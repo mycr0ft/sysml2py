@@ -28,7 +28,7 @@ def enforce_grammar():  # pragma: no cover
     import re
 
     comments_strip_rule = r"(?:(?:(?<!\\)(\/\/.*\n))|(?:\/\*(?:.|\n)*?\*\/))"
-    regex_rule = "\n[ ]*([\w]*)[ ]*:((?:(?:'[^']*')|(?:[^;']*))*;)"
+    regex_rule = r"\n[ ]*([\w]*)[ ]*:((?:(?:'[^']*')|(?:[^;']*))*;)"
 
     g_list = []
     rule_files = ["KerMLExpressions", "KerML", "SysML"]
