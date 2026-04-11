@@ -1,5 +1,5 @@
 Welcome to sysml2py's documentation!
-====================================
+===================================
 
 .. automodule:: sysml2py
     :members:
@@ -7,6 +7,8 @@ Welcome to sysml2py's documentation!
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+
+   quickstart
 
 
 
