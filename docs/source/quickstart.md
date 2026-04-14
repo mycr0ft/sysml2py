@@ -173,3 +173,33 @@ Reference
 ---------
 
 For more examples, see the test files in ``tests/class_test.py``.
+
+Python Representation
+------------------
+
+All classes have ``__repr__`` that returns constructor-style output::
+
+    from sysml2py import Package, Item, Part, Attribute
+
+    p = Package(name='Rocket')
+    print(repr(p))
+    # → Package(name='Rocket')
+
+    i = Item(definition=True, name='Fuel')
+    print(repr(i))
+    # → Item(definition=True, name='Fuel')
+
+    part = Part(name='Engine')
+    print(repr(part))
+    # → Part(name='Engine')
+
+    attr = Attribute(name='mass')
+    print(repr(attr))
+    # → Attribute(name='mass')
+
+Anonymous elements show a UUID until named::
+
+    from sysml2py import Package
+    p = Package()
+    print(repr(p))
+    # → Package(name='a1b2c3d4-...')  # UUID
