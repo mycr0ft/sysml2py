@@ -80,5 +80,28 @@ part sensor {
 }
 ```
 
+Actions
+-------
+
+Actions (activities) can be defined with input and output parameters::
+
+```
+from sysml2py import Action
+
+# Action definition with typed inputs/outputs
+a = Action(definition=True, name='Focus')
+a.add_input('scene', 'Scene')
+a.add_output('image', 'Image')
+print(a.dump())
+# → action def Focus { in scene : Scene; out image : Image; }
+
+# Action usage with references
+b = Action(name='TakePicture')
+b.add_input('scene')
+b.add_output('picture')
+print(b.dump())
+# → action TakePicture { in scene; out picture; }
+```
+
 ## License
 sysml2py is released under the MIT license, hence allowing commercial use of the library.

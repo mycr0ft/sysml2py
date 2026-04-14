@@ -124,6 +124,27 @@ Composite structures::
     #        attribute thrust;
     #     }
 
+Actions
+-------
+
+Actions (activities) can be defined with input and output parameters::
+
+    from sysml2py import Action
+
+    # Action definition with typed inputs/outputs
+    a = Action(definition=True, name='Focus')
+    a.add_input('scene', 'Scene')
+    a.add_output('image', 'Image')
+    print(a.dump())
+    # → action def Focus { in scene : Scene; out image : Image; }
+
+    # Action usage with references
+    b = Action(name='TakePicture')
+    b.add_input('scene')
+    b.add_output('picture')
+    print(b.dump())
+    # → action TakePicture { in scene; out picture; }
+
 Typing (Subclassing)
 ------------------
 
@@ -179,7 +200,7 @@ Python Representation
 
 All classes have ``__repr__`` that returns constructor-style output::
 
-    from sysml2py import Package, Item, Part, Attribute
+    from sysml2py import Package, Item, Part, Attribute, Action
 
     p = Package(name='Rocket')
     print(repr(p))
