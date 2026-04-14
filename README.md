@@ -103,5 +103,32 @@ print(b.dump())
 # → action TakePicture { in scene; out picture; }
 ```
 
+References
+----------
+
+References can reference other elements::
+
+```
+from sysml2py import Reference, Item
+
+# Simple reference
+r = Reference(name='driver')
+print(r.dump())
+# → ref driver;
+
+# Reference with type
+person = Item(name='Person')
+r2 = Reference(name='driver')
+r2.set_type(person)
+print(r2.dump())
+# → ref driver : Person;
+
+# Reference redefinition
+r3 = Reference(name='payload', redefines=True)
+r3.set_type(person)
+print(r3.dump())
+# → ref :>> payload : Person;
+```
+
 ## License
 sysml2py is released under the MIT license, hence allowing commercial use of the library.

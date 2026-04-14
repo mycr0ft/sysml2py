@@ -835,6 +835,43 @@ class Action(Usage):
             return f"{keyword} {name_str};"
 
 
+class Reference(Usage):
+    def __init__(self, name=None, shortname=None, redefines=None):
+        self.name = name if name else str(uuidlib.uuid4())
+        self.children = []
+        self.typedby = None
+        self.grammar = None
+        self.shortname = shortname
+        self.redefines = redefines  # for redefinition like ref :>> name :
+        self.ref_type = None  # type reference
+
+    def set_type(self, type_obj):
+        """Set the type this reference points to.
+        
+        Args:
+            type_obj: Another element (Item, Part, etc.) to reference
+        """
+        self.ref_type = type_obj
+        return self
+
+    def _set_typed_by(self, type_obj):
+        """Alias for set_type for consistency with other classes."""
+        return self.set_type(type_obj)
+
+    def dump(self):
+        name_str = getattr(self, 'name', "") or ""
+        type_str = ""
+        
+        if self.ref_type:
+            type_name = getattr(self.ref_type, 'name', str(self.ref_type))
+            type_str = f" : {type_name}"
+        
+        if self.redefines:
+            return f"ref :>> {name_str}{type_str};"
+        
+        return f"ref {name_str}{type_str};"
+
+
 class DefaultReference(Usage):
     def __init__(self):
         Usage.__init__(self)

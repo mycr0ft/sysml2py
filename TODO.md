@@ -2,11 +2,11 @@
 
 ## Features to Add
 
-### Reference Class
-- Add `Reference` class to public API
-- Support syntax: `ref name : Type;`
-- Support redefinition: `ref :>> name : Type;`
-- Add `_set_typed_by()` for reference typing
+### Reference Class ✓ DONE
+- Add `Reference` class to public API ✓
+- Support syntax: `ref name : Type;` ✓
+- Support redefinition: `ref :>> name : Type;` ✓
+- Add `_set_typed_by()` for reference typing ✓
 
 ## Known Issues
 - Action parsing via `loads()` not fully implemented (grammer pipeline)
