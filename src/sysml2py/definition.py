@@ -124,6 +124,22 @@ class Package:
         if shortname is not None:
             self._set_name(shortname, short=True)
 
+    def __repr__(self):
+        name = getattr(self, 'name', None)
+        shortname = getattr(self.grammar.declaration.identification, 'declaredShortName', None)
+        if shortname:
+            shortname = shortname.strip('<').strip('>')
+        
+        cls_name = self.__class__.__name__
+        if name and shortname:
+            return f"{cls_name}(name={name!r}, shortname={shortname!r})"
+        elif name:
+            return f"{cls_name}(name={name!r})"
+        elif shortname:
+            return f"{cls_name}(shortname={shortname!r})"
+        else:
+            return f"{cls_name}()"
+
     def _set_name(self, name, short=False):
         if short:
             if self.grammar.declaration.identification is None:

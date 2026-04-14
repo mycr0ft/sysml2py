@@ -155,6 +155,50 @@ class Usage:
     def dump(self, child=None):
         return classtree(self._get_definition(child)).dump()
 
+    def __repr__(self):
+        # Safely get name
+        try:
+            name = getattr(self, 'name', None)
+            if not name:
+                id_obj = getattr(self.grammar, 'usage', None)
+                if id_obj:
+                    id_obj = getattr(id_obj.declaration, 'declaration', None)
+                    if id_obj:
+                        name = getattr(id_obj.identification, 'declaredName', None)
+        except (AttributeError, TypeError):
+            name = None
+        
+        # Safely get shortname
+        try:
+            shortname = None
+            id_obj = getattr(self.grammar, 'usage', None)
+            if id_obj:
+                id_obj = getattr(id_obj.declaration, 'declaration', None)
+                if id_obj:
+                    shortname = getattr(id_obj.identification, 'declaredShortName', None)
+            if shortname:
+                shortname = shortname.strip('<').strip('>')
+        except (AttributeError, TypeError):
+            shortname = None
+            
+        is_def = hasattr(self.grammar, 'definition')
+        cls_name = self.__class__.__name__
+        
+        if is_def:
+            if name and shortname:
+                return f"{cls_name}(definition=True, name={name!r}, shortname={shortname!r})"
+            elif name:
+                return f"{cls_name}(definition=True, name={name!r})"
+            else:
+                return f"{cls_name}(definition=True)"
+        else:
+            if name and shortname:
+                return f"{cls_name}(name={name!r}, shortname={shortname!r})"
+            elif name:
+                return f"{cls_name}(name={name!r})"
+            else:
+                return f"{cls_name}()"
+
     def _set_name(self, name, short=False):
         if hasattr(self.grammar, "usage"):
             path = self.grammar.usage.declaration.declaration
