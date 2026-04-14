@@ -1404,15 +1404,18 @@ class CalculationDefinition:
 
 
 class ActionDefinition:
-    def __init__(self, definition):
+    def __init__(self, definition=None):
         self.prefix = None
         self.keyword = "action def"
-        if valid_definition(definition, self.__class__.__name__):
-            if definition["prefix"] is not None:
-                raise NotImplementedError  # pragma: no cover
-
-            self.declaration = DefinitionDeclaration(definition["declaration"])
-            self.body = ActionBody(definition["body"])
+        if definition is not None:
+            if valid_definition(definition, self.__class__.__name__):
+                if definition["prefix"] is not None:
+                    raise NotImplementedError  # pragma: no cover
+                self.declaration = DefinitionDeclaration(definition["declaration"])
+                self.body = ActionBody(definition["body"])
+        else:
+            self.declaration = DefinitionDeclaration(None)
+            self.body = ActionBody(None)
 
     def dump(self):
         output = []
@@ -1425,11 +1428,12 @@ class ActionDefinition:
 
 
 class ActionBody:
-    def __init__(self, definition):
+    def __init__(self, definition=None):
         self.children = []
-        if valid_definition(definition, self.__class__.__name__):
-            for item in definition["items"]:
-                self.children.append(ActionBodyItem(item))
+        if definition is not None:
+            if valid_definition(definition, self.__class__.__name__):
+                for item in definition["items"]:
+                    self.children.append(ActionBodyItem(item))
 
     def dump(self):
         if len(self.children) == 0:
@@ -1888,14 +1892,21 @@ class CalculationUsageDeclaration:
 
 
 class ActionUsage:
-    def __init__(self, definition):
+    def __init__(self, definition=None):
         self.prefix = None
-        if valid_definition(definition, self.__class__.__name__):
+        if definition is None:
+            self.prefix = None
+            self.keyword = "action"
+            self.declaration = ActionUsageDeclaration()
+            self.body = ActionBody()
+        elif valid_definition(definition, self.__class__.__name__):
             if definition["prefix"] is not None:
                 self.prefix = OccurrenceUsagePrefix(definition["prefix"])
             self.keyword = "action"
             self.declaration = ActionUsageDeclaration(definition["declaration"])
             self.body = ActionBody(definition["body"])
+        else:
+            raise TypeError("This does not seem to be valid.")
 
     def dump(self):
         output = []

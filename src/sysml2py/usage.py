@@ -38,6 +38,8 @@ from sysml2py.grammar.classes import (
     PortDefinition,
     DefaultReferenceUsage,
     RefPrefix,
+    ActionUsage,
+    ActionDefinition,
 )
 
 
@@ -696,6 +698,79 @@ class Port(Usage):
             self._set_name(name)
         if shortname is not None:
             self._set_name(shortname, short=True)
+
+
+class Action(Usage):
+    def __init__(self, definition=False, name=None, shortname=None):
+        # Minimal init - don't call parent which requires grammar
+        self.is_definition = definition
+        self.action_shortname = shortname
+        self.name = name if name else str(uuidlib.uuid4())
+        self.children = []
+        self.typedby = None
+        self.grammar = True  # Mark as valid
+        
+        if definition:
+            self.keyword = "action def"
+        else:
+            self.keyword = "action"
+
+    def _get_definition(self, child=None):
+        if self.is_definition:
+            keyword = "action def"
+        else:
+            keyword = "action"
+        
+        decl = {
+            "name": "UsageDeclaration",
+            "identification": {
+                "name": "Identification",
+                "declaredName": self.name if self.name else "",
+                "declaredShortName": None
+            }
+        }
+        
+        if self.is_definition:
+            grammar_type = "ActionDefinition"
+            body = {"name": "ActionBody", "items": []}
+        else:
+            grammar_type = "ActionUsage"
+            body = {"name": "ActionBody", "items": []}
+        
+        return {
+            "name": grammar_type,
+            "declaration": decl,
+            "body": body
+        }
+
+    def load_from_grammar(self, grammar):
+        self.is_definition = False
+        try:
+            usage = getattr(grammar, 'usage', None)
+            if usage:
+                decl = usage.declaration.declaration
+                if decl and decl.identification:
+                    self.name = decl.identification.declaredName
+                    self.is_definition = False
+                    self.keyword = "action"
+            else:
+                defn = getattr(grammar, 'definition', None)
+                if defn:
+                    decl = defn.declaration
+                    if decl and decl.identification:
+                        self.name = decl.identification.declaredName
+                        self.is_definition = True
+                        self.keyword = "action def"
+        except:
+            pass
+        return self
+
+    def dump(self):
+        name_str = getattr(self, 'name', "") or ""
+        keyword = getattr(self, 'keyword', 'action')
+        
+        # Simple output for now
+        return f"{keyword} {name_str};"
 
 
 class DefaultReference(Usage):
