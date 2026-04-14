@@ -709,11 +709,33 @@ class Action(Usage):
         self.children = []
         self.typedby = None
         self.grammar = True  # Mark as valid
+        self.action_inputs = []  # List of (name, type_name)
+        self.action_outputs = []
         
         if definition:
             self.keyword = "action def"
         else:
             self.keyword = "action"
+
+    def add_input(self, name, type_name=None):
+        """Add an input parameter (in) to the action.
+        
+        Args:
+            name: Name of the input
+            type_name: Optional type (e.g., 'Scene')
+        """
+        self.action_inputs.append((name, type_name))
+        return self
+    
+    def add_output(self, name, type_name=None):
+        """Add an output parameter (out) to the action.
+        
+        Args:
+            name: Name of the output  
+            type_name: Optional type (e.g., 'Image')
+        """
+        self.action_outputs.append((name, type_name))
+        return self
 
     def _get_definition(self, child=None):
         if self.is_definition:
@@ -730,12 +752,31 @@ class Action(Usage):
             }
         }
         
+        # Build action body with in/out parameters
+        body_items = []
+        
+        # Add inputs
+        for inp_name, inp_type in self.action_inputs:
+            if inp_type:
+                item = f"in {inp_name} : {inp_type};"
+            else:
+                item = f"in {inp_name};"
+            body_items.append(item)
+        
+        # Add outputs  
+        for out_name, out_type in self.action_outputs:
+            if out_type:
+                item = f"out {out_name} : {out_type};"
+            else:
+                item = f"out {out_name};"
+            body_items.append(item)
+        
+        body = {"name": "ActionBody", "items": body_items}
+        
         if self.is_definition:
             grammar_type = "ActionDefinition"
-            body = {"name": "ActionBody", "items": []}
         else:
             grammar_type = "ActionUsage"
-            body = {"name": "ActionBody", "items": []}
         
         return {
             "name": grammar_type,
@@ -745,6 +786,8 @@ class Action(Usage):
 
     def load_from_grammar(self, grammar):
         self.is_definition = False
+        self.action_inputs = []
+        self.action_outputs = []
         try:
             usage = getattr(grammar, 'usage', None)
             if usage:
@@ -769,8 +812,27 @@ class Action(Usage):
         name_str = getattr(self, 'name', "") or ""
         keyword = getattr(self, 'keyword', 'action')
         
-        # Simple output for now
-        return f"{keyword} {name_str};"
+        # Build output with in/out parameters
+        parts = [keyword, name_str]
+        
+        # Add in/out parameters
+        params = []
+        for inp_name, inp_type in self.action_inputs:
+            if inp_type:
+                params.append(f"in {inp_name} : {inp_type}")
+            else:
+                params.append(f"in {inp_name}")
+        
+        for out_name, out_type in self.action_outputs:
+            if out_type:
+                params.append(f"out {out_name} : {out_type}")
+            else:
+                params.append(f"out {out_name}")
+        
+        if params:
+            return f"{keyword} {name_str} {{ " + "; ".join(params) + "; }"
+        else:
+            return f"{keyword} {name_str};"
 
 
 class DefaultReference(Usage):
