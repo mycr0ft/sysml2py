@@ -49,8 +49,8 @@ Create a package::
 
 Package with body::
 
-    p = Package()._set_name("Rocket")
-    p._set_child(Package()._set_name("Engine"))
+    p = Package(name="Rocket")
+    p._set_child(Package(name="Engine"))
     print(p.dump())
     # → package Rocket {
     #        package Engine;
@@ -58,7 +58,7 @@ Package with body::
 
 Short names (alias IDs)::
 
-    p = Package()._set_name("Rocket")._set_name("'3.1'", short=True)
+    p = Package(name="Rocket", shortname="'3.1'")
     print(p.dump())
     # → package <'3.1'> Rocket;
 
@@ -69,20 +69,20 @@ Create an item usage::
 
     from sysml2py import Item
 
-    i = Item()._set_name("Fuel")
+    i = Item(name="Fuel")
     print(i.dump())
     # → item Fuel;
 
 Item definition::
 
-    i = Item(definition=True)._set_name("Fuel")
+    i = Item(definition=True, name="Fuel")
     print(i.dump())
     # → item def Fuel;
 
 Items with children::
 
-    i = Item()._set_name("Fuel")
-    i._set_child(Item()._set_name("Oxidizer"))
+    i = Item(name="Fuel")
+    i._set_child(Item(name="Oxidizer"))
     print(i.dump())
     # → item Fuel {
     #        item Oxidizer;
@@ -95,7 +95,7 @@ Parts work like items::
 
     from sysml2py import Part
 
-    p = Part()._set_name("Engine")
+    p = Part(name="Engine")
     print(p.dump())
     # → part Engine;
 
@@ -106,7 +106,7 @@ Attributes with values::
 
     from sysml2py import Attribute, ureg
 
-    a = Attribute()._set_name("mass")
+    a = Attribute(name="mass")
     a.set_value(100 * ureg.kilogram)
     print(a.dump())
     # → attribute mass = 100 [kilogram];
@@ -115,9 +115,9 @@ Composite structures::
 
     from sysml2py import Part, Attribute
 
-    p = Part()._set_name("Stage1")
-    p._set_child(Attribute()._set_name("mass"))
-    p._set_child(Attribute()._set_name("thrust"))
+    p = Part(name="Stage1")
+    p._set_child(Attribute(name="mass"))
+    p._set_child(Attribute(name="thrust"))
     print(p.dump())
     # → part Stage1 {
     #        attribute mass;
@@ -132,10 +132,10 @@ An item can be typed by a definition::
     from sysml2py import Item
 
     # Create definition
-    fuel_def = Item(definition=True)._set_name("Fuel")
+    fuel_def = Item(definition=True, name="Fuel")
     
     # Create usage typed by definition
-    hydrogen = Item()._set_name("Hydrogen")
+    hydrogen = Item(name="Hydrogen")
     hydrogen._set_typed_by(fuel_def)
     print(hydrogen.dump())
     # → item Hydrogen : Fuel;
@@ -148,8 +148,8 @@ A Model contains packages::
     from sysml2py import Model, Package
 
     m = Model()
-    m._set_child(Package()._set_name("Rocket"))
-    m._set_child(Package()._set_name("Payload"))
+    m._set_child(Package(name="Rocket"))
+    m._set_child(Package(name="Payload"))
     print(m.dump())
     # → package Rocket;
     #     package Payload;

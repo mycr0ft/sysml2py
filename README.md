@@ -37,11 +37,11 @@ Finally, we can dump the output from this class.
 ```
   from sysml2py import Attribute, Part, ureg
 
-  a = Attribute()._set_name('mass')
+  a = Attribute(name='mass')
   a.set_value(100 * ureg.kilogram)
-  b = Attribute()._set_name('thrust')
+  b = Attribute(name='thrust')
   b.set_value(1000 * ureg.newton)
-  c = Part()._set_name("Stage_1")._set_name("'3.1'", short=True)
+  c = Part(name="Stage_1", shortname="'3.1'")
   c._set_child(a)
   c._set_child(b)
   v = "Stage_1.thrust"
@@ -60,10 +60,10 @@ It will output the following:
 The package is able to handle Items, Parts, and Attributes.
 
 ```
-a = Part()._set_name('camera')
-b = Item()._set_name('lens')
-d = Attribute()._set_name('mass')
-c = Part()._set_name("sensor")
+a = Part(name='camera')
+b = Item(name='lens')
+d = Attribute(name='mass')
+c = Part(name='sensor')
 c._set_child(a)
 c._set_child(b)
 a._set_child(d)
