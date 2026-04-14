@@ -317,6 +317,9 @@ class Attribute(Usage):
         else:
             self.grammar = AttributeUsage()
 
+        if name is not None:
+            self._set_name(name)
+
     def usage_dump(self, child):
         # Override - base output
 
@@ -610,30 +613,45 @@ class Attribute(Usage):
 
 
 class Part(Usage):
-    def __init__(self, definition=False, name=None):
+    def __init__(self, definition=False, name=None, shortname=None):
         Usage.__init__(self)
         if definition:
             self.grammar = PartDefinition()
         else:
             self.grammar = PartUsage()
 
+        if name is not None:
+            self._set_name(name)
+        if shortname is not None:
+            self._set_name(shortname, short=True)
+
 
 class Item(Usage):
-    def __init__(self, definition=False, name=None):
+    def __init__(self, definition=False, name=None, shortname=None):
         Usage.__init__(self)
         if definition:
             self.grammar = ItemDefinition()
         else:
             self.grammar = ItemUsage()
 
+        if name is not None:
+            self._set_name(name)
+        if shortname is not None:
+            self._set_name(shortname, short=True)
+
 
 class Port(Usage):
-    def __init__(self, definition=False, name=None):
+    def __init__(self, definition=False, name=None, shortname=None):
         Usage.__init__(self)
         if definition:
             self.grammar = PortDefinition()
         else:
             self.grammar = PortUsage()
+
+        if name is not None:
+            self._set_name(name)
+        if shortname is not None:
+            self._set_name(shortname, short=True)
 
 
 class DefaultReference(Usage):

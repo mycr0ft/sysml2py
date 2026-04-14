@@ -113,11 +113,16 @@ class Model:
 
 
 class Package:
-    def __init__(self):
+    def __init__(self, name=None, shortname=None):
         self.name = str(uuidlib.uuid4())
         self.children = []
         self.typedby = None
         self.grammar = PackageGrammar()
+
+        if name is not None:
+            self._set_name(name)
+        if shortname is not None:
+            self._set_name(shortname, short=True)
 
     def _set_name(self, name, short=False):
         if short:
