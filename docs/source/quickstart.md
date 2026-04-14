@@ -104,18 +104,16 @@ Attributes
 
 Attributes with values::
 
-    from sysml2py import Attribute
-    import astropy.units as u
+    from sysml2py import Attribute, ureg
 
     a = Attribute()._set_name("mass")
-    a.set_value(100 * u.kg)
+    a.set_value(100 * ureg.kilogram)
     print(a.dump())
-    # → attribute mass = 100.0 [kg];
+    # → attribute mass = 100 [kilogram];
 
 Composite structures::
 
     from sysml2py import Part, Attribute
-    import astropy.units as u
 
     p = Part()._set_name("Stage1")
     p._set_child(Attribute()._set_name("mass"))

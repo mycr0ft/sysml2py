@@ -7,14 +7,16 @@ Created on Mon May 29 23:26:16 2023
 """
 
 __all__ = ["load", "loads", "load_grammar"]
-__author__ = "Christopher Cox"
-__version__ = "0.1.0"
+__author__ = "Jon Fox"
+__version__ = "0.5.3"
 
 # These are interchangable
 from sysml2py.usage import Item, Attribute, Part, Port
 
 # These are definition only
 from sysml2py.definition import Model, Package
+
+from sysml2py.usage import ureg
 
 
 def enforce_grammar():  # pragma: no cover

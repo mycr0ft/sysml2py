@@ -9,11 +9,10 @@ Created on Tue Jul 11 16:46:28 2023
 import pytest
 import pint
 
-ureg = pint.UnitRegistry()
-
 from sysml2py.formatting import classtree
 from sysml2py import Package, Item, Model, Attribute, Part, Port
 from sysml2py import load_grammar as loads
+from sysml2py.usage import ureg
 
 
 def test_package():
