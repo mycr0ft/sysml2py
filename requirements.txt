@@ -1,4 +1,4 @@
 PyYAML>=6.0
 textX>=4.0
-astropy>=7.0
+pint>=0.24
 mypy>=1.0

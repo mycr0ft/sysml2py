@@ -13,7 +13,9 @@ Created on Fri Jun 30 23:23:31 2023
 
 import uuid as uuidlib
 
-import astropy.units as u
+import pint
+
+ureg = pint.UnitRegistry()
 
 from sysml2py.formatting import classtree
 
@@ -351,13 +353,14 @@ class Attribute(Usage):
         return package
 
     def set_value(self, value):
-        if not isinstance(value, u.quantity.Quantity):
-            value = value * u.one
-        if isinstance(value, u.quantity.Quantity):
-            if str(value.unit) != "":
+        if not isinstance(value, pint.Quantity):
+            value = value * ureg.dimensionless
+        if isinstance(value, pint.Quantity):
+            # Only add units if not dimensionless
+            if not value.units.dimensionless:
                 package_units = {
                     "name": "QualifiedName",
-                    "names": [str(value.unit)],
+                    "names": [str(value.units)],
                 }
                 package_units = {
                     "name": "FeatureReferenceMember",
@@ -479,7 +482,7 @@ class Attribute(Usage):
                 "name": "BaseExpression",
                 "ownedRelationship": {
                     "name": "LiteralInteger",
-                    "value": str(value.value),
+                    "value": str(value.magnitude),
                 },
             }
             package = {
@@ -603,7 +606,7 @@ class Attribute(Usage):
             ]
             .memberElement.dump()
         )
-        return real * u.Unit(unit)
+        return real * ureg(unit)
 
 
 class Part(Usage):

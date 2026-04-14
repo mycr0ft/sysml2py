@@ -7,6 +7,9 @@ Created on Tue Jul 11 16:46:28 2023
 """
 
 import pytest
+import pint
+
+ureg = pint.UnitRegistry()
 
 from sysml2py.formatting import classtree
 from sysml2py import Package, Item, Model, Attribute, Part, Port
@@ -507,7 +510,7 @@ def test_port_directed_error():
 #     import astropy.units as u
 
 #     a = Attribute()._set_name("mass")
-#     a.set_value(100 * u.kg)
+#     a.set_value(100 * ureg.kg)
 #     i._set_child(a)
 
 #     text = """item Engine {
@@ -520,8 +523,6 @@ def test_port_directed_error():
 
 
 def test_attribute_definition():
-    import astropy.units as u
-
     a = Attribute(definition=True)._set_name("mass")
 
     text = """attribute def mass;"""
@@ -532,12 +533,10 @@ def test_attribute_definition():
 
 
 def test_attribute_units():
-    import astropy.units as u
-
     a = Attribute()._set_name("mass")
-    a.set_value(100 * u.kg)
+    a.set_value(100 * ureg.kg)
 
-    text = """attribute mass= 100.0 [kg];"""
+    text = """attribute mass= 100 [kilogram];"""
 
     q = classtree(loads(text))
 
@@ -545,9 +544,7 @@ def test_attribute_units():
 
 
 def test_attribute_getunits():
-    import astropy.units as u
-
-    value = 100 * u.kg
+    value = 100 * ureg.kg
 
     a = Attribute()._set_name("mass")
     a.set_value(value)
@@ -559,7 +556,7 @@ def test_attribute_nounits():
     a = Attribute()._set_name("mass")
     a.set_value(100)
 
-    text = """attribute mass= 100.0;"""
+    text = """attribute mass= 100;"""
 
     q = classtree(loads(text))
 
