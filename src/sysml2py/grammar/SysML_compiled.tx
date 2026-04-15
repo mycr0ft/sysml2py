@@ -937,7 +937,7 @@ MessageKeyword:
 ;
 
 Message:
-	OccurrenceUsagePrefix MessageKeyword MessageDeclaration DefinitionBody
+	prefix=OccurrenceUsagePrefix MessageKeyword declaration=MessageDeclaration body=DefinitionBody
 ;
 
 MessageDeclaration:

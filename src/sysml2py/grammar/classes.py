@@ -4135,6 +4135,8 @@ class StructureUsageElement:
                 self.children = SuccessionFlowConnectionUsage(
                     definition["ownedRelatedElement"]
                 )
+            elif definition["ownedRelatedElement"]["name"] == "Message":
+                self.children = Message(definition["ownedRelatedElement"])
             else:
                 print(definition["ownedRelatedElement"]["name"])  # pragma: no cover
                 raise NotImplementedError  # pragma: no cover
@@ -4212,6 +4214,159 @@ class UsageExtensionKeyword:
 
     def dump(self):
         return self.children.dump()
+
+
+class Message:
+    # Message :
+    # 	prefix=OccurrenceUsagePrefix MessageKeyword
+    #   declaration=MessageDeclaration body=DefinitionBody
+    # ;
+    def __init__(self, definition=None):
+        self.prefix = None
+        self.keyword = "message"
+        self.declaration = None
+        self.body = None
+        if definition is not None:
+            if valid_definition(definition, self.__class__.__name__):
+                if definition["prefix"] is not None:
+                    self.prefix = OccurrenceUsagePrefix(definition["prefix"])
+                if definition["declaration"] is not None:
+                    self.declaration = MessageDeclaration(definition["declaration"])
+                if definition["body"] is not None:
+                    self.body = DefinitionBody(definition["body"])
+        else:
+            self.declaration = None
+            self.body = DefinitionBody()
+
+    def dump(self):
+        output = []
+        if self.prefix is not None:
+            output.append(self.prefix.dump())
+        output.append(self.keyword)
+        if self.declaration is not None:
+            output.append(self.declaration.dump())
+        if self.body is not None:
+            output.append(self.body.dump())
+        return " ".join(output)
+
+    def get_definition(self):
+        output = {
+            "name": self.__class__.__name__,
+            "prefix": None,
+            "declaration": None,
+            "body": None,
+        }
+        if self.prefix is not None:
+            output["prefix"] = self.prefix.get_definition()
+        if self.declaration is not None:
+            output["declaration"] = self.declaration.get_definition()
+        if self.body is not None:
+            output["body"] = self.body.get_definition()
+        return output
+
+
+class MessageDeclaration:
+    # MessageDeclaration :
+    # 	  UsageDeclaration? ValuePart?
+    #     ( 'of' ownedRelationship += ItemFeatureMember )?
+    #     ( 'from' ownedRelationship += MessageEventMember
+    #       'to' ownedRelationship += MessageEventMember
+    #     )?
+    #   | ownedRelationship += MessageEventMember 'to'
+    # 	  ownedRelationship += MessageEventMember
+    # ;
+    def __init__(self, definition):
+        self.declaration = None
+        self.valuepart = None
+        self.of_item = None
+        self.from_event = None
+        self.to_event = None
+        if valid_definition(definition, self.__class__.__name__):
+            if definition.get("declaration") is not None:
+                self.declaration = UsageDeclaration(definition["declaration"])
+            if definition.get("valuepart") is not None:
+                self.valuepart = ValuePart(definition["valuepart"])
+
+            # Parse from/to from ownedRelationship list
+            relationships = definition.get("ownedRelationship", [])
+            if len(relationships) >= 2:
+                self.from_event = MessageEventMember(relationships[0])
+                self.to_event = MessageEventMember(relationships[1])
+            elif len(relationships) == 1:
+                self.to_event = MessageEventMember(relationships[0])
+
+    def dump(self):
+        output = []
+        if self.declaration is not None:
+            output.append(self.declaration.dump())
+        if self.valuepart is not None:
+            output.append(self.valuepart.dump())
+        if self.from_event is not None and self.to_event is not None:
+            output.append("from")
+            output.append(self.from_event.dump())
+            output.append("to")
+            output.append(self.to_event.dump())
+        elif self.to_event is not None:
+            output.append("to")
+            output.append(self.to_event.dump())
+        return " ".join(output)
+
+    def get_definition(self):
+        output = {
+            "name": self.__class__.__name__,
+            "declaration": None,
+            "valuepart": None,
+            "ownedRelationship": [],
+        }
+        if self.declaration is not None:
+            output["declaration"] = self.declaration.get_definition()
+        if self.valuepart is not None:
+            output["valuepart"] = self.valuepart.get_definition()
+        if self.from_event is not None:
+            output["ownedRelationship"].append(self.from_event.get_definition())
+        if self.to_event is not None:
+            output["ownedRelationship"].append(self.to_event.get_definition())
+        return output
+
+
+class MessageEventMember:
+    def __init__(self, definition):
+        self.children = []
+        if valid_definition(definition, self.__class__.__name__):
+            for element in definition["ownedRelatedElement"]:
+                self.children.append(MessageEvent(element))
+
+    def dump(self):
+        return " ".join([child.dump() for child in self.children])
+
+    def get_definition(self):
+        output = {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": [],
+        }
+        for child in self.children:
+            output["ownedRelatedElement"].append(child.get_definition())
+        return output
+
+
+class MessageEvent:
+    def __init__(self, definition):
+        self.children = []
+        if valid_definition(definition, self.__class__.__name__):
+            for relationship in definition["ownedRelationship"]:
+                self.children.append(OwnedReferenceSubsetting(relationship))
+
+    def dump(self):
+        return " ".join([child.dump() for child in self.children])
+
+    def get_definition(self):
+        output = {
+            "name": self.__class__.__name__,
+            "ownedRelationship": [],
+        }
+        for child in self.children:
+            output["ownedRelationship"].append(child.get_definition())
+        return output
 
 
 class FlowConnectionUsage:

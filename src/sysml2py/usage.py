@@ -1382,6 +1382,74 @@ class Requirement(Usage):
             return f"{keyword}{shortname_str} {name_str}{type_suffix};"
 
 
+class Message(Usage):
+    def __init__(self, name=None, from_port=None, to_port=None, of_type=None):
+        """Create a message.
+
+        Args:
+            name: Optional message name
+            from_port: Source port/part path (e.g., 'sensor')
+            to_port: Target port/part path (e.g., 'controller')
+            of_type: Optional item type (e.g., 'SensorData')
+        """
+        self.name = name if name else str(uuidlib.uuid4())
+        self.children = []
+        self.typedby = None
+        self.grammar = True
+        self.from_port = from_port
+        self.to_port = to_port
+        self.of_type = of_type
+
+    def set_from(self, from_port):
+        """Set the source of the message.
+
+        Args:
+            from_port: Source path string or element with .name
+        """
+        self.from_port = from_port.name if hasattr(from_port, 'name') else str(from_port)
+        return self
+
+    def set_to(self, to_port):
+        """Set the target of the message.
+
+        Args:
+            to_port: Target path string or element with .name
+        """
+        self.to_port = to_port.name if hasattr(to_port, 'name') else str(to_port)
+        return self
+
+    def set_of(self, of_type):
+        """Set the item type of the message.
+
+        Args:
+            of_type: Item type string or element with .name
+        """
+        self.of_type = of_type.name if hasattr(of_type, 'name') else str(of_type)
+        return self
+
+    def dump(self):
+        parts = ["message"]
+
+        # Name (if not a UUID)
+        name_str = getattr(self, 'name', "") or ""
+        try:
+            import uuid as _uuid
+            _uuid.UUID(name_str)
+            # It's a UUID - anonymous message, skip name
+        except ValueError:
+            parts.append(name_str)
+
+        if self.of_type:
+            parts.append(f"of {self.of_type}")
+
+        if self.from_port and self.to_port:
+            parts.append(f"from {self.from_port} to {self.to_port}")
+        elif self.to_port:
+            parts.append(f"to {self.to_port}")
+
+        return " ".join(parts) + ";"
+
+
 class Reference(Usage):
     def __init__(self, name=None, shortname=None, redefines=None):
         self.name = name if name else str(uuidlib.uuid4())
