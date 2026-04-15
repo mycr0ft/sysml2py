@@ -2356,7 +2356,7 @@ class CommentSysML:
             else:
                 import re
 
-                return re.sub("\n[\s]*", "\n", self.body)
+                return re.sub(r"\n[\s]*", "\n", self.body)
 
 
 class Annotation:
@@ -2588,6 +2588,15 @@ class SubclassificationPart:
     def dump(self):
         return self.keyword + ", ".join([child.dump() for child in self.children])
 
+    def get_definition(self):
+        output = {
+            "name": self.__class__.__name__,
+            "ownedRelationship": [],
+        }
+        for child in self.children:
+            output["ownedRelationship"].append(child.get_definition())
+        return output
+
 
 class OwnedSubclassification:
     def __init__(self, definition):
@@ -2596,6 +2605,12 @@ class OwnedSubclassification:
 
     def dump(self):
         return self.name.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "superclassifier": self.name.get_definition(),
+        }
 
 
 class DefinitionBody:
@@ -5220,6 +5235,15 @@ class Redefinitions:
         output.insert(0, self.keyword)
         return " ".join(output)
 
+    def get_definition(self):
+        output = {
+            "name": self.__class__.__name__,
+            "ownedRelationship": [],
+        }
+        for child in self.children:
+            output["ownedRelationship"].append(child.get_definition())
+        return output
+
 
 class OwnedRedefinition:
     def __init__(self, definition):
@@ -5231,6 +5255,13 @@ class OwnedRedefinition:
 
     def dump(self):
         return self.redefinedFeature.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "redefinedFeature": self.redefinedFeature.get_definition(),
+            "ownedRelatedElement": [],
+        }
 
 
 class Subsettings:
@@ -5248,6 +5279,15 @@ class Subsettings:
     def dump(self):
         return self.keyword + ", ".join([child.dump() for child in self.children])
 
+    def get_definition(self):
+        output = {
+            "name": self.__class__.__name__,
+            "ownedRelationship": [],
+        }
+        for child in self.children:
+            output["ownedRelationship"].append(child.get_definition())
+        return output
+
 
 class OwnedSubsetting:
     def __init__(self, definition):
@@ -5262,6 +5302,19 @@ class OwnedSubsetting:
 
     def dump(self):
         return " ".join([child.dump() for child in self.elements])
+
+    def get_definition(self):
+        output = {
+            "name": self.__class__.__name__,
+            "subsettedFeature": None,
+            "ownedRelatedElement": [],
+        }
+        for element in self.elements:
+            if isinstance(element, QualifiedName):
+                output["subsettedFeature"] = element.get_definition()
+            else:
+                output["ownedRelatedElement"].append(element.get_definition())
+        return output
 
 
 class OwnedFeatureChain:

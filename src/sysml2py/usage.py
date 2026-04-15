@@ -24,6 +24,7 @@ from sysml2py.grammar.classes import (
     DefinitionBody,
     DefinitionBodyItem,
     FeatureSpecializationPart,
+    SubclassificationPart,
 )
 
 from sysml2py.grammar.classes import (
@@ -290,6 +291,127 @@ class Usage:
                     )
         else:
             raise ValueError("Typed by element was not a definition.")
+        return self
+
+    def _set_specializes(self, *parents):
+        """Set specialization (`:>`) for definitions.
+        
+        In SysML v2: `part def Car :> Vehicle;`
+        
+        Args:
+            *parents: One or more definition elements to specialize.
+        """
+        if "definition" not in self.grammar.__dict__:
+            raise ValueError(
+                "Only definition elements can use specializes. "
+                "Use _set_subsets() for usage elements."
+            )
+        
+        names = [p.name for p in parents]
+        relationships = []
+        for name in names:
+            relationships.append({
+                "name": "OwnedSubclassification",
+                "superclassifier": {
+                    "name": "QualifiedName",
+                    "names": [name],
+                },
+            })
+        
+        package = {
+            "name": "SubclassificationPart",
+            "ownedRelationship": relationships,
+        }
+        self.grammar.definition.declaration.subclassificationpart = (
+            SubclassificationPart(package)
+        )
+        return self
+
+    def _set_subsets(self, *parents):
+        """Set subsetting (`:>`) for usage elements.
+        
+        In SysML v2: `part myEng :> eng;`
+        
+        Args:
+            *parents: One or more elements to subset.
+        """
+        if "definition" in self.grammar.__dict__:
+            raise ValueError(
+                "Definition elements cannot use subsets. "
+                "Use _set_specializes() for definitions."
+            )
+        
+        names = [p.name if hasattr(p, 'name') else str(p) for p in parents]
+        relationships = []
+        for name in names:
+            relationships.append({
+                "name": "OwnedSubsetting",
+                "subsettedFeature": {
+                    "name": "QualifiedName",
+                    "names": [name],
+                },
+                "ownedRelatedElement": [],
+            })
+        
+        package = {
+            "name": "Subsettings",
+            "ownedRelationship": relationships,
+        }
+        package = {
+            "name": "FeatureSpecialization",
+            "ownedRelationship": package,
+        }
+        package = {
+            "name": "FeatureSpecializationPart",
+            "specialization": [package],
+            "multiplicity": None,
+            "specialization2": [],
+            "multiplicity2": None,
+        }
+        self.grammar.usage.declaration.declaration.specialization = (
+            FeatureSpecializationPart(package)
+        )
+        return self
+
+    def _set_redefines(self, parent):
+        """Set redefinition (`:>>`) for usage elements.
+        
+        In SysML v2: `attribute :>> mass = 100;`
+        
+        Args:
+            parent: The element being redefined.
+        """
+        if "definition" in self.grammar.__dict__:
+            raise ValueError("Definition elements cannot use redefines.")
+        
+        name = parent.name if hasattr(parent, 'name') else str(parent)
+        
+        package = {
+            "name": "OwnedRedefinition",
+            "redefinedFeature": {
+                "name": "QualifiedName",
+                "names": [name],
+            },
+            "ownedRelatedElement": [],
+        }
+        package = {
+            "name": "Redefinitions",
+            "ownedRelationship": [package],
+        }
+        package = {
+            "name": "FeatureSpecialization",
+            "ownedRelationship": package,
+        }
+        package = {
+            "name": "FeatureSpecializationPart",
+            "specialization": [package],
+            "multiplicity": None,
+            "specialization2": [],
+            "multiplicity2": None,
+        }
+        self.grammar.usage.declaration.declaration.specialization = (
+            FeatureSpecializationPart(package)
+        )
         return self
 
     def _get_grammar(self):
@@ -829,10 +951,29 @@ class Action(Usage):
             else:
                 params.append(f"out {out_name}")
         
+        # Build type/specialization suffix
+        type_suffix = ""
+        if hasattr(self, '_typed_by_name') and self._typed_by_name:
+            type_suffix = f" : {self._typed_by_name}"
+        elif hasattr(self, '_specializes_names') and self._specializes_names:
+            type_suffix = " :> " + ", ".join(self._specializes_names)
+        
         if params:
-            return f"{keyword} {name_str} {{ " + "; ".join(params) + "; }"
+            return f"{keyword} {name_str}{type_suffix} {{ " + "; ".join(params) + "; }"
         else:
-            return f"{keyword} {name_str};"
+            return f"{keyword} {name_str}{type_suffix};"
+
+    def _set_typed_by(self, typed):
+        """Set typing (`:`) for action usage typed by action definition."""
+        self._typed_by_name = typed.name if hasattr(typed, 'name') else str(typed)
+        return self
+
+    def _set_specializes(self, *parents):
+        """Set specialization (`:>`) for action definitions."""
+        self._specializes_names = [
+            p.name if hasattr(p, 'name') else str(p) for p in parents
+        ]
+        return self
 
 
 class Reference(Usage):
