@@ -809,17 +809,185 @@ class Item(Usage):
 
 
 class Port(Usage):
-    def __init__(self, definition=False, name=None, shortname=None):
+    def __init__(self, definition=False, name=None, shortname=None, conjugated=False):
         Usage.__init__(self)
         if definition:
             self.grammar = PortDefinition()
         else:
             self.grammar = PortUsage()
 
+        self.is_definition = definition
+        self.conjugated = conjugated
+        self.port_attributes = []  # list of (name, type_name)
+        self.port_in_items = []  # list of (name, type_name)
+        self.port_out_items = []  # list of (name, type_name)
+        self.port_inout_items = []  # list of (name, type_name)
+
         if name is not None:
             self._set_name(name)
         if shortname is not None:
             self._set_name(shortname, short=True)
+
+    def add_attribute(self, name, type_name=None):
+        """Add an attribute to the port definition.
+
+        Args:
+            name: Attribute name
+            type_name: Optional type
+        """
+        self.port_attributes.append((name, type_name))
+        return self
+
+    def add_in_item(self, name, type_name=None):
+        """Add an input item to the port definition.
+
+        Args:
+            name: Item name
+            type_name: Optional type
+        """
+        self.port_in_items.append((name, type_name))
+        return self
+
+    def add_out_item(self, name, type_name=None):
+        """Add an output item to the port definition.
+
+        Args:
+            name: Item name
+            type_name: Optional type
+        """
+        self.port_out_items.append((name, type_name))
+        return self
+
+    def add_inout_item(self, name, type_name=None):
+        """Add an inout item to the port definition.
+
+        Args:
+            name: Item name
+            type_name: Optional type
+        """
+        self.port_inout_items.append((name, type_name))
+        return self
+
+    def dump(self, child=None):
+        # Check if we have enhanced features
+        has_port_features = (
+            self.port_attributes or self.port_in_items
+            or self.port_out_items or self.port_inout_items
+        )
+
+        if not has_port_features:
+            # Use standard grammar dump for basic ports
+            return classtree(self._get_definition(child)).dump()
+
+        # Enhanced dump with in/out items
+        keyword = "port def" if self.is_definition else "port"
+        name_str = getattr(self, 'name', "") or ""
+
+        body_items = []
+        for attr_name, attr_type in self.port_attributes:
+            if attr_type:
+                body_items.append(f"attribute {attr_name} : {attr_type}")
+            else:
+                body_items.append(f"attribute {attr_name}")
+
+        for item_name, item_type in self.port_out_items:
+            if item_type:
+                body_items.append(f"out item {item_name} : {item_type}")
+            else:
+                body_items.append(f"out item {item_name}")
+
+        for item_name, item_type in self.port_in_items:
+            if item_type:
+                body_items.append(f"in item {item_name} : {item_type}")
+            else:
+                body_items.append(f"in item {item_name}")
+
+        for item_name, item_type in self.port_inout_items:
+            if item_type:
+                body_items.append(f"inout item {item_name} : {item_type}")
+            else:
+                body_items.append(f"inout item {item_name}")
+
+        return f"{keyword} {name_str} {{\n   " + ";\n   ".join(body_items) + ";\n}"
+
+
+class Interface(Usage):
+    def __init__(self, definition=False, name=None, shortname=None):
+        self.is_definition = definition
+        self.name = name if name else str(uuidlib.uuid4())
+        self.children = []
+        self.typedby = None
+        self.grammar = True
+        self.iface_shortname = shortname
+        self.ends = []  # list of (name, type_name, multiplicity, children)
+        self.connections = []  # list of (from_path, to_path)
+
+        if definition:
+            self.keyword = "interface def"
+        else:
+            self.keyword = "interface"
+
+    def add_end(self, name, type_name=None, multiplicity=None):
+        """Add an end to the interface definition.
+
+        Args:
+            name: End name
+            type_name: Optional type (e.g., 'FuelOutPort')
+            multiplicity: Optional multiplicity (e.g., '1', '1..*')
+        """
+        self.ends.append((name, type_name, multiplicity))
+        return self
+
+    def add_connection(self, from_path, to_path):
+        """Add a connection between ends.
+
+        Args:
+            from_path: Source path (e.g., 'suppliedBy.hot')
+            to_path: Target path (e.g., 'deliveredTo.hot')
+        """
+        self.connections.append((from_path, to_path))
+        return self
+
+    def _set_typed_by(self, typed):
+        """Set typing (`:`) for interface usage."""
+        self._typed_by_name = typed.name if hasattr(typed, 'name') else str(typed)
+        return self
+
+    def _set_specializes(self, *parents):
+        """Set specialization (`:>`) for interface definitions."""
+        self._specializes_names = [
+            p.name if hasattr(p, 'name') else str(p) for p in parents
+        ]
+        return self
+
+    def dump(self):
+        name_str = getattr(self, 'name', "") or ""
+        keyword = getattr(self, 'keyword', 'interface')
+
+        # Build type/specialization suffix
+        type_suffix = ""
+        if hasattr(self, '_typed_by_name') and self._typed_by_name:
+            type_suffix = f" : {self._typed_by_name}"
+        elif hasattr(self, '_specializes_names') and self._specializes_names:
+            type_suffix = " :> " + ", ".join(self._specializes_names)
+
+        body_items = []
+
+        for end_name, end_type, end_mult in self.ends:
+            mult_str = f"[{end_mult}]" if end_mult else ""
+            if end_type:
+                body_items.append(f"end {end_name} : {end_type}{mult_str};")
+            else:
+                body_items.append(f"end {end_name}{mult_str};")
+
+        for from_path, to_path in self.connections:
+            body_items.append(f"connect {from_path} to {to_path};")
+
+        if body_items:
+            body = " {\n   " + "\n   ".join(body_items) + "\n}"
+            return f"{keyword} {name_str}{type_suffix}{body}"
+        else:
+            return f"{keyword} {name_str}{type_suffix};"
 
 
 class Action(Usage):
