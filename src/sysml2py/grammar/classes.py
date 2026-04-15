@@ -168,6 +168,10 @@ class DefinitionElement:
                 self.children.append(
                     AnalysisCaseDefinition(definition["ownedRelatedElement"])
                 )
+            elif de == "UseCaseDefinition":
+                self.children.append(
+                    UseCaseDefinition(definition["ownedRelatedElement"])
+                )
             else:
                 print(de)  # pragma: no cover
                 raise NotImplementedError  # pragma: no cover
@@ -214,17 +218,103 @@ class AnalysisCaseDefinition:
         return " ".join(output)
 
 
-class CaseBody:
-    def __init__(self, definition):
-        if valid_definition(definition, self.__class__.__name__):
-            self.items = []
-            for item in definition["item"]:
-                self.items.append(CaseBodyItem(item))
+class UseCaseDefinition:
+    # UseCaseDefinition :
+    # 	OccurrenceDefinitionPrefix UseCaseDefKeyword DefinitionDeclaration CaseBody
+    # ;
+    def __init__(self, definition=None):
+        self.prefix = None
+        self.keyword = "use case def"
+        self.declaration = None
+        if definition is not None:
+            if valid_definition(definition, self.__class__.__name__):
+                if definition["prefix"] is not None:
+                    self.prefix = OccurrenceDefinitionPrefix(definition["prefix"])
+                if definition["declaration"] is not None:
+                    self.declaration = DefinitionDeclaration(definition["declaration"])
+                self.body = CaseBody(definition["body"])
+        else:
+            self.declaration = DefinitionDeclaration()
+            self.body = CaseBody(None)
 
-            if definition["ownedRelationship"] is not None:
-                self.child = ResultExpressionMember(definition["ownedRelationship"])
-            else:
-                self.child = None
+    def dump(self):
+        output = []
+        if self.prefix is not None:
+            output.append(self.prefix.dump())
+        output.append(self.keyword)
+        if self.declaration is not None:
+            output.append(self.declaration.dump())
+        output.append(self.body.dump())
+        return " ".join(output)
+
+    def get_definition(self):
+        output = {
+            "name": self.__class__.__name__,
+            "prefix": None,
+        }
+        if self.prefix is not None:
+            output["prefix"] = self.prefix.get_definition()
+        if self.declaration is not None:
+            output["declaration"] = self.declaration.get_definition()
+        else:
+            output["declaration"] = None
+        output["body"] = self.body.get_definition()
+        return output
+
+
+class UseCaseUsage:
+    # UseCaseUsage :
+    # 	OccurrenceUsagePrefix UseCaseUsageKeyword CalculationUsageDeclaration CaseBody
+    # ;
+    def __init__(self, definition=None):
+        self.prefix = None
+        self.keyword = "use case"
+        if definition is not None:
+            if valid_definition(definition, self.__class__.__name__):
+                if definition["prefix"] is not None:
+                    self.prefix = OccurrenceUsagePrefix(definition["prefix"])
+                self.declaration = CalculationUsageDeclaration(definition["declaration"])
+                self.body = CaseBody(definition["body"])
+        else:
+            self.declaration = CalculationUsageDeclaration(None)
+            self.body = CaseBody(None)
+
+    def dump(self):
+        output = []
+        if self.prefix is not None:
+            output.append(self.prefix.dump())
+        output.append(self.keyword)
+        output.append(self.declaration.dump())
+        output.append(self.body.dump())
+        return " ".join(output)
+
+    def get_definition(self):
+        output = {
+            "name": self.__class__.__name__,
+            "prefix": None,
+        }
+        if self.prefix is not None:
+            output["prefix"] = self.prefix.get_definition()
+        output["declaration"] = self.declaration.get_definition()
+        output["body"] = self.body.get_definition()
+        return output
+
+
+class CaseBody:
+    def __init__(self, definition=None):
+        if definition is not None:
+            if valid_definition(definition, self.__class__.__name__):
+                self.items = []
+                for item in definition["item"]:
+                    self.items.append(CaseBodyItem(item))
+
+                if definition["ownedRelationship"] is not None:
+                    self.child = ResultExpressionMember(definition["ownedRelationship"])
+                else:
+                    self.child = None
+        else:
+            self.items = []
+            self.child = None
 
     def dump(self):
         if len(self.items) == 0:
@@ -1873,14 +1963,15 @@ class CalculationUsage:
 
 
 class CalculationUsageDeclaration:
-    def __init__(self, definition):
+    def __init__(self, definition=None):
         self.declaration = None
         self.valuepart = None
-        if valid_definition(definition, self.__class__.__name__):
-            if definition["declaration"] is not None:
-                self.declaration = UsageDeclaration(definition["declaration"])
-            if definition["valuepart"] is not None:
-                self.valuepart = ValuePart(definition["valuepart"])
+        if definition is not None:
+            if valid_definition(definition, self.__class__.__name__):
+                if definition["declaration"] is not None:
+                    self.declaration = UsageDeclaration(definition["declaration"])
+                if definition["valuepart"] is not None:
+                    self.valuepart = ValuePart(definition["valuepart"])
 
     def dump(self):
         output = []

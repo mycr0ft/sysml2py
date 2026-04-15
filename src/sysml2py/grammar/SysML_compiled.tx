@@ -1984,11 +1984,11 @@ UseCaseUsageKeyword:
 ;
 
 UseCaseDefinition:
-	OccurrenceDefinitionPrefix UseCaseDefKeyword DefinitionDeclaration CaseBody
+	prefix=OccurrenceDefinitionPrefix UseCaseDefKeyword declaration=DefinitionDeclaration body=CaseBody
 ;
 
 UseCaseUsage:
-	OccurrenceUsagePrefix UseCaseUsageKeyword CalculationUsageDeclaration CaseBody
+	prefix=OccurrenceUsagePrefix UseCaseUsageKeyword declaration=CalculationUsageDeclaration body=CaseBody
 ;
 
 IncludeUseCaseUsage:

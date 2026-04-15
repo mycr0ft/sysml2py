@@ -976,6 +976,101 @@ class Action(Usage):
         return self
 
 
+class UseCase(Usage):
+    def __init__(self, definition=False, name=None, shortname=None):
+        self.is_definition = definition
+        self.name = name if name else str(uuidlib.uuid4())
+        self.children = []
+        self.typedby = None
+        self.grammar = True
+        self.subject = None  # (name, type_name)
+        self.actors = []  # list of (name, type_name)
+        self.includes = []  # list of use case names
+        
+        if definition:
+            self.keyword = "use case def"
+        else:
+            self.keyword = "use case"
+
+    def set_subject(self, name, type_name=None):
+        """Set the subject of the use case.
+        
+        Args:
+            name: Name of the subject
+            type_name: Optional type (e.g., 'Vehicle')
+        """
+        self.subject = (name, type_name)
+        return self
+
+    def add_actor(self, name, type_name=None):
+        """Add an actor to the use case.
+        
+        Args:
+            name: Name of the actor
+            type_name: Optional type (e.g., 'Driver')
+        """
+        self.actors.append((name, type_name))
+        return self
+
+    def add_include(self, use_case):
+        """Add an included use case.
+        
+        Args:
+            use_case: UseCase object or name string to include
+        """
+        name = use_case.name if hasattr(use_case, 'name') else str(use_case)
+        self.includes.append(name)
+        return self
+
+    def _set_typed_by(self, typed):
+        """Set typing (`:`) for use case usage."""
+        self._typed_by_name = typed.name if hasattr(typed, 'name') else str(typed)
+        return self
+
+    def _set_specializes(self, *parents):
+        """Set specialization (`:>`) for use case definitions."""
+        self._specializes_names = [
+            p.name if hasattr(p, 'name') else str(p) for p in parents
+        ]
+        return self
+
+    def dump(self):
+        name_str = getattr(self, 'name', "") or ""
+        keyword = getattr(self, 'keyword', 'use case')
+        
+        # Build type/specialization suffix
+        type_suffix = ""
+        if hasattr(self, '_typed_by_name') and self._typed_by_name:
+            type_suffix = f" : {self._typed_by_name}"
+        elif hasattr(self, '_specializes_names') and self._specializes_names:
+            type_suffix = " :> " + ", ".join(self._specializes_names)
+        
+        # Build body members
+        body_items = []
+        
+        if self.subject:
+            subj_name, subj_type = self.subject
+            if subj_type:
+                body_items.append(f"subject {subj_name} : {subj_type};")
+            else:
+                body_items.append(f"subject {subj_name};")
+        
+        for actor_name, actor_type in self.actors:
+            if actor_type:
+                body_items.append(f"actor {actor_name} : {actor_type};")
+            else:
+                body_items.append(f"actor {actor_name};")
+        
+        for inc in self.includes:
+            body_items.append(f"include use case {inc};")
+        
+        if body_items:
+            body = " {\n   " + "\n   ".join(body_items) + "\n}"
+            return f"{keyword} {name_str}{type_suffix}{body}"
+        else:
+            return f"{keyword} {name_str}{type_suffix};"
+
+
 class Reference(Usage):
     def __init__(self, name=None, shortname=None, redefines=None):
         self.name = name if name else str(uuidlib.uuid4())
