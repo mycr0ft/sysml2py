@@ -1071,6 +1071,149 @@ class UseCase(Usage):
             return f"{keyword} {name_str}{type_suffix};"
 
 
+class Requirement(Usage):
+    def __init__(self, definition=False, name=None, shortname=None):
+        self.is_definition = definition
+        self.name = name if name else str(uuidlib.uuid4())
+        self.children = []
+        self.typedby = None
+        self.grammar = True
+        self.req_shortname = shortname
+        self.subject = None  # (name, type_name)
+        self.actors = []  # list of (name, type_name)
+        self.doc = None  # doc string
+        self.attributes = []  # list of (name, type_name)
+        self.constraints = []  # list of constraint strings
+        self.assume_constraints = []  # list of assume constraint strings
+
+        if definition:
+            self.keyword = "requirement def"
+        else:
+            self.keyword = "requirement"
+
+    def set_subject(self, name, type_name=None):
+        """Set the subject of the requirement.
+
+        Args:
+            name: Name of the subject
+            type_name: Optional type (e.g., 'Vehicle')
+        """
+        self.subject = (name, type_name)
+        return self
+
+    def add_actor(self, name, type_name=None):
+        """Add an actor to the requirement.
+
+        Args:
+            name: Name of the actor
+            type_name: Optional type
+        """
+        self.actors.append((name, type_name))
+        return self
+
+    def set_doc(self, text):
+        """Set the documentation string.
+
+        Args:
+            text: Documentation text
+        """
+        self.doc = text
+        return self
+
+    def add_attribute(self, name, type_name=None):
+        """Add an attribute to the requirement.
+
+        Args:
+            name: Attribute name
+            type_name: Optional type
+        """
+        self.attributes.append((name, type_name))
+        return self
+
+    def add_constraint(self, expr):
+        """Add a require constraint expression.
+
+        Args:
+            expr: Constraint expression string (e.g., 'massActual <= massReqd')
+        """
+        self.constraints.append(expr)
+        return self
+
+    def add_assume_constraint(self, expr):
+        """Add an assume constraint expression.
+
+        Args:
+            expr: Assume constraint expression string
+        """
+        self.assume_constraints.append(expr)
+        return self
+
+    def _set_typed_by(self, typed):
+        """Set typing (`:`) for requirement usage."""
+        self._typed_by_name = typed.name if hasattr(typed, 'name') else str(typed)
+        return self
+
+    def _set_specializes(self, *parents):
+        """Set specialization (`:>`) for requirement definitions."""
+        self._specializes_names = [
+            p.name if hasattr(p, 'name') else str(p) for p in parents
+        ]
+        return self
+
+    def dump(self):
+        name_str = getattr(self, 'name', "") or ""
+        keyword = getattr(self, 'keyword', 'requirement')
+
+        # Add shortname
+        shortname_str = ""
+        if self.req_shortname:
+            shortname_str = f" <{self.req_shortname}>"
+
+        # Build type/specialization suffix
+        type_suffix = ""
+        if hasattr(self, '_typed_by_name') and self._typed_by_name:
+            type_suffix = f" : {self._typed_by_name}"
+        elif hasattr(self, '_specializes_names') and self._specializes_names:
+            type_suffix = " :> " + ", ".join(self._specializes_names)
+
+        # Build body members
+        body_items = []
+
+        if self.doc:
+            body_items.append(f"doc /* {self.doc} */")
+
+        if self.subject:
+            subj_name, subj_type = self.subject
+            if subj_type:
+                body_items.append(f"subject {subj_name} : {subj_type};")
+            else:
+                body_items.append(f"subject {subj_name};")
+
+        for actor_name, actor_type in self.actors:
+            if actor_type:
+                body_items.append(f"actor {actor_name} : {actor_type};")
+            else:
+                body_items.append(f"actor {actor_name};")
+
+        for attr_name, attr_type in self.attributes:
+            if attr_type:
+                body_items.append(f"attribute {attr_name} : {attr_type};")
+            else:
+                body_items.append(f"attribute {attr_name};")
+
+        for expr in self.constraints:
+            body_items.append(f"require constraint {{ {expr} }}")
+
+        for expr in self.assume_constraints:
+            body_items.append(f"assume constraint {{ {expr} }}")
+
+        if body_items:
+            body = " {\n   " + "\n   ".join(body_items) + "\n}"
+            return f"{keyword}{shortname_str} {name_str}{type_suffix}{body}"
+        else:
+            return f"{keyword}{shortname_str} {name_str}{type_suffix};"
+
+
 class Reference(Usage):
     def __init__(self, name=None, shortname=None, redefines=None):
         self.name = name if name else str(uuidlib.uuid4())
