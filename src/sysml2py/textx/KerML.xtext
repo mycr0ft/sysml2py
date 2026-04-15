@@ -1,6 +1,6 @@
 /*****************************************************************************
  * SysML 2 Pilot Implementation
- * Copyright (c) 2018-2023 Model Driven Solutions, Inc.
+ * Copyright (c) 2018-2025 Model Driven Solutions, Inc.
  * Copyright (c) 2018 IncQuery Labs Ltd.
  * Copyright (c) 2019 Maplesoft (Waterloo Maple, Inc.)
  * Copyright (c) 2019 Mgnite Inc.
@@ -31,7 +31,7 @@
 grammar org.omg.kerml.xtext.KerML with org.omg.kerml.expressions.xtext.KerMLExpressions
 
 import "http://www.eclipse.org/emf/2002/Ecore" as Ecore
-import "https://www.omg.org/spec/SysML/20230201" as SysML
+import "https://www.omg.org/spec/SysML/20250201" as SysML
 
 /* ROOT NAMESPACE */
 
@@ -97,11 +97,14 @@ Comment returns SysML::Comment :
 	  ('about' ownedRelationship += Annotation
 	     ( ',' ownedRelationship += Annotation )* )? 
 	)?
+	( 'locale' locale = STRING_VALUE )?
 	body = REGULAR_COMMENT
 ;
 
 Documentation returns SysML::Documentation :
-	'doc' Identification? body = REGULAR_COMMENT
+	'doc' Identification? 
+	( 'locale' locale = STRING_VALUE )?
+	body = REGULAR_COMMENT
 ;
 
 /* Textual Representation */
@@ -165,7 +168,7 @@ AliasMember returns SysML::Membership :
 ;
 
 fragment ImportPrefix returns SysML::Import :
-	( visibility = VisibilityIndicator )?  
+	visibility = VisibilityIndicator  
 	'import' ( isImportAll ?= 'all' )?
 ;
 
@@ -268,8 +271,8 @@ FeatureElement returns SysML::Feature :
 	| Connector
 	| BindingConnector
 	| Succession
-	| ItemFlow
-	| SuccessionItemFlow
+	| Flow
+	| SuccessionFlow
 ;
 
 /* PACKAGES */
@@ -322,7 +325,7 @@ Type returns SysML::Type :
 fragment TypeDeclaration returns SysML::Type : 
     ( isSufficient ?= 'all' )? Identification?
     ( ownedRelationship += OwnedMultiplicity )? 
-    ( SpecializationPart | ConjugationPart )+
+    ( SpecializationPart | ConjugationPart )
     TypeRelationshipPart*
 ;
 
@@ -506,22 +509,40 @@ enum FeatureDirection returns SysML::FeatureDirectionKind:
 	in = 'in' | out = 'out' | inout = 'inout'
 ;
 
-fragment FeaturePrefix returns SysML::Feature :	
+fragment EndFeaturePrefix returns SysML::Feature :
+    ( isConstant ?= 'const')? isEnd ?= 'end'
+;
+
+fragment BasicFeaturePrefix returns SysML::Feature :	
 	( direction = FeatureDirection )?
+	( isDerived ?= 'derived' )?
 	( isAbstract ?= 'abstract' )?
 	( isComposite ?= 'composite' | isPortion ?= 'portion' )? 
-	( isReadOnly ?= 'readonly' )?
-	( isDerived ?= 'derived' )?
-	( isEnd ?= 'end' )?
+	( isVariable ?= 'var' | isConstant ?= 'const' )?
+;
+
+fragment FeaturePrefix returns SysML::Feature :
+	( EndFeaturePrefix ( ownedRelationship += OwnedCrossingFeatureMember )?
+	| BasicFeaturePrefix
+	)
 	( ownedRelationship += PrefixMetadataMember )*
 ;
 
+OwnedCrossingFeatureMember returns SysML::OwningMembership :
+	ownedRelatedElement += OwnedCrossingFeature
+;
+
+OwnedCrossingFeature returns SysML::Feature :
+	BasicFeaturePrefix FeatureDeclaration
+;
+
 Feature returns SysML::Feature :
-	FeaturePrefix
-	( 'feature'? FeatureDeclaration
-	| ownedRelationship += PrefixMetadataMember
-	| 'feature'
-	) 
+	( FeaturePrefix
+	  ( 'feature' | ownedRelationship += PrefixMetadataMember ) 
+	  FeatureDeclaration?
+	| ( EndFeaturePrefix | BasicFeaturePrefix )
+	  FeatureDeclaration
+	)
 	ValuePart? TypeBody
 ;
 
@@ -559,13 +580,18 @@ fragment FeatureSpecializationPart returns SysML::Feature :
 fragment MultiplicityPart returns SysML::Feature :
 	  ownedRelationship += OwnedMultiplicity 
 	| ( ownedRelationship += OwnedMultiplicity )?
-	  ( isOrdered ?= 'ordered' isNonunique ?= 'nonunique'?
-	  | isNonunique ?= 'nonunique' isOrdered ?= 'ordered'?
+	  ( isOrdered ?= 'ordered' ( isUnique = Nonunique )?
+	  | isUnique = Nonunique ( isOrdered ?= 'ordered' )?
 	  )
 ;
 
+Nonunique returns Ecore::EBoolean :
+	// Note: A value converter converts the value of this keyword to "false".
+	'nonunique'
+;
+
 fragment FeatureSpecialization returns SysML::Feature :
-	Typings | Subsettings | References | Redefinitions
+	Typings | Subsettings | References | Crossings | Redefinitions
 ;
 
 fragment Typings returns SysML::Feature :
@@ -590,6 +616,10 @@ fragment References returns SysML::Feature :
 
 ReferencesKeyword :
 	'::>' | 'references'
+;
+
+fragment Crossings returns SysML::Feature :
+	( '=>' | 'crosses' ) ownedRelationship += OwnedCrossSubsetting
 ;
 
 fragment Redefinitions returns SysML::Feature :
@@ -640,7 +670,6 @@ FeatureTyping returns SysML::FeatureTyping :
     RelationshipBody
 ;
 
-@Override
 OwnedFeatureTyping returns SysML::FeatureTyping :
 	FeatureType
 ;
@@ -671,6 +700,12 @@ OwnedSubsetting returns SysML::Subsetting:
 OwnedReferenceSubsetting returns SysML::ReferenceSubsetting:
 	  referencedFeature = [SysML::Feature | QualifiedName]
 	| ownedRelatedElement += OwnedFeatureChain
+;
+
+OwnedCrossSubsetting returns SysML::CrossSubsetting :
+	( crossedFeature = [SysML::Feature | QualifiedName]
+	| ownedRelatedElement += OwnedFeatureChain
+	)
 ;
 
 /* Redefinition */
@@ -705,51 +740,14 @@ FeatureConjugation returns SysML::Conjugation :
 
 fragment ValuePart returns SysML::Feature :
 	  ownedRelationship += FeatureValue
-	| ownedRelationship += FeatureValueExpression
-	  ownedRelationship += EmptyFeatureWriteMember
 ;
 
 FeatureValue returns SysML::FeatureValue :
-	( '=' | isDefault ?= 'default' ( '=' | isInitial ?= ':=' )? )
+	( '=' 
+	| isInitial ?= ':='
+	| isDefault ?= 'default' ( '=' | isInitial ?= ':=' )?
+	)
 	ownedRelatedElement += OwnedExpression
-;
-
-FeatureValueExpression returns SysML::FeatureValue :
-	isInitial ?= ':='
-	ownedRelatedElement += OwnedExpression
-;
-
-EmptyFeatureWriteMember returns SysML::OwningMembership :
-	ownedRelatedElement += EmptyFeatureWrite 
-;
-
-EmptyFeatureWrite returns SysML::Step :
-	ownedRelationship += EmptyTargetMember
-	ownedRelationship += EmptyParameterMember
-;
-
-EmptyTargetMember returns SysML::ParameterMembership :
-	ownedRelatedElement += EmptyTargetParameter
-;
-
-EmptyTargetParameter returns SysML::ReferenceUsage :
-	ownedRelationship += TargetFeatureMember
-;
-
-TargetFeatureMember returns SysML::FeatureMembership :
-	ownedRelatedElement += TargetFeature 
-;
-
-TargetFeature returns SysML::Feature :
-	ownedRelationship += EmptyFeatureMember
-;
-
-EmptyFeatureMember returns SysML::FeatureMembership :
-	ownedRelatedElement += EmptyFeature 
-;
-
-EmptyParameterMember returns SysML::ParameterMembership :
-	ownedRelatedElement += EmptyFeature
 ;
 
 /* MULTIPLICITIES */
@@ -826,7 +824,10 @@ AssociationStructure returns SysML::AssociationStructure :
 
 Connector returns SysML::Connector :	 
 	FeaturePrefix 'connector' 
-	ConnectorDeclaration TypeBody	  
+	( FeatureDeclaration? ValuePart?
+	| ConnectorDeclaration
+	) 
+	TypeBody	  
 ;
 
 fragment ConnectorDeclaration returns SysML::Connector :
@@ -840,11 +841,11 @@ fragment BinaryConnectorDeclaration returns SysML::Connector :
 ;
 
 fragment NaryConnectorDeclaration returns SysML::Connector :
-	FeatureDeclaration?
-	( '(' ownedRelationship += ConnectorEndMember ',' 
-	      ownedRelationship += ConnectorEndMember
-	      ( ',' ownedRelationship += ConnectorEndMember )* 
-	  ')' )?
+	FeatureDeclaration? 
+	'(' ownedRelationship += ConnectorEndMember ',' 
+	    ownedRelationship += ConnectorEndMember
+	    ( ',' ownedRelationship += ConnectorEndMember )* 
+	')'
 ;
 
 ConnectorEndMember returns SysML::EndFeatureMembership :
@@ -852,9 +853,17 @@ ConnectorEndMember returns SysML::EndFeatureMembership :
 ;
 
 ConnectorEnd returns SysML::Feature :
+	( ownedRelationship += OwnedCrossingMultiplicityMember )?
 	( declaredName = Name ReferencesKeyword )? 
 	ownedRelationship += OwnedReferenceSubsetting
-	( ownedRelationship += OwnedMultiplicity )?
+;
+
+OwnedCrossingMultiplicityMember returns SysML::OwningMembership :
+	ownedRelatedElement += OwnedCrossingMultiplicity
+;
+
+OwnedCrossingMultiplicity returns SysML::Feature :
+	ownedRelationship += OwnedMultiplicity
 ;
 
 /* Binding Connectors */
@@ -983,53 +992,53 @@ Interaction returns SysML::Interaction :
 	ClassifierDeclaration TypeBody
 ;
 
-/* Item Flows */
+/* Flows */
 
-ItemFlow returns SysML::ItemFlow :
+Flow returns SysML::Flow :
 	FeaturePrefix 'flow' 
-	ItemFlowDeclaration TypeBody
+	FlowDeclaration TypeBody
 ;
 
-SuccessionItemFlow returns SysML::SuccessionItemFlow :
-	FeaturePrefix 'succession' 'flow' ItemFlowDeclaration TypeBody
+SuccessionFlow returns SysML::SuccessionFlow :
+	FeaturePrefix 'succession' 'flow' FlowDeclaration TypeBody
 ;
 
-fragment ItemFlowDeclaration returns SysML::ItemFlow :
+fragment FlowDeclaration returns SysML::Flow :
 	  FeatureDeclaration? ValuePart?
-      ( 'of'  ownedRelationship += ItemFeatureMember )?
-	  ( 'from' ownedRelationship += ItemFlowEndMember 
-	    'to' ownedRelationship += ItemFlowEndMember )?
+      ( 'of'  ownedRelationship += PayloadFeatureMember )?
+	  ( 'from' ownedRelationship += FlowEndMember 
+	    'to' ownedRelationship += FlowEndMember )?
     | ( isSufficient ?= 'all' )?
-      ownedRelationship += ItemFlowEndMember 'to'
-	  ownedRelationship += ItemFlowEndMember
+      ownedRelationship += FlowEndMember 'to'
+	  ownedRelationship += FlowEndMember
 ;
 
-ItemFeatureMember returns SysML::FeatureMembership :
-	ownedRelatedElement += ItemFeature 
+PayloadFeatureMember returns SysML::FeatureMembership :
+	ownedRelatedElement += PayloadFeature 
 ;
 
-ItemFeature returns SysML::ItemFeature :
-	  Identification? ItemFeatureSpecializationPart ValuePart?
+PayloadFeature returns SysML::PayloadFeature :
+	  Identification? PayloadFeatureSpecializationPart ValuePart?
 	| Identification? ValuePart
     | ownedRelationship += OwnedFeatureTyping ( ownedRelationship += OwnedMultiplicity )?
     | ownedRelationship += OwnedMultiplicity ownedRelationship += OwnedFeatureTyping
 ;
 
-fragment ItemFeatureSpecializationPart returns SysML::Feature :
+fragment PayloadFeatureSpecializationPart returns SysML::Feature :
 	  ( -> FeatureSpecialization )+ MultiplicityPart? FeatureSpecialization*
 	| MultiplicityPart FeatureSpecialization+
 ;
 
-ItemFlowEndMember returns SysML::EndFeatureMembership :
-	ownedRelatedElement += ItemFlowEnd 
+FlowEndMember returns SysML::EndFeatureMembership :
+	ownedRelatedElement += FlowEnd 
 ;
 
-ItemFlowEnd returns SysML::ItemFlowEnd :
-	( ownedRelationship += ItemFlowEndSubsetting )?
-	ownedRelationship += ItemFlowFeatureMember
+FlowEnd returns SysML::FlowEnd :
+	( ownedRelationship += FlowEndSubsetting )?
+	ownedRelationship += FlowFeatureMember
 ;
 
-ItemFlowEndSubsetting returns SysML::ReferenceSubsetting :
+FlowEndSubsetting returns SysML::ReferenceSubsetting :
 	  referencedFeature = [SysML::Feature | QualifiedName] '.'
 	| ownedRelatedElement += FeatureChainPrefix
 ;
@@ -1039,15 +1048,15 @@ FeatureChainPrefix returns SysML::Feature :
 	ownedRelationship += OwnedFeatureChaining '.'
 ;
 
-ItemFlowFeatureMember returns SysML::FeatureMembership :
-	ownedRelatedElement += ItemFlowFeature 
+FlowFeatureMember returns SysML::FeatureMembership :
+	ownedRelatedElement += FlowFeature 
 ;
 
-ItemFlowFeature returns SysML::Feature :
-	ownedRelationship += ItemFlowRedefinition
+FlowFeature returns SysML::Feature :
+	ownedRelationship += FlowRedefinition
 ;
 
-ItemFlowRedefinition returns SysML::Redefinition :
+FlowRedefinition returns SysML::Redefinition :
 	redefinedFeature = [SysML::Feature|QualifiedName]
 ;
 
@@ -1071,6 +1080,7 @@ PrefixMetadataFeature returns SysML::MetadataFeature :
 ;
 
 MetadataFeature returns SysML::MetadataFeature :
+	( ownedRelationship += PrefixMetadataMember )*
 	( '@' | 'metadata' ) MetadataFeatureDeclaration 
 	( 'about' ownedRelationship += Annotation 
 		( ',' ownedRelationship += Annotation )*
