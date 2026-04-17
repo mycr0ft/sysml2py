@@ -6,7 +6,7 @@ Created on Mon May 29 23:26:16 2023
 @author: christophercox
 """
 
-__all__ = ["load", "loads", "load_grammar"]
+__all__ = ["load", "loads", "load_grammar", "load_antlr", "loads_antlr", "load_grammar_antlr"]
 __author__ = "Jon Fox"
 __version__ = "0.5.3"
 
@@ -178,3 +178,92 @@ def loads(s: str):
 
     """
     return Model().load(s)
+
+
+def load_grammar_antlr(fp, debug=False):
+    """SysML load from file pointer using ANTLR4 parser.
+
+    Deserialize ``fp`` (a ``.read()``-supporting file-like object containing
+    a SysML v2.0 document) or ``s`` (a ``str`` instance containing a SysML
+    v2.0 document) to a Python dictionary object using the ANTLR4 parser.
+
+    Parameters
+    ----------
+    fp : _io.TextIOWrapper or str
+        File pointer to SysML v2.0 document or string instance of SysML v2.0
+        document
+
+    Returns
+    -------
+    dict
+        Dictionary version structured utilizing SysML v2.0 grammar (textX-compatible format).
+
+    Raises
+    ------
+    TypeError
+        Input was not _io.TextIOWrapper or str
+
+    """
+    import io
+    import sysml2py.antlr_visitor as antlr_visitor
+    import sysml2py.antlr_parser as antlr_parser
+
+    if isinstance(fp, io.TextIOWrapper):
+        s = fp.read()
+    elif isinstance(fp, str):
+        s = fp
+    else:
+        raise TypeError(
+            f"the SysML object must be _io.TextIOWrapper or str "
+            f"not {fp.__class__.__name__}"
+        )
+
+    try:
+        return antlr_visitor.parse_to_dict(s)
+    except antlr_parser.SysMLSyntaxError as e:
+        print("ANTLR4 returned the following error: {}".format(e))
+        raise
+
+
+def load_antlr(fp):
+    """SysML load from file pointer using ANTLR4 parser.
+
+    Deserialize ``fp`` (a ``.read()``-supporting file-like object containing
+    a SysML v2.0 document) to a Python dictionary object.
+
+    Parameters
+    ----------
+    fp : _io.TextIOWrapper
+        File pointer to SysML v2.0 document
+
+    Returns
+    -------
+    dict
+        Dictionary version structured utilizing SysML v2.0 grammar (textX-compatible format).
+
+    Raises
+    ------
+    TypeError
+        Input was not _io.TextIOWrapper
+
+    """
+    import io
+
+    if not isinstance(fp, io.TextIOWrapper):
+        raise TypeError(
+            f"the SysML object must be _io.TextIOWrapper, "
+            f"not {fp.__class__.__name__}"
+        )
+
+    return loads_antlr(fp.read())
+
+
+def loads_antlr(s: str):
+    """Loads a model from string using ANTLR4 parser.
+
+    This function allows a user to build a model from a string by
+    first instantiating a base model class which builds out a default namespace
+    and then that model loads all elements underneath, using the ANTLR4 parser.
+
+    """
+    return Model().load(s, parser='antlr')

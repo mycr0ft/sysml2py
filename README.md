@@ -8,11 +8,40 @@ classes consistent with the [SysML v2.0 standard](https://github.com/Systems-Mod
 This is a fork of the original project by [Christopher Cox](https://github.com/chriscox-westfall),
 maintained by [Jon Fox](mailto:jon.fox@drfox.com) at [mycr0ft/sysml2py](https://github.com/mycr0ft/sysml2py).
 
+**New in v0.6.0:** Experimental ANTLR4-based parser for automatic grammar updates from OMG specification!
+
 ## Requirements
 sysml2py requires the following Python packages:
-- [textX](https://github.com/textX/textX)
+- [textX](https://github.com/textX/textX) (or ANTLR4 - see below)
 - [pyyaml](https://github.com/yaml/pyyaml)
 - [pint](https://github.com/hgrecco/pint)
+- [antlr4-python3-runtime](https://github.com/antlr/antlr4) (for new ANTLR4 parser)
+
+## Parser Options
+
+sysml2py now supports two parser backends:
+
+### textX Parser (Default)
+The original parser using manually converted XText grammars. Stable and feature-complete.
+
+### ANTLR4 Parser (Experimental)
+A new parser using grammars auto-generated from the OMG specification. Provides automatic grammar updates from the official specification.
+
+To use the ANTLR4 parser:
+```python
+from sysml2py import loads_antlr
+
+model = loads_antlr('''
+package VehicleModel {
+    part def Vehicle {
+        attribute mass : Real;
+    }
+}
+''')
+print(model.dump())
+```
+
+See [ANTLR4 Parser Documentation](src/sysml2py/antlr/README.md) for details.
 
 ## Installation
 

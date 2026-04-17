@@ -423,19 +423,24 @@ class Usage:
         self.__init__()
         self.grammar = grammar
         children = []
-        if "usage" in self.grammar.__dict__:
-            # This is a usage
-            u_name = grammar.usage.declaration.declaration.identification.declaredName
-            a_children = grammar.usage.completion.body.body.children
-
-            for child in a_children:
-                children.append(child.children[0].children[0])
-        else:
-            # This is a definition
-            u_name = grammar.definition.declaration.identification.declaredName
-            a_children = grammar.definition.body.children
+        
+        # Check if this is a definition or usage
+        # Some definition types use 'definition' (PartDefinition, AttributeDefinition)
+        # Others use 'declaration' directly (RequirementDefinition, UseCaseDefinition)
+        defn = getattr(grammar, 'definition', None)
+        if defn:
+            # This type uses 'definition' (PartDefinition, etc.)
+            u_name = defn.declaration.identification.declaredName
+            a_children = defn.body.children
             if len(a_children) > 0:
                 children = a_children[0]
+        else:
+            # This type uses 'declaration' directly (RequirementDefinition, UseCaseDefinition)
+            decl = getattr(grammar, 'declaration', None)
+            if decl:
+                u_name = decl.identification.declaredName
+            else:
+                u_name = None
 
         if u_name is not None:
             self.name = u_name

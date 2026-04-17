@@ -20,7 +20,7 @@ from sysml2py.grammar.classes import (
 )
 from sysml2py.grammar.classes import Package as PackageGrammar
 
-from sysml2py import Part, Item
+from sysml2py import Part, Item, Port, Requirement, UseCase
 
 ModelType = TypeVar("Model", bound="Model")
 
@@ -32,11 +32,27 @@ class Model:
         self.typedby = None
         self.grammar = None
 
-    def load(self: type[ModelType], s: str) -> ModelType:
-        from sysml2py import load_grammar
-
-        # Try to load the grammar from the string
-        definition = load_grammar(s)["ownedRelationship"]
+    def load(self: type[ModelType], s: str, parser='textx') -> ModelType:
+        """Load a SysML model from a string.
+        
+        Parameters
+        ----------
+        s : str
+            The SysML source code to parse.
+        parser : str
+            The parser to use: 'textx' (default) or 'antlr'.
+        
+        Returns
+        -------
+        Model
+            The loaded model.
+        """
+        if parser == 'antlr':
+            from sysml2py import load_grammar_antlr
+            definition = load_grammar_antlr(s)["ownedRelationship"]
+        else:
+            from sysml2py import load_grammar
+            definition = load_grammar(s)["ownedRelationship"]
 
         # Add each sub-element to children.
         member_grammar = []
@@ -227,46 +243,49 @@ class Package:
         self.name = grammar.declaration.identification.declaredName
         self.grammar = grammar
         for child in grammar.body.children:
-            if child.children[0].__class__.__name__ == "UsageElement":
-                # PackageMember -> UsageElement
-                if (
-                    child.children[0].children.children.children.__class__.__name__
-                    == "ItemUsage"
-                ):
-                    self.children.append(
-                        Item().load_from_grammar(
-                            child.children[0].children.children.children
-                        )
-                    )
-                elif (
-                    child.children[0].children.children.children.__class__.__name__
-                    == "PartUsage"
-                ):
-                    self.children.append(
-                        Part().load_from_grammar(
-                            child.children[0].children.children.children
-                        )
-                    )
-                else:
-                    print(child.children[0].children[0].__class__.__name__)
-                    raise NotImplementedError
+            inner_element = child.children[0].children[0]
+            inner_class = inner_element.__class__.__name__
+            
+            if inner_class == "ItemUsage":
+                self.children.append(
+                    Item().load_from_grammar(inner_element)
+                )
+            elif inner_class == "PartUsage":
+                self.children.append(
+                    Part().load_from_grammar(inner_element)
+                )
+            elif inner_class == "PortUsage":
+                self.children.append(
+                    Port().load_from_grammar(inner_element)
+                )
+            elif inner_class == "Package":
+                self.children.append(
+                    Package().load_from_grammar(inner_element)
+                )
+            elif inner_class == "ItemDefinition":
+                self.children.append(
+                    Item().load_from_grammar(inner_element)
+                )
+            elif inner_class == "PartDefinition":
+                self.children.append(
+                    Part(definition=True).load_from_grammar(inner_element)
+                )
+            elif inner_class == "PortDefinition":
+                self.children.append(
+                    Port(definition=True).load_from_grammar(inner_element)
+                )
+            elif inner_class == "RequirementDefinition":
+                self.children.append(
+                    Requirement(definition=True).load_from_grammar(inner_element)
+                )
+            elif inner_class == "UseCaseDefinition":
+                self.children.append(
+                    UseCase(definition=True).load_from_grammar(inner_element)
+                )
             else:
-                # Not a UsageElement
-                if child.children[0].children[0].__class__.__name__ == "Package":
-                    self.children.append(
-                        Package().load_from_grammar(child.children[0].children[0])
-                    )
-                elif (
-                    child.children[0].children[0].__class__.__name__ == "ItemDefinition"
-                ):
-                    self.children.append(
-                        Item().load_from_grammar(child.children[0].children[0])
-                    )
-                else:
-                    print(child.children[0].children[0].__class__.__name__)
-                    raise NotImplementedError
+                print(f"Unknown class: {inner_class}")
+                raise NotImplementedError
 
-        # self.children.append()
         return self
 
     def _get_grammar(self):
