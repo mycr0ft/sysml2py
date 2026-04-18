@@ -20,7 +20,7 @@ from sysml2py.grammar.classes import (
 )
 from sysml2py.grammar.classes import Package as PackageGrammar
 
-from sysml2py import Part, Item, Port, Requirement, UseCase
+from sysml2py import Part, Item, Port, Requirement, UseCase, Attribute, Action
 
 ModelType = TypeVar("Model", bound="Model")
 
@@ -273,6 +273,14 @@ class Package:
             elif inner_class == "PortDefinition":
                 self.children.append(
                     Port(definition=True).load_from_grammar(inner_element)
+                )
+            elif inner_class == "AttributeDefinition":
+                self.children.append(
+                    Attribute(definition=True).load_from_grammar(inner_element)
+                )
+            elif inner_class == "ActionDefinition":
+                self.children.append(
+                    Action(definition=True).load_from_grammar(inner_element)
                 )
             elif inner_class == "RequirementDefinition":
                 self.children.append(
