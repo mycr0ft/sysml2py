@@ -1516,6 +1516,17 @@ class ActionDefinition:
         output.append(self.body.dump())
         return " ".join(output)
 
+    def get_definition(self):
+        output = {"name": self.__class__.__name__, "prefix": None}
+        if self.prefix is not None:
+            output["prefix"] = self.prefix.get_definition()
+        
+        # ActionDefinition uses 'declaration' directly (not wrapped in 'definition')
+        output["declaration"] = self.declaration.get_definition()
+        output["body"] = self.body.get_definition()
+        
+        return output
+
 
 class ActionBody:
     def __init__(self, definition=None):
@@ -1530,6 +1541,12 @@ class ActionBody:
             return ";"
         else:
             return " {\n" + "\n".join([x.dump() for x in self.children]) + "\n}"
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "items": [child.get_definition() for child in self.children]
+        }
 
 
 class ActionBodyItem:
@@ -1551,16 +1568,19 @@ class ActionBodyItem:
         for child in self.children:
             output.append(child.dump())
             if child.__class__.__name__ != "EmptySuccessionMember":
-                # Add a new line
                 output.append("\n")
             else:
-                # Otherwise add a space
                 output.append(" ")
 
         if output[-1] == "\n":
-            # Remove a extra new line
             output = output[:-1]
         return "".join(output)
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": [child.get_definition() for child in self.children]
+        }
 
 
 class ActionBodyItemTarget:

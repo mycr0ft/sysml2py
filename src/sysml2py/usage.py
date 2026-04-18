@@ -997,13 +997,19 @@ class Interface(Usage):
 
 class Action(Usage):
     def __init__(self, definition=False, name=None, shortname=None):
-        # Minimal init - don't call parent which requires grammar
+        # Initialize grammar properly (like Part does)
+        if definition:
+            self.grammar = ActionDefinition()
+            self.grammar.declaration.identification.declaredName = name if name else None
+        else:
+            self.grammar = ActionUsage()
+            self.grammar.declaration.identification.declaredName = name if name else None
+        
         self.is_definition = definition
         self.action_shortname = shortname
         self.name = name if name else str(uuidlib.uuid4())
         self.children = []
         self.typedby = None
-        self.grammar = True  # Mark as valid
         self.action_inputs = []  # List of (name, type_name)
         self.action_outputs = []
         
@@ -1083,25 +1089,57 @@ class Action(Usage):
         self.is_definition = False
         self.action_inputs = []
         self.action_outputs = []
-        try:
+        
+        # Check for 'declaration' directly (for definitions like ActionDefinition, RequirementDefinition)
+        decl = getattr(grammar, 'declaration', None)
+        if decl and hasattr(decl, 'identification') and decl.identification:
+            self.name = decl.identification.declaredName
+            self.is_definition = True
+            self.keyword = "action def"
+        elif getattr(grammar, 'usage', None):
+            # Check for 'usage' (for usages like ActionUsage)
             usage = getattr(grammar, 'usage', None)
-            if usage:
-                decl = usage.declaration.declaration
-                if decl and decl.identification:
+            if usage and hasattr(usage, 'declaration'):
+                decl = getattr(usage.declaration, 'declaration', None)
+                if decl and hasattr(decl, 'identification') and decl.identification:
                     self.name = decl.identification.declaredName
                     self.is_definition = False
                     self.keyword = "action"
-            else:
-                defn = getattr(grammar, 'definition', None)
-                if defn:
-                    decl = defn.declaration
-                    if decl and decl.identification:
-                        self.name = decl.identification.declaredName
-                        self.is_definition = True
-                        self.keyword = "action def"
-        except:
-            pass
+        
         return self
+    
+    def _get_definition(self, child=None):
+        # Sync self.name to grammar before getting definition
+        if hasattr(self.grammar, 'declaration') and hasattr(self.grammar.declaration, 'identification'):
+            self.grammar.declaration.identification.declaredName = self.name
+        
+        # Get the grammar's get_definition output
+        if hasattr(self.grammar, 'get_definition'):
+            grammar_def = self.grammar.get_definition()
+        else:
+            # Fallback - shouldn't happen now
+            grammar_def = {"name": "ActionDefinition", "declaration": {}, "body": {}}
+        
+        package = {
+            "name": "DefinitionElement",
+            "ownedRelatedElement": grammar_def,
+        }
+
+        if child == "DefinitionBody":
+            package = {
+                "name": "DefinitionMember",
+                "prefix": None,
+                "ownedRelatedElement": [package],
+            }
+            package = {"name": "DefinitionBodyItem", "ownedRelationship": [package]}
+        elif child == "PackageBody" or child == None:
+            package = {
+                "name": "PackageMember",
+                "ownedRelatedElement": package,
+                "prefix": None,
+            }
+
+        return package
 
     def dump(self):
         name_str = getattr(self, 'name', "") or ""
