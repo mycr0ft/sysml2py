@@ -302,19 +302,16 @@ class UseCaseUsage:
 
 class CaseBody:
     def __init__(self, definition=None):
+        self.items = []
+        self.child = None
         if definition is not None:
             if valid_definition(definition, self.__class__.__name__):
-                self.items = []
-                for item in definition["item"]:
-                    self.items.append(CaseBodyItem(item))
+                if "item" in definition:
+                    for item in definition["item"]:
+                        self.items.append(CaseBodyItem(item))
 
-                if definition["ownedRelationship"] is not None:
+                if definition.get("ownedRelationship") is not None:
                     self.child = ResultExpressionMember(definition["ownedRelationship"])
-                else:
-                    self.child = None
-        else:
-            self.items = []
-            self.child = None
 
     def dump(self):
         if len(self.items) == 0:
@@ -332,6 +329,14 @@ class CaseBody:
                 + "\n}"
             )
 
+    def get_definition(self):
+        result = {"name": self.__class__.__name__, "item": [item.get_definition() for item in self.items]}
+        if self.child is not None:
+            result["ownedRelationship"] = self.child.get_definition()
+        else:
+            result["ownedRelationship"] = None
+        return result
+
 
 class CaseBodyItem:
     #  CaseBodyItem :
@@ -341,7 +346,8 @@ class CaseBodyItem:
     # 	| ownedRelationship = ObjectiveMember
     # ;
     def __init__(self, definition):
-        if valid_definition(definition, self.__class__.__name__):
+        self.child = None
+        if definition is not None and valid_definition(definition, self.__class__.__name__):
             child = definition["ownedRelationship"]
             name = child["name"]
             if name == "CalculationBodyItem":
@@ -357,6 +363,12 @@ class CaseBodyItem:
 
     def dump(self):
         return self.child.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": self.child.get_definition()
+        }
 
 
 class ObjectiveMember:
@@ -425,19 +437,37 @@ class RequirementDefinition:
         output.append(self.body.dump())
         return " ".join(output)
 
+    def get_definition(self):
+        output = {"name": self.__class__.__name__, "prefix": None}
+        if self.prefix is not None:
+            output["prefix"] = self.prefix.get_definition()
+        
+        # RequirementDefinition uses 'declaration' directly
+        output["declaration"] = self.declaration.get_definition() if self.declaration else None
+        output["body"] = self.body.get_definition() if hasattr(self.body, 'get_definition') else {"name": "RequirementBody", "item": []}
+        
+        return output
+
 
 class RequirementBody:
     def __init__(self, definition):
-        if valid_definition(definition, self.__class__.__name__):
-            self.items = []
-            for item in definition["item"]:
-                self.items.append(RequirementBodyItem(item))
+        self.items = []
+        if definition is not None and valid_definition(definition, self.__class__.__name__):
+            if "item" in definition:
+                for item in definition["item"]:
+                    self.items.append(RequirementBodyItem(item))
 
     def dump(self):
         if len(self.items) == 0:
             return ";"
         else:
             return "{\n" + "\n".join([child.dump() for child in self.items]) + "\n}"
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "item": [item.get_definition() for item in self.items]
+        }
 
 
 class RequirementBodyItem:
@@ -451,7 +481,8 @@ class RequirementBodyItem:
     # 	| ownedRelationship = StakeholderMember
     # ;
     def __init__(self, definition):
-        if valid_definition(definition, self.__class__.__name__):
+        self.child = None
+        if definition is not None and valid_definition(definition, self.__class__.__name__):
             child = definition["ownedRelationship"]
             name = child["name"]
             if name == "DefinitionBodyItem":
@@ -473,6 +504,12 @@ class RequirementBodyItem:
 
     def dump(self):
         return self.child.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": self.child.get_definition()
+        }
 
 
 class SubjectMember:
