@@ -1,8 +1,8 @@
 # sysmlpy — Project Work Summary
 
 > **For:** Future agents and team members
-> **Last Updated:** June 18, 2026
-> **Current Version:** v0.34.1
+> **Last Updated:** July 18, 2026
+> **Current Version:** v0.36.0
 > **Repository:** https://github.com/mycr0ft/sysmlpy
 
 ---
@@ -28,6 +28,7 @@ sysmlpy/
 │   ├── project.py           # Multi-file project loading (load_files, load_project)
 │   ├── store.py             # Storage backends (memory, NetworkX, Kuzu, Cayley)
 │   ├── plantuml.py          # PlantUML diagram generation
+│   ├── boxes_view.py        # Optional boxes-backed state-machine visualizer (v0.36.0)
 │   ├── formatting.py        # classtree() for round-trip serialization
 │   ├── navigate.py          # Searchable mixin for model traversal
 │   └── library/             # Bundled SysML v2 standard library (88 files)
@@ -36,9 +37,10 @@ sysmlpy/
 │       └── domain/          # ISQ, SI units, base quantities
 ├── tests/
 │   ├── grammar_test.py      # 95 round-trip tests (95 pass, 0 deferred)
-│   ├── class_test.py        # 54 programmatic API tests
+│   ├── class_test.py        # 56 programmatic API tests
 │   ├── main_test.py         # 7 integration tests
 │   ├── plantuml_test.py     # 108 PlantUML view rendering tests
+│   ├── boxes_view_test.py   # 19 boxes-backed state-machine visualizer tests (v0.36.0)
 │   ├── semantic_test.py     # 107 semantic analysis tests
 │   ├── project_test.py      # 17 multi-file loading tests
 │   ├── navigate_test.py     # 33 model navigation tests

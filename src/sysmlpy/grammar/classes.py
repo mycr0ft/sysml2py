@@ -3906,7 +3906,7 @@ class DefaultInterfaceEnd:
             if definition.get("direction") is not None:
                 self.direction = FeatureDirection(definition["direction"])
 
-            if definition.get("usage") is not None:
+            if definition.get("usage"):
                 self.usage = Usage(definition["usage"])
 
     def dump(self):

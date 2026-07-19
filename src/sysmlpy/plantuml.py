@@ -1020,7 +1020,7 @@ class PlantUMLGenerator:
         sysml_type = getattr(element, 'sysml_type', '')
 
         if sysml_type == 'state':
-            keyword = "state"
+            keyword = "rectangle"  # avoid PlantUML state-shape constraints
         elif sysml_type == 'view':
             keyword = "folder"
         elif sysml_type == 'action':
@@ -1334,7 +1334,8 @@ def as_interconnection_diagram(model, focus=None, elements=None, style="bw",
         if sysml_type in iv_types:
             keyword = "rectangle"
             if sysml_type == 'state':
-                keyword = "state"
+                keyword = "rectangle"  # avoid PlantUML state-shape constraints
+                stereotype = "<<state>>"
             elif sysml_type == 'view':
                 keyword = "folder"
             lines.append(f'{keyword} "{name}" as {alias} {stereotype}')
@@ -1606,7 +1607,8 @@ def as_action_flow_view(model, focus=None, elements=None, style="bw", direction=
         if sysml_type in afv_types:
             keyword = "rectangle"
             if sysml_type == 'state':
-                keyword = "state"
+                keyword = "rectangle"  # avoid PlantUML state-shape constraints
+                stereotype = "<<state>>"
             elif sysml_type == 'view':
                 keyword = "folder"
             lines.append(f'{keyword} "{name}" as {alias} {stereotype}')
@@ -1698,7 +1700,8 @@ def _scan_body_tree(node, result_list):
         return
 
     class_name = node.__class__.__name__
-    if class_name in ('FlowConnectionUsage', 'FlowConnectionDefinition'):
+    if class_name in ('FlowConnectionUsage', 'FlowConnectionDefinition',
+                      'SuccessionFlowConnectionUsage'):
         from_names, to_names = _extract_flow_endpoints_from_grammar(node)
         # Extract name from declaration
         flow_name = None
@@ -2250,7 +2253,7 @@ def as_tree_diagram(model, focus=None, style="bw", direction="TB",
 
         keyword = "rectangle"
         if sysml_type == 'state':
-            keyword = "state"
+            keyword = "rectangle"  # avoid PlantUML state-shape constraints
         elif sysml_type == 'view':
             keyword = "folder"
 
@@ -2726,7 +2729,8 @@ def as_general_view(model, focus=None, elements=None, style="bw", direction="TB"
         if sysml_type in gv_types:
             keyword = "rectangle"
             if sysml_type == 'state':
-                keyword = "state"
+                keyword = "rectangle"  # avoid PlantUML state-shape constraints
+                stereotype = "<<state>>"
             elif sysml_type == 'view':
                 keyword = "folder"
             label = name
@@ -2969,7 +2973,8 @@ def as_package_view(model, focus=None, style="bw", direction="TB",
         if sysml_type in pv_types:
             keyword = "rectangle"
             if sysml_type == 'state':
-                keyword = "state"
+                keyword = "rectangle"  # avoid PlantUML state-shape constraints
+                stereotype = "<<state>>"
             elif sysml_type == 'view':
                 keyword = "folder"
             lines.append(f'{keyword} "{name}" as {alias} {stereotype}')

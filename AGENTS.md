@@ -11,7 +11,7 @@ already knows.
 | Field | Value |
 |-------|-------|
 | Name | sysmlpy |
-| Current version | 0.34.0 |
+| Current version | 0.36.0 |
 | Language | Python 3.9+ |
 | Package manager | **Poetry** (use `poetry run` for all commands) |
 | Test runner | pytest via `poetry run pytest` |
@@ -74,8 +74,9 @@ SysML text
 | `src/sysmlpy/semantic.py` | `analyze()`, `SemanticAnalyzer`, `SymbolTable`, `LibrarySymbolIndex` |
 | `src/sysmlpy/project.py` | `load_files()`, `load_project()`, `load_with_dependencies()` |
 | `src/sysmlpy/store.py` | Storage backends |
+| `src/sysmlpy/boxes_view.py` | Optional boxes-backed state-machine visualizer |
 | `src/sysmlpy/formatting.py` | `classtree()` — model tree → SysML text |
-| `pyproject.toml` | Version is in **two** places: `[project].version` and `[tool.poetry].version` |
+| `pyproject.toml` | Version is in `[project].version` (PEP 621) |
 
 ---
 
@@ -173,11 +174,12 @@ FeatureSpecializationPart
 Use `_extract_bound_value_from_member()` in `semantic.py` as the canonical
 navigation helper.
 
-### 4. `pyproject.toml` has version in two places
+### 4. `pyproject.toml` has version in one place
 
-`[project].version` (PEP 621) and `[tool.poetry].version` (Poetry). Both must
-match. The `[tool.semantic_release]` section references both via
-`version_toml`.
+`pyproject.toml` uses PEP 621 `[project] version = "X.Y.Z"`. Also bump
+`src/sysmlpy/__init__.py:__version__` to match. (Older releases had a
+`[tool.poetry].version` field too — it is no longer present in this
+project's `pyproject.toml`.)
 
 ### 5. Top-level attribute multiplicity is lost
 

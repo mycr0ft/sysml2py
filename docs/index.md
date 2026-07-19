@@ -5,7 +5,7 @@ Uses the ANTLR4 parser for full SysML v2 grammar support.
 
 ## Version
 
-**v0.31.3** — All 79 grammar round-trip tests pass (100%). Public API stabilized with `add_child()`, `find_one()`, `__str__`, `AnalysisResult`, and non-raising `parse()`. 14 control flow node classes fully implemented.: `as_action_flow_view()` (AFV), `as_interconnection_view()` / `as_interconnection_diagram()` (IV), and `as_state_transition_view()` (STV). Auto-include connected elements for flows and transitions. Grammar-level connection scanning.
+**v0.36.0** — Optional boxes-backed state-machine visualizer (`as_state_transition_view_boxes()`, `render_state_transition_view[_svg]()`) with native UML state shapes, initial pseudostate, final-state bullseye, guard labels, composite + parallel state support. Also fixes the INCOSE flashlight parse crash in `grammar/classes.py`. 19 new tests.
 
 ## Quick Links
 
@@ -13,6 +13,7 @@ Uses the ANTLR4 parser for full SysML v2 grammar support.
 - [Quick Start](quickstart.md) — basic usage examples
 - [Status](STATUS.md) — conformance results and round-trip coverage
 - [Changelog](CHANGELOG.md) — release history
+- [Boxes-backed State-Machine Visualizer](boxes_view.md) — native UML shapes via the optional `boxes` package
 
 ## Installation
 

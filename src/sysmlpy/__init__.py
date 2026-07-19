@@ -19,9 +19,12 @@ __all__ = [
     "as_sequence_view", "as_case_view", "as_browser_view",
     "analyze", "AnalysisResult", "SemanticIssue", "SemanticAnalyzer",
     "SysMLSyntaxError",
+    # boxes-backed optional renderers (require pip install -e ../boxes)
+    "as_state_transition_view_boxes", "render_state_transition_view",
+    "render_state_transition_view_svg", "boxes_view",
 ]
 __author__ = "Jon Fox"
-__version__ = "0.35.0"
+__version__ = "0.36.0"
 
 from sysmlpy.usage import (
     Item, Attribute, Part, Port, Action, Reference, UseCase, Requirement, Interface, Message,
@@ -266,4 +269,22 @@ from sysmlpy.plantuml import (to_plantuml, PlantUMLGenerator,
 from sysmlpy.semantic import analyze, AnalysisResult, SemanticIssue, SemanticAnalyzer
 
 from sysmlpy.project import load_files, load_project, load_with_dependencies
+
+# Optional boxes-backed state-machine renderer (lazy import on first use so
+# `import sysmlpy` works without `boxes` installed). The first call to any of
+# the functions below triggers `import sysmlpy.boxes_view`, which itself
+# raises ImportError with installation instructions if `boxes` is missing.
+def __getattr__(name):
+    if name == "boxes_view":
+        import sysmlpy.boxes_view as bv
+        globals()[name] = bv
+        return bv
+    if name in ("as_state_transition_view_boxes",
+                "render_state_transition_view",
+                "render_state_transition_view_svg"):
+        from sysmlpy import boxes_view as bv
+        fn = getattr(bv, name)
+        globals()[name] = fn
+        return fn
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

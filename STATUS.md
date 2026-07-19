@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.34.1** (2026-06-23)
+Current version: **v0.36.0** (2026-07-18)
 
 ---
 
@@ -157,6 +157,18 @@ graceful handling. The parser no longer crashes on any edge-case input.
 | `as_relationship_matrix_view()` | Relationship Matrix View | PlantUML / MD / HTML | Cross-element relationship matrix |
 
 All views support: `focus`, `elements`, `show_external`, `direction`, B&W/color toggle, `custom_style`, and legend.
+
+### Boxes-backed State-Machine Visualizer (v0.36.0)
+
+Optional renderer that produces a [`boxes`](https://github.com/mycr0ft/boxes) Diagram with native UML state shapes (rounded `«state»` boxes, filled-circle initial pseudostate, bullseye final state, orthogonal port-to-port routing). Alternative to `as_state_transition_view()` when you don't want a PlantUML/Java runtime.
+
+| Function | Returns | Notes |
+|---|---|---|
+| `as_state_transition_view_boxes(model, focus=None)` | `boxes.Diagram` | Build an in-memory diagram you can introspect / extend |
+| `render_state_transition_view(model, focus=None, routing=...)` | braille terminal string | Quick terminal preview |
+| `render_state_transition_view_svg(model, focus=..., routing=..., scale=...)` | SVG string | Vector output for embedding in docs |
+
+Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded transitions (`if guard`), shorthand `accept X then Y;`, the reserved `done` final-state target, dotted feature-chain targets (`S2.S3`), nested composite states, and `parallel` region composition. Lazy-loaded so `import sysmlpy` works without `boxes` installed. See [`docs/boxes_view.md`](boxes_view.md) for the full pseudostate landscape and worked examples.
 
 ### Storage Backends
 

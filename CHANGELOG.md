@@ -1,5 +1,80 @@
 # CHANGELOG
 
+## v0.36.0 (2026-07-18)
+
+### :sparkles: New Features
+
+- **Boxes-backed state-machine visualizer.** New optional renderer
+  `sysmlpy.boxes_view` produces a [`boxes`](https://github.com/mycr0ft/boxes)
+  Diagram from a parsed SysML v2 `state def` — true rounded-corner
+  `«state»` UML nodes, filled-circle initial pseudostate, bullseye final
+  state, orthogonal port-to-port routing, and SVG / braille terminal
+  output. This is an alternative to `as_state_transition_view()` (PlantUML),
+  for the case where you want native UML shapes and don't want to round-trip
+  through Java.
+- Public API:
+  - `sysmlpy.as_state_transition_view_boxes(model, focus=None)` → `boxes.Diagram`
+  - `sysmlpy.render_state_transition_view(model, focus=None, routing=...)` → braille terminal string
+  - `sysmlpy.render_state_transition_view_svg(model, focus=None, routing=..., scale=...)` → SVG string
+  - All three are lazy-imported so `import sysmlpy` continues to work
+    without `boxes` installed (raises `ImportError` with install hint on
+    first call if `boxes` is missing).
+- Adapter handles every state-machine construct that is actually in the
+  SysML v2 language (per spec §7.18, `formal/26-03-02`, Sept 2025):
+  - `entry;` / `entry action A;` / `do ...` / `exit ...` actions emitted
+    as `entry / A`, `do / A`, `exit / A` attributes in the state box
+  - Implicit initial pseudostate via `entry; then X;` succession
+  - **`done` target** → `FinalState` bullseye node (one per region, reused)
+  - **Guarded transitions** `transition T first A accept X if guard then B`
+    → trigger and `[guard]` both appear in the edge label
+  - **`accept X then Y;` shorthand** (`TargetTransitionUsage`) — extracts
+    trigger and target, back-fills source from the most-recently declared
+    state in the region
+  - **Dotted feature-chain targets** like `S2.S3` — resolved through the
+    full `OwnedFeatureChaining` chain, not just the last chaining name
+  - **Nested composite states** — `state R1 { state a; state b;… }`
+    parsed recursively; substates emitted as siblings with
+    namespace-qualified names for now (visual nesting via `View.children`
+    is a future boxes enhancement)
+  - **`parallel` composite states** — when `isParallel=true` on the
+    StateDefBody, the composite's «parallel» stereotype is emitted
+    alongside «state»
+- Re-exports the boxes pseudostate classes for diagram-author code that
+  wants the state-machine vocabulary: `InitialPseudostate`,
+  `JunctionPseudostate`, `ChoicePseudostate`, `ForkPseudostate`,
+  `JoinPseudostate`, `FinalState`, `TerminatePseudostate`,
+  `HistoryPseudostate`, `EntryPoint`, `ExitPoint`, `StateNode`.
+
+### :bug: Fixes
+
+- `grammar/classes.py:3909` — `DefaultInterfaceEnd.__init__` was calling
+  `Usage(definition["usage"])` even when the visitor emitted an empty
+  `usage: {}` dict (which happens for `perform … ;` lines inside an
+  `interface … connect … { }` body). This crashed the entire parse with
+  `AttributeError: This does not seem to be valid.` Fixed by switching
+  the guard from `is not None` to truthy/non-empty. The official INCOSE
+  SysML v2 Pilot `Flashlight Example.sysml` now loads successfully end-to-end.
+
+### :books: Documentation
+
+- New `docs/boxes_view.md` page covering the boxes-backed state-machine
+  visualizer: install, API, supported constructs, the SysML v2 spec
+  landscape (which pseudostates were deliberately dropped from UML 1.x),
+  and a worked example with the OMG `StateTest.sysml` fixture.
+- Updated `README.md` and `docs/PROJECT_SUMMARY.md` to mention the new
+  visualizer and the boxes optional dependency.
+- `STATUS.md` updated with the v0.36.0 capabilities and test counts.
+
+### :white_check_mark: Tests
+
+- New `tests/boxes_view_test.py` (19 tests): state-machine collection,
+  composite states, `done` final-state, guard label, parallel flag,
+  entry/do/exit attribute rendering, full-omg `StateTest.sysml` abridged
+  extract, lazy attribute on `sysmlpy` namespace.
+- Pre-existing `tests/plantuml_test.py` failures
+  (`test_as_element_table_basic`, `test_as_state_transition_view_basic`)
+  remain — they are unrelated to this work and predate it.
+
 ## v0.34.1 (2026-06-23)
 
 ### :bug: Fix standard library type resolution and add implicit import warnings

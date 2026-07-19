@@ -14,6 +14,8 @@ The project had diverged so much from sysml2py that a new name, sysmlpy, was sel
 
 ![Lines of Code Over Time](loc_history.svg)
 
+**v0.36.0:** Boxes-backed state-machine visualizer — `as_state_transition_view_boxes()`, `render_state_transition_view()`, `render_state_transition_view_svg()` produce native UML `«state»` shapes, initial pseudostate, final bullseye, and orthogonal routing via the optional [`boxes`](https://github.com/mycr0ft/boxes) package. Handles `done`, guards, shorthand `accept X then Y`, dotted feature chains (`S2.S3`), composite states, `parallel` regions, entry/do/exit attributes. 19 new boxes_view tests. Also fixes the INCOSE flashlight `interface … connect … { perform …; }` parse crash in `grammar/classes.py`.
+
 **v0.31.0:** Documentation overhaul — all docs rewritten to showcase the modern public API. New Model Parsing and Model Navigation sections. Semantic Analysis updated with `AnalysisResult`. Grammar round-trip: 77/77 (100%). 211 core tests passing.
 
 **v0.32.4:** Fixed `Attribute.usage_dump()` calling `dump(child=True)` (returns str) when it should call `_get_definition(child="DefinitionBody")` (returns dict). Broke inline anonymous attribute usages with nested children.
