@@ -506,44 +506,105 @@ def _extract_accept_then_shorthand(state_body_item: dict) -> Optional[dict]:
     return None
 
 
+def _state_body_items(state_def_like: dict) -> tuple:
+    """Return (items, is_parallel) for a StateDefinition *or* a composite
+    StateUsage. The two have the same body shape: ``.body.part.item`` and
+    ``.body.isParallel``. The StateUsage wraps its StateDefBody one level
+    deeper — ``.body.body.part.item`` — so we handle both.
+
+    Returns ([], False) if the body structure cannot be found.
+    """
+    body = state_def_like.get("body", {})
+    # StateDefinition: body.part.item / body.isParallel
+    if isinstance(body, dict) and "part" in body:
+        part = body.get("part") or {}
+        items = part.get("item", []) if isinstance(part, dict) else []
+        is_parallel = bool(body.get("isParallel")) if isinstance(body, dict) else False
+        return items, is_parallel
+    # StateUsage: body.body.part.item / body.body.isParallel
+    inner = body.get("body", {}) if isinstance(body, dict) else {}
+    if isinstance(inner, dict) and "part" in inner:
+        part = inner.get("part") or {}
+        items = part.get("item", []) if isinstance(part, dict) else []
+        is_parallel = bool(inner.get("isParallel")) if isinstance(inner, dict) else False
+        return items, is_parallel
+    return [], False
+
+
 def _collect_state_machine(visit_dict: dict) -> list:
     """Return a list of state-machine descriptors.
 
     Each descriptor is a dict::
 
         {
-          "name": <state def name>,
+          "name": <state def / state usage name>,
           "parallel": bool,
           "states": [{name, body, parallel, ...}, ...],
           "initial": <state name:str>|None,
           "transitions": [{name, source, target, trigger, guard}, ...],
           "composites": [{name, items, ...}, ...],
         }
+
+    Both top-level ``state def X { … }`` (StateDefinition) and top-level
+    ``state X { … }`` (StateUsage with a body) are recognized, so models
+    that put their state machine at package level (the common pattern
+    used by the INCOSE flashlight / OMG Simple State Example) work too.
+
+    Nested StateUsages inside another StateDefinition/StateUsage — the
+    substates — are *not* emitted as standalone machines; they are
+    handled by the recursive ``_collect_state_body`` walk.
     """
     machines: list[dict] = []
+    # Track IDs of every StateUsage dict nested inside an already-collected
+    # machine — so we don't duplicate them as their own top-level machines.
+    nested_state_usage_ids: set = set()
+
+    def _mark_nested_state_usages(node_obj):
+        if isinstance(node_obj, dict):
+            if node_obj.get("name") == "StateUsage":
+                nested_state_usage_ids.add(id(node_obj))
+            for v in node_obj.values():
+                _mark_nested_state_usages(v)
+        elif isinstance(node_obj, list):
+            for it in node_obj:
+                _mark_nested_state_usages(it)
+
     for node in _iter_dict(visit_dict):
-        if node.get("name") != "StateDefinition":
+        nm = node.get("name")
+        if nm not in ("StateDefinition", "StateUsage"):
             continue
+        if id(node) in nested_state_usage_ids:
+            continue
+        items, is_parallel = _state_body_items(node)
+        if nm == "StateUsage" and not items:
+            continue
+
         decl = node.get("declaration", {})
         sm_name = None
-        if isinstance(decl, dict):
-            ident = decl.get("identification")
-            if isinstance(ident, dict):
-                sm_name = ident.get("declaredName")
-        body = node.get("body", {})
-        part = body.get("part", {}) if isinstance(body, dict) else {}
-        items = part.get("item", []) if isinstance(part, dict) else []
-        sm_parallel = bool(body.get("isParallel")) if isinstance(body, dict) else False
+        # Walk the declaration chain looking for an identification
+        cur = decl
+        while isinstance(cur, dict) and sm_name is None:
+            ident = cur.get("identification")
+            if isinstance(ident, dict) and ident.get("declaredName"):
+                sm_name = ident["declaredName"]
+                break
+            cur = cur.get("declaration")
+            if cur is None or not isinstance(cur, dict):
+                break
 
         sm = {
             "name": sm_name,
-            "parallel": sm_parallel,
+            "parallel": is_parallel,
             "states": [],
             "initial": None,
             "transitions": [],
             "composites": [],
         }
-        sm.update(_collect_state_body(items, is_parallel=sm_parallel))
+        sm.update(_collect_state_body(items, is_parallel=is_parallel))
+        # Mark every StateUsage reachable from this machine's items tree
+        # as nested, so the outer _iter_dict pass skips them when it
+        # surfaces them later.
+        _mark_nested_state_usages(items)
         machines.append(sm)
     return machines
 
