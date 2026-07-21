@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
@@ -733,13 +733,14 @@
 <p>A pure Python implementation for parsing SysML v2.0 models.
 Uses the ANTLR4 parser for full SysML v2 grammar support.</p>
 <h2 id="version">Version<a class="headerlink" href="#version" title="Permanent link">&para;</a></h2>
-<p><strong>v0.31.3</strong> — All 79 grammar round-trip tests pass (100%). Public API stabilized with <code>add_child()</code>, <code>find_one()</code>, <code>__str__</code>, <code>AnalysisResult</code>, and non-raising <code>parse()</code>. 14 control flow node classes fully implemented.: <code>as_action_flow_view()</code> (AFV), <code>as_interconnection_view()</code> / <code>as_interconnection_diagram()</code> (IV), and <code>as_state_transition_view()</code> (STV). Auto-include connected elements for flows and transitions. Grammar-level connection scanning.</p>
+<p><strong>v0.36.0</strong> — Optional boxes-backed state-machine visualizer (<code>as_state_transition_view_boxes()</code>, <code>render_state_transition_view[_svg]()</code>) with native UML state shapes, initial pseudostate, final-state bullseye, guard labels, composite + parallel state support. Also fixes the INCOSE flashlight parse crash in <code>grammar/classes.py</code>. 19 new tests.</p>
 <h2 id="quick-links">Quick Links<a class="headerlink" href="#quick-links" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="TUTORIAL/">Tutorial</a> — comprehensive guide with class mapping tables</li>
 <li><a href="quickstart/">Quick Start</a> — basic usage examples</li>
 <li><a href="STATUS/">Status</a> — conformance results and round-trip coverage</li>
 <li><a href="CHANGELOG/">Changelog</a> — release history</li>
+<li><a href="boxes_view/">Boxes-backed State-Machine Visualizer</a> — native UML shapes via the optional <code>boxes</code> package</li>
 </ul>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>sysmlpy
@@ -962,7 +963,7 @@ Uses the ANTLR4 parser for full SysML v2 grammar support.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.sections", "navigation.expand", "search.highlight", "search.share", "content.code.copy"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

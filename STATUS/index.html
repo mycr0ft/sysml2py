@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -29,7 +29,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -510,6 +510,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#boxes-backed-state-machine-visualizer-v0360" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boxes-backed State-Machine Visualizer (v0.36.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#storage-backends" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -925,6 +936,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#boxes-backed-state-machine-visualizer-v0360" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boxes-backed State-Machine Visualizer (v0.36.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#storage-backends" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1166,7 +1188,7 @@
 
 
 <h1 id="sysmlpy-project-status">sysmlpy — Project Status<a class="headerlink" href="#sysmlpy-project-status" title="Permanent link">&para;</a></h1>
-<p>Current version: <strong>v0.34.1</strong> (2026-06-23)</p>
+<p>Current version: <strong>v0.36.0</strong> (2026-07-18)</p>
 <hr />
 <h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
 <h3 id="public-api-classes">Public API Classes<a class="headerlink" href="#public-api-classes" title="Permanent link">&para;</a></h3>
@@ -1668,6 +1690,35 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tbody>
 </table>
 <p>All views support: <code>focus</code>, <code>elements</code>, <code>show_external</code>, <code>direction</code>, B&amp;W/color toggle, <code>custom_style</code>, and legend.</p>
+<h3 id="boxes-backed-state-machine-visualizer-v0360">Boxes-backed State-Machine Visualizer (v0.36.0)<a class="headerlink" href="#boxes-backed-state-machine-visualizer-v0360" title="Permanent link">&para;</a></h3>
+<p>Optional renderer that produces a <a href="https://github.com/mycr0ft/boxes"><code>boxes</code></a> Diagram with native UML state shapes (rounded <code>«state»</code> boxes, filled-circle initial pseudostate, bullseye final state, orthogonal port-to-port routing). Alternative to <code>as_state_transition_view()</code> when you don't want a PlantUML/Java runtime.</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Returns</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>as_state_transition_view_boxes(model, focus=None)</code></td>
+<td><code>boxes.Diagram</code></td>
+<td>Build an in-memory diagram you can introspect / extend</td>
+</tr>
+<tr>
+<td><code>render_state_transition_view(model, focus=None, routing=...)</code></td>
+<td>braille terminal string</td>
+<td>Quick terminal preview</td>
+</tr>
+<tr>
+<td><code>render_state_transition_view_svg(model, focus=..., routing=..., scale=...)</code></td>
+<td>SVG string</td>
+<td>Vector output for embedding in docs</td>
+</tr>
+</tbody>
+</table>
+<p>Handles <code>entry; then X;</code>, <code>do</code>/<code>exit</code> actions as state attributes, guarded transitions (<code>if guard</code>), shorthand <code>accept X then Y;</code>, the reserved <code>done</code> final-state target, dotted feature-chain targets (<code>S2.S3</code>), nested composite states, and <code>parallel</code> region composition. Lazy-loaded so <code>import sysmlpy</code> works without <code>boxes</code> installed. See <a href="../boxes_view/"><code>docs/boxes_view.md</code></a> for the full pseudostate landscape and worked examples.</p>
 <h3 id="storage-backends">Storage Backends<a class="headerlink" href="#storage-backends" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -2067,7 +2118,7 @@ Test files: <strong>123 <code>.sysml</code> files</strong> under <code>tests/sys
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.expand", "search.highlight", "search.share", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
