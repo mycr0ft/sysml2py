@@ -316,9 +316,10 @@ namespaceImport
     | filterPackage
     ;
 
+// OMG 2026-05 KeBNF added a real FilterPackageImport production; the previous
+// TODO stub (filterPackageImport : IDENTIFIER) is no longer needed.
 filterPackage
     : filterPackageImportDeclaration (filterPackageMember)+
-    | filterPackageImport ( filterPackageMember)+
     ;
 
 filterPackageMember
@@ -965,11 +966,15 @@ payloadFeatureMember
     : payloadFeature
     ;
 
+// OMG 2026-05 BNF sync (daltskin/sysml-v2-grammar v2026.05.0, commits #8/#9):
+// identification is required in the typed alternatives and the ownedFeatureTyping /
+// ownedMultiplicity pair is normalized.
 payloadFeature
-    : identification? valuePart
-    | identification? payloadFeatureSpecializationPart valuePart?
+    : identification payloadFeatureSpecializationPart valuePart?
+    | identification valuePart
     | ownedFeatureTyping ( ownedMultiplicity)?
-    | ownedMultiplicity ( ownedFeatureTyping)?
+    | ownedMultiplicity ownedFeatureTyping
+    | identification? payloadFeatureSpecializationPart valuePart?
     ;
 
 payloadFeatureSpecializationPart
@@ -1110,8 +1115,10 @@ dependencyDeclaration
     )*
     ;
 
+// SYSML21-319 (SysML 2.1 RTF Ballot 1, Pilot PR #775): an annotating member of an
+// enumeration definition may now have an explicit visibility indicator.
 annotatingMember
-    : annotatingElement
+    : memberPrefix annotatingElement
     ;
 
 packageBodyElement
@@ -2171,8 +2178,11 @@ framedConcernMember
     ;
 
 framedConcernUsage
-    : ownedReferenceSubsetting featureSpecializationPart? calculationBody
-    | (usageExtensionKeyword* CONCERN | usageExtensionKeyword+) calculationUsageDeclaration calculationBody
+    // SYSML21-366 (SysML 2.1 RTF Ballot 1, Pilot PR #775): the second alternative of a
+    // framed concern usage has a requirement body (and a constraint usage declaration),
+    // not a calculation body.
+    : ownedReferenceSubsetting featureSpecializationPart? requirementBody
+    | (usageExtensionKeyword* CONCERN | usageExtensionKeyword+) constraintUsageDeclaration requirementBody
     ;
 
 actorMember
@@ -2451,10 +2461,6 @@ namespaceImportDirect
 // These rules are referenced in the spec but not fully defined.
 // They need manual review and completion.
 
-calculationUsageDeclaration
-    : usageDeclaration? valuePart?
-    ;
-
 emptyActionUsage_
     : /* epsilon */
     ;
@@ -2469,10 +2475,6 @@ emptyMultiplicity_
 
 emptyUsage_
     : /* epsilon */
-    ;
-
-filterPackageImport
-    : IDENTIFIER /* TODO: stub for filterPackageImport */
     ;
 
 nonFeatureChainPrimaryExpression

@@ -1,4 +1,4 @@
-# Generated from /storage16/home/jfox/sysmlpy/src/sysmlpy/grammar/antlr4/SysMLv2Parser.g4 by ANTLR 4.13.2
+# Generated from SysMLv2Parser.g4 by ANTLR 4.13.2
 from antlr4 import *
 if "." in __name__:
     from .SysMLv2Parser import SysMLv2Parser
@@ -2499,11 +2499,6 @@ class SysMLv2ParserVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by SysMLv2Parser#calculationUsageDeclaration.
-    def visitCalculationUsageDeclaration(self, ctx:SysMLv2Parser.CalculationUsageDeclarationContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by SysMLv2Parser#emptyActionUsage_.
     def visitEmptyActionUsage_(self, ctx:SysMLv2Parser.EmptyActionUsage_Context):
         return self.visitChildren(ctx)
@@ -2521,11 +2516,6 @@ class SysMLv2ParserVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by SysMLv2Parser#emptyUsage_.
     def visitEmptyUsage_(self, ctx:SysMLv2Parser.EmptyUsage_Context):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#filterPackageImport.
-    def visitFilterPackageImport(self, ctx:SysMLv2Parser.FilterPackageImportContext):
         return self.visitChildren(ctx)
 
 

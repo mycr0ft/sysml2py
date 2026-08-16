@@ -3,7 +3,7 @@
 ANTLR4-based SysML v2.0 parser module.
 
 This module provides an alternative parser to textX, using ANTLR4 grammar
-generated from the OMG SysML v2 specification (2026-03 release).
+generated from the OMG SysML v2 specification (2026-05 release).
 """
 import sys
 import os
