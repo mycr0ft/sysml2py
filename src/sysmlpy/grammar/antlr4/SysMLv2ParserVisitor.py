@@ -1,4 +1,4 @@
-# Generated from SysMLv2Parser.g4 by ANTLR 4.13.2
+# Generated from /storage16/home/jfox/sysmlpy/src/sysmlpy/grammar/antlr4/SysMLv2Parser.g4 by ANTLR 4.13.2
 from antlr4 import *
 if "." in __name__:
     from .SysMLv2Parser import SysMLv2Parser

@@ -1,4 +1,4 @@
-# Generated from SysMLv2Parser.g4 by ANTLR 4.13.2
+# Generated from /storage16/home/jfox/sysmlpy/src/sysmlpy/grammar/antlr4/SysMLv2Parser.g4 by ANTLR 4.13.2
 # encoding: utf-8
 from antlr4 import *
 from io import StringIO

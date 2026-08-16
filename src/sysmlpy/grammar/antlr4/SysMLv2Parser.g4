@@ -298,6 +298,11 @@ qualifiedName
     : (DOLLAR COLON_COLON)? (name COLON_COLON)* name
     ;
 
+// Import visibility is required at the syntax level, matching the official
+// KerML/SysML 2026-05 BNF ("Import = visibility = VisibilityIndicator 'import' ...",
+// KerML §8.2.3.4.2 / SysML-textual-bnf.kebnf). daltskin's translation makes it
+// optional; this local deviation keeps the official shape (a bare 'import' is a
+// syntax error, as the official XPECT fixture Import_Visibility_Valid expects).
 importRule
     : visibilityIndicator IMPORT (ALL)? importDeclaration relationshipBody
     ;
