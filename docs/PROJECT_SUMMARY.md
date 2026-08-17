@@ -1,8 +1,8 @@
 # sysmlpy — Project Work Summary
 
 > **For:** Future agents and team members
-> **Last Updated:** July 18, 2026
-> **Current Version:** v0.36.0
+> **Last Updated:** August 17, 2026
+> **Current Version:** v0.36.1
 > **Repository:** https://github.com/mycr0ft/sysmlpy
 
 ---

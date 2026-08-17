@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v0.36.1 (2026-08-17)
+
+### :sparkles: New Features
+
+- **Nested requirement children.** `Requirement.load_from_grammar` now
+  populates `self.children` with nested `requirement` usages and
+  `requirement def` definitions encountered in the body. Previously the
+  body walk stubbed out `DefinitionBodyItem` with `pass`, so nested
+  requirements were parsed by the grammar but dropped from the public
+  object tree. Deep nesting recurses correctly; `.parent` links are set
+  on each child. Non-requirement nested elements (parts, items,
+  attributes) are silently skipped for now. The grammar-object
+  round-trip (`load_grammar` + `classtree`) is unaffected.
+
 ## v0.36.0 (2026-07-18)
 
 ### :sparkles: New Features

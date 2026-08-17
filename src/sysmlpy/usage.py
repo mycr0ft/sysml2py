@@ -2663,7 +2663,7 @@ class Requirement(Usage):
                 if hasattr(item, 'child') and item.child:
                     child_class = item.child.__class__.__name__
                     if child_class == "DefinitionBodyItem":
-                        pass  # handled separately
+                        self._extract_nested_requirements(item.child)
                     elif child_class == "RequirementConstraintMember":
                         pass  # could extract constraints
                     elif child_class == "SubjectMember":
@@ -2672,6 +2672,41 @@ class Requirement(Usage):
                         pass  # could extract actors
         
         return self
+
+    def _extract_nested_requirements(self, def_body_item):
+        """Find nested requirement usages/definitions inside a DefinitionBodyItem.
+
+        Traversal path (per grammar/classes.py):
+            DefinitionBodyItem
+              -> OccurrenceUsageMember | NonOccurrenceUsageMember | DefinitionMember
+                -> OccurrenceUsageElement | NonOccurrenceUsageElement | DefinitionElement
+                  -> BehaviorUsageElement | StructureUsageElement | <Definition>
+                    -> RequirementUsage | RequirementDefinition | ...
+
+        Only RequirementUsage and RequirementDefinition are instantiated as
+        children; other nested element types are ignored (future work).
+        """
+        for member in getattr(def_body_item, 'children', []) or []:
+            for element in getattr(member, 'children', []) or []:
+                inner = getattr(element, 'children', None)
+                if inner is None:
+                    continue
+                # OccurrenceUsageElement / NonOccurrenceUsageElement wrap a
+                # single child class in `.children`; DefinitionElement wraps
+                # a Definition subclass in `.children`.
+                target = getattr(inner, 'children', None) or inner
+                target_cls = target.__class__.__name__ if not isinstance(target, list) else None
+
+                if target_cls == "RequirementUsage":
+                    c = Requirement().load_from_grammar(target)
+                    c.parent = self
+                    self.children.append(c)
+                elif target_cls == "RequirementDefinition":
+                    c = Requirement(definition=True).load_from_grammar(target)
+                    c.parent = self
+                    self.children.append(c)
+                elif target_cls and "Requirement" in target_cls:
+                    print(f"[Requirement] Unhandled nested requirement type: {target_cls}")
 
 
 class Message(Usage):

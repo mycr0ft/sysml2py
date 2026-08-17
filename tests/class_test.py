@@ -10,9 +10,10 @@ import pytest
 import pint
 
 from sysmlpy.formatting import classtree
-from sysmlpy import Package, Item, Model, Attribute, Part, Port
+from sysmlpy import Package, Item, Model, Attribute, Part, Port, Requirement
 from sysmlpy import load_grammar as loads
 from sysmlpy.usage import ureg
+from .functions import strip_ws
 
 
 def test_package():
@@ -598,3 +599,125 @@ def test_attribute_nounits():
     q = classtree(loads(text))
 
     assert a.dump() == q.dump()
+
+
+# ---------------------------------------------------------------------------
+# Requirement nesting — children populated from grammar
+# ---------------------------------------------------------------------------
+
+def test_requirement_nested_children_populated():
+    """A nested requirement usage should appear in the parent's .children."""
+    import sysmlpy
+    text = """package P {
+        requirement def TopReq {
+            subject s : Item;
+            require constraint { s > 0 }
+            requirement nested {
+                subject t : Item;
+                require constraint { t < 100 }
+            }
+        }
+    }"""
+    m = sysmlpy.loads(text)
+    top = m.children[0].children[0]
+    assert top.__class__.__name__ == "Requirement"
+    assert top.name == "TopReq"
+    assert len(top.children) == 1
+    nested = top.children[0]
+    assert nested.__class__.__name__ == "Requirement"
+    assert nested.name == "nested"
+    assert nested.parent is top
+
+
+def test_requirement_multiple_nested_children():
+    """Multiple nested requirements are all populated, in order."""
+    import sysmlpy
+    text = """package P {
+        requirement engineSpecification {
+            subject engine : Engine;
+            requirement drivePowerInterface : DrivePowerInterface {
+                subject = engine.clutchPort;
+            }
+            requirement torqueGeneration : TorqueGeneration {
+                subject = engine.generateTorque;
+            }
+        }
+    }"""
+    m = sysmlpy.loads(text)
+    eng = m.children[0].children[0]
+    assert eng.name == "engineSpecification"
+    names = [c.name for c in eng.children]
+    assert names == ["drivePowerInterface", "torqueGeneration"]
+    for c in eng.children:
+        assert c.parent is eng
+
+
+def test_requirement_deeply_nested_children():
+    """Nested-of-nested requirements recurse through load_from_grammar."""
+    import sysmlpy
+    text = """package P {
+        requirement def Outer {
+            requirement mid {
+                requirement inner {
+                    subject x : Item;
+                    require constraint { x > 0 }
+                }
+            }
+        }
+    }"""
+    m = sysmlpy.loads(text)
+    outer = m.children[0].children[0]
+    assert outer.name == "Outer"
+    mid = outer.children[0]
+    assert mid.name == "mid"
+    assert mid.parent is outer
+    inner = mid.children[0]
+    assert inner.name == "inner"
+    assert inner.parent is mid
+    assert inner.parent.parent is outer
+
+
+def test_requirement_no_nested_children():
+    """A flat requirement has an empty children list."""
+    import sysmlpy
+    text = """package P {
+        requirement def Flat {
+            subject s : Item;
+            require constraint { s > 0 }
+        }
+    }"""
+    m = sysmlpy.loads(text)
+    flat = m.children[0].children[0]
+    assert flat.name == "Flat"
+    assert flat.children == []
+
+
+def test_requirement_nested_children_preserves_grammar_roundtrip():
+    """Populating children must not break grammar-object round-trip."""
+    text = """package P {
+        requirement vehicleSpecification {
+            doc /* Overall vehicle requirements group */
+            subject vehicle : Vehicle;
+            require fullVehicleMassLimit;
+            require emptyVehicleMassLimit;
+        }
+        requirement engineSpecification {
+            doc /* Engine power requirements group */
+            subject engine : Engine;
+            requirement drivePowerInterface : DrivePowerInterface {
+                subject = engine.clutchPort;
+            }
+            requirement torqueGeneration : TorqueGeneration {
+                subject = engine.generateTorque;
+            }
+        }
+    }"""
+    # Grammar round-trip via load_grammar (raw dict) + classtree
+    raw = loads(text)
+    assert strip_ws(text) == strip_ws(classtree(raw).dump())
+    # Public API: children should be populated
+    import sysmlpy
+    m = sysmlpy.loads(text)
+    eng = m.children[0].children[1]
+    assert eng.name == "engineSpecification"
+    assert len(eng.children) == 2

@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.36.0** (2026-07-18)
+Current version: **v0.36.1** (2026-08-17)
 
 ---
 
@@ -157,6 +157,10 @@ graceful handling. The parser no longer crashes on any edge-case input.
 | `as_relationship_matrix_view()` | Relationship Matrix View | PlantUML / MD / HTML | Cross-element relationship matrix |
 
 All views support: `focus`, `elements`, `show_external`, `direction`, B&W/color toggle, `custom_style`, and legend.
+
+### Nested Requirement Children (v0.36.1)
+
+`Requirement.load_from_grammar` now populates `self.children` with nested `requirement` usages and `requirement def` definitions encountered in the body. Previously the body walk stubbed out `DefinitionBodyItem` with `pass`, so nested requirements were parsed by the grammar but dropped from the public object tree. Deep nesting recurses; `.parent` links are set on each child. Non-requirement nested elements are skipped for now. Grammar-object round-trip is unaffected.
 
 ### Boxes-backed State-Machine Visualizer (v0.36.0)
 
