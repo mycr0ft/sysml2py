@@ -550,11 +550,11 @@ symbols are lazy-loaded on first access and raise an informative
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">d</span> <span class="o">=</span> <span class="n">sysmlpy</span><span class="o">.</span><span class="n">as_state_transition_view_boxes</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">focus</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># Render straight to the terminal (braille characters)</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">sysmlpy</span><span class="o">.</span><span class="n">render_state_transition_view</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">routing</span><span class="o">=</span><span class="s2">&quot;orthogonal&quot;</span><span class="p">))</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">sysmlpy</span><span class="o">.</span><span class="n">render_state_transition_view</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">routing</span><span class="o">=</span><span class="s2">"orthogonal"</span><span class="p">))</span>
 <a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
 <a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c1"># Render to an SVG string</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">svg</span> <span class="o">=</span> <span class="n">sysmlpy</span><span class="o">.</span><span class="n">render_state_transition_view_svg</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">routing</span><span class="o">=</span><span class="s2">&quot;orthogonal&quot;</span><span class="p">)</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="nb">open</span><span class="p">(</span><span class="s2">&quot;state.svg&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">svg</span><span class="p">)</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">svg</span> <span class="o">=</span> <span class="n">sysmlpy</span><span class="o">.</span><span class="n">render_state_transition_view_svg</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">routing</span><span class="o">=</span><span class="s2">"orthogonal"</span><span class="p">)</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="nb">open</span><span class="p">(</span><span class="s2">"state.svg"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">svg</span><span class="p">)</span>
 </code></pre></div>
 <p><code>model</code> accepts raw SysML text, a <code>sysmlpy.Model</code>, or the dict from
 <code>sysmlpy.load_grammar()</code>. <code>focus</code> chooses a specific <code>state def</code> by name
@@ -695,7 +695,7 @@ source language has no equivalent input.</p>
 <h2 id="example-the-omg-statetestsysml-state-machine">Example: the OMG StateTest.sysml state machine<a class="headerlink" href="#example-the-omg-statetestsysml-state-machine" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">sysmlpy</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;state def S {</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">text</span> <span class="o">=</span> <span class="s2">"""state def S {</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="s2">    entry; then S1;</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="s2">    state S1;</span>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="s2">        accept s : Sig then S2;</span>
@@ -705,9 +705,9 @@ source language has no equivalent input.</p>
 <a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="s2">        first S1</span>
 <a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="s2">        accept s : Sig</span>
 <a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="s2">        then S2.S3;</span>
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="s2">}&quot;&quot;&quot;</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="s2">}"""</span>
 <a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="nb">print</span><span class="p">(</span><span class="n">sysmlpy</span><span class="o">.</span><span class="n">render_state_transition_view</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">routing</span><span class="o">=</span><span class="s2">&quot;orthogonal&quot;</span><span class="p">))</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="nb">print</span><span class="p">(</span><span class="n">sysmlpy</span><span class="o">.</span><span class="n">render_state_transition_view</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">routing</span><span class="o">=</span><span class="s2">"orthogonal"</span><span class="p">))</span>
 </code></pre></div>
 <p>The output is a braille-character diagram showing:</p>
 <ul>

@@ -746,21 +746,21 @@
 <h2 id="recommendations-for-our-implementation">Recommendations for Our Implementation<a class="headerlink" href="#recommendations-for-our-implementation" title="Permanent link">&para;</a></h2>
 <h3 id="1-arrow-mapping-follow-the-reference-implementation">1. Arrow Mapping (follow the reference implementation)<a class="headerlink" href="#1-arrow-mapping-follow-the-reference-implementation" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">RELATIONSHIP_ARROWS</span> <span class="o">=</span> <span class="p">{</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="s2">&quot;OwningMembership&quot;</span><span class="p">:</span>       <span class="s2">&quot;+--&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="s2">&quot;Membership&quot;</span><span class="p">:</span>             <span class="s2">&quot;+..&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="s2">&quot;FeatureMembership_comp&quot;</span><span class="p">:</span> <span class="s2">&quot;*--&quot;</span><span class="p">,</span>   <span class="c1"># isComposite=True</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="s2">&quot;FeatureMembership_shared&quot;</span><span class="p">:</span> <span class="s2">&quot;o--&quot;</span><span class="p">,</span> <span class="c1"># isComposite=False</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="s2">&quot;FeatureTyping&quot;</span><span class="p">:</span>          <span class="s2">&quot;--:|&gt;&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="s2">&quot;Redefinition&quot;</span><span class="p">:</span>           <span class="s2">&quot;--||&gt;&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="s2">&quot;Specialization&quot;</span><span class="p">:</span>         <span class="s2">&quot;--|&gt;&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="s2">&quot;BindingConnector&quot;</span><span class="p">:</span>       <span class="s2">&quot;-[thickness=4,#E74C3C]-&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="s2">&quot;Connector&quot;</span><span class="p">:</span>              <span class="s2">&quot;-[thickness=2,#3498DB]-&gt;&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="s2">&quot;Succession&quot;</span><span class="p">:</span>             <span class="s2">&quot;--&gt;&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="s2">&quot;Flow&quot;</span><span class="p">:</span>                   <span class="s2">&quot;--&gt;&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="s2">&quot;Dependency&quot;</span><span class="p">:</span>             <span class="s2">&quot;..&gt;&gt;&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="s2">&quot;Allocation&quot;</span><span class="p">:</span>             <span class="s2">&quot;-[thickness=3,dotted,#9B59B6]-&gt;&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="s2">&quot;Comment&quot;</span><span class="p">:</span>                <span class="s2">&quot;..&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="s2">&quot;Import&quot;</span><span class="p">:</span>                 <span class="s2">&quot;..&gt;&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="s2">"OwningMembership"</span><span class="p">:</span>       <span class="s2">"+--"</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="s2">"Membership"</span><span class="p">:</span>             <span class="s2">"+.."</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="s2">"FeatureMembership_comp"</span><span class="p">:</span> <span class="s2">"*--"</span><span class="p">,</span>   <span class="c1"># isComposite=True</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="s2">"FeatureMembership_shared"</span><span class="p">:</span> <span class="s2">"o--"</span><span class="p">,</span> <span class="c1"># isComposite=False</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="s2">"FeatureTyping"</span><span class="p">:</span>          <span class="s2">"--:|&gt;"</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="s2">"Redefinition"</span><span class="p">:</span>           <span class="s2">"--||&gt;"</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="s2">"Specialization"</span><span class="p">:</span>         <span class="s2">"--|&gt;"</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="s2">"BindingConnector"</span><span class="p">:</span>       <span class="s2">"-[thickness=4,#E74C3C]-"</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="s2">"Connector"</span><span class="p">:</span>              <span class="s2">"-[thickness=2,#3498DB]-&gt;"</span><span class="p">,</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="s2">"Succession"</span><span class="p">:</span>             <span class="s2">"--&gt;"</span><span class="p">,</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="s2">"Flow"</span><span class="p">:</span>                   <span class="s2">"--&gt;"</span><span class="p">,</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="s2">"Dependency"</span><span class="p">:</span>             <span class="s2">"..&gt;&gt;"</span><span class="p">,</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="s2">"Allocation"</span><span class="p">:</span>             <span class="s2">"-[thickness=3,dotted,#9B59B6]-&gt;"</span><span class="p">,</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="s2">"Comment"</span><span class="p">:</span>                <span class="s2">".."</span><span class="p">,</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="s2">"Import"</span><span class="p">:</span>                 <span class="s2">"..&gt;"</span><span class="p">,</span>
 <a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="2-element-rendering">2. Element Rendering<a class="headerlink" href="#2-element-rendering" title="Permanent link">&para;</a></h3>
@@ -785,20 +785,20 @@
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>}
 <a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>&lt;/style&gt;
 <a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>&#39; Per-relationship inline styling
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>' Per-relationship inline styling
 <a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>A -[#E74C3C,thickness=4]-&gt; B : binding
 <a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>C -[#3498DB,thickness=2]-&gt; D : connector
 </code></pre></div>
 <h3 id="4-compartment-alternative">4. Compartment Alternative<a class="headerlink" href="#4-compartment-alternative" title="Permanent link">&para;</a></h3>
 <p>Since <code>rectangle { ... }</code> compartments don't work, use PlantUML's <code>class</code> syntax for elements that need internal structure:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>class &quot;Wheel&quot; as WheelDef {
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>class "Wheel" as WheelDef {
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  +radius : LengthValue
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  +pressure : PressureValue
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  +hubPort : Port
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>}
 </code></pre></div>
 <p>Or use notes adjacent to elements:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>rectangle &quot;Wheel&quot; as W &lt;&lt;part def&gt;&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>rectangle "Wheel" as W &lt;&lt;part def&gt;&gt;
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>note right of W
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>  radius : LengthValue
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>  pressure : PressureValue

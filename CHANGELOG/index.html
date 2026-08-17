@@ -431,6 +431,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0361-2026-08-17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.36.1 (2026-08-17)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.36.1 (2026-08-17)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sparkles-new-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :sparkles: New Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0360-2026-07-18" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -443,7 +471,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#sparkles-new-features" class="md-nav__link">
+  <a href="#sparkles-new-features_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         :sparkles: New Features
@@ -543,7 +571,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#sparkles-new-features_1" class="md-nav__link">
+  <a href="#sparkles-new-features_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         :sparkles: New Features
@@ -1738,6 +1766,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0361-2026-08-17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.36.1 (2026-08-17)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.36.1 (2026-08-17)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sparkles-new-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :sparkles: New Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0360-2026-07-18" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1750,7 +1806,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#sparkles-new-features" class="md-nav__link">
+  <a href="#sparkles-new-features_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         :sparkles: New Features
@@ -1850,7 +1906,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#sparkles-new-features_1" class="md-nav__link">
+  <a href="#sparkles-new-features_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         :sparkles: New Features
@@ -3004,8 +3060,21 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
-<h2 id="v0360-2026-07-18">v0.36.0 (2026-07-18)<a class="headerlink" href="#v0360-2026-07-18" title="Permanent link">&para;</a></h2>
+<h2 id="v0361-2026-08-17">v0.36.1 (2026-08-17)<a class="headerlink" href="#v0361-2026-08-17" title="Permanent link">&para;</a></h2>
 <h3 id="sparkles-new-features">:sparkles: New Features<a class="headerlink" href="#sparkles-new-features" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Nested requirement children.</strong> <code>Requirement.load_from_grammar</code> now
+  populates <code>self.children</code> with nested <code>requirement</code> usages and
+  <code>requirement def</code> definitions encountered in the body. Previously the
+  body walk stubbed out <code>DefinitionBodyItem</code> with <code>pass</code>, so nested
+  requirements were parsed by the grammar but dropped from the public
+  object tree. Deep nesting recurses correctly; <code>.parent</code> links are set
+  on each child. Non-requirement nested elements (parts, items,
+  attributes) are silently skipped for now. The grammar-object
+  round-trip (<code>load_grammar</code> + <code>classtree</code>) is unaffected.</li>
+</ul>
+<h2 id="v0360-2026-07-18">v0.36.0 (2026-07-18)<a class="headerlink" href="#v0360-2026-07-18" title="Permanent link">&para;</a></h2>
+<h3 id="sparkles-new-features_1">:sparkles: New Features<a class="headerlink" href="#sparkles-new-features_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Boxes-backed state-machine visualizer.</strong> New optional renderer
   <code>sysmlpy.boxes_view</code> produces a <a href="https://github.com/mycr0ft/boxes"><code>boxes</code></a>
@@ -3098,7 +3167,7 @@
 <li>Removed <code>as_package_diagram_view()</code> — Package Diagram is a SysML v1.x concept; use <code>as_package_view()</code> or <code>as_general_view()</code>.</li>
 <li>Removed orphan helpers: <code>_extract_constraint_parameters()</code>, <code>_extract_requirement_relationships()</code>, <code>_extract_connection_endpoints()</code>.</li>
 </ul>
-<h3 id="sparkles-new-features_1">:sparkles: New Features<a class="headerlink" href="#sparkles-new-features_1" title="Permanent link">&para;</a></h3>
+<h3 id="sparkles-new-features_2">:sparkles: New Features<a class="headerlink" href="#sparkles-new-features_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Added <code>as_browser_view()</code> — renders hierarchical model tree using PlantUML <code>@startwbs</code> (Work Breakdown Structure) syntax. Supports <code>focus</code>, <code>elements</code>, <code>style</code>, <code>custom_style</code>.</li>
 <li>Exported <code>as_browser_view</code> from <code>sysmlpy</code> package (<code>sysmlpy.as_browser_view()</code>).</li>

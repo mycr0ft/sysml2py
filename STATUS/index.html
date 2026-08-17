@@ -510,6 +510,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#nested-requirement-children-v0361" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nested Requirement Children (v0.36.1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#boxes-backed-state-machine-visualizer-v0360" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -936,6 +947,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#nested-requirement-children-v0361" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nested Requirement Children (v0.36.1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#boxes-backed-state-machine-visualizer-v0360" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1188,7 +1210,7 @@
 
 
 <h1 id="sysmlpy-project-status">sysmlpy — Project Status<a class="headerlink" href="#sysmlpy-project-status" title="Permanent link">&para;</a></h1>
-<p>Current version: <strong>v0.36.0</strong> (2026-07-18)</p>
+<p>Current version: <strong>v0.36.1</strong> (2026-08-17)</p>
 <hr />
 <h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
 <h3 id="public-api-classes">Public API Classes<a class="headerlink" href="#public-api-classes" title="Permanent link">&para;</a></h3>
@@ -1690,6 +1712,8 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tbody>
 </table>
 <p>All views support: <code>focus</code>, <code>elements</code>, <code>show_external</code>, <code>direction</code>, B&amp;W/color toggle, <code>custom_style</code>, and legend.</p>
+<h3 id="nested-requirement-children-v0361">Nested Requirement Children (v0.36.1)<a class="headerlink" href="#nested-requirement-children-v0361" title="Permanent link">&para;</a></h3>
+<p><code>Requirement.load_from_grammar</code> now populates <code>self.children</code> with nested <code>requirement</code> usages and <code>requirement def</code> definitions encountered in the body. Previously the body walk stubbed out <code>DefinitionBodyItem</code> with <code>pass</code>, so nested requirements were parsed by the grammar but dropped from the public object tree. Deep nesting recurses; <code>.parent</code> links are set on each child. Non-requirement nested elements are skipped for now. Grammar-object round-trip is unaffected.</p>
 <h3 id="boxes-backed-state-machine-visualizer-v0360">Boxes-backed State-Machine Visualizer (v0.36.0)<a class="headerlink" href="#boxes-backed-state-machine-visualizer-v0360" title="Permanent link">&para;</a></h3>
 <p>Optional renderer that produces a <a href="https://github.com/mycr0ft/boxes"><code>boxes</code></a> Diagram with native UML state shapes (rounded <code>«state»</code> boxes, filled-circle initial pseudostate, bullseye final state, orthogonal port-to-port routing). Alternative to <code>as_state_transition_view()</code> when you don't want a PlantUML/Java runtime.</p>
 <table>
@@ -1892,7 +1916,7 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 <tbody>
 <tr>
 <td><code>grammar/classes.py</code></td>
-<td><code>PackageBodyElement</code> name is hardcoded; <code class="highlight">This isn&#39;t always the case</code></td>
+<td><code>PackageBodyElement</code> name is hardcoded; <code class="highlight">This isn't always the case</code></td>
 </tr>
 <tr>
 <td><code>definition.py</code> (<code>RootNamespace</code>)</td>

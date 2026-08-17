@@ -904,50 +904,50 @@
 <div class="highlight"><pre><span></span><code>from sysmlpy import loads
 
 # Parse text to Python
-text = &quot;package Rocket;&quot;
+text = "package Rocket;"
 model = loads(text)
 
 # Python to text
 output = model.dump()
-# → &quot;package Rocket;&quot;
+# → "package Rocket;"
 </code></pre></div>
 <h2 id="packages">Packages<a class="headerlink" href="#packages" title="Permanent link">&para;</a></h2>
 <p>Create a package::</p>
 <div class="highlight"><pre><span></span><code>from sysmlpy import Package
 
-p = Package(name=&quot;Rocket&quot;)
+p = Package(name="Rocket")
 print(p.dump())
-# → &quot;package Rocket;&quot;
+# → "package Rocket;"
 </code></pre></div>
 <p>Package with body::</p>
-<div class="highlight"><pre><span></span><code>p = Package(name=&quot;Rocket&quot;)
-p.add_child(Package(name=&quot;Engine&quot;))
+<div class="highlight"><pre><span></span><code>p = Package(name="Rocket")
+p.add_child(Package(name="Engine"))
 print(p.dump())
 # → package Rocket {
 #        package Engine;
 #     }
 </code></pre></div>
 <p>Short names (alias IDs)::</p>
-<div class="highlight"><pre><span></span><code>p = Package(name=&quot;Rocket&quot;, shortname=&quot;&#39;3.1&#39;&quot;)
+<div class="highlight"><pre><span></span><code>p = Package(name="Rocket", shortname="'3.1'")
 print(p.dump())
-# → package &lt;&#39;3.1&#39;&gt; Rocket;
+# → package &lt;'3.1'&gt; Rocket;
 </code></pre></div>
 <h2 id="items">Items<a class="headerlink" href="#items" title="Permanent link">&para;</a></h2>
 <p>Create an item usage::</p>
 <div class="highlight"><pre><span></span><code>from sysmlpy import Item
 
-i = Item(name=&quot;Fuel&quot;)
+i = Item(name="Fuel")
 print(i.dump())
 # → item Fuel;
 </code></pre></div>
 <p>Item definition::</p>
-<div class="highlight"><pre><span></span><code>i = Item(definition=True, name=&quot;Fuel&quot;)
+<div class="highlight"><pre><span></span><code>i = Item(definition=True, name="Fuel")
 print(i.dump())
 # → item def Fuel;
 </code></pre></div>
 <p>Items with children::</p>
-<div class="highlight"><pre><span></span><code>i = Item(name=&quot;Fuel&quot;)
-i.add_child(Item(name=&quot;Oxidizer&quot;))
+<div class="highlight"><pre><span></span><code>i = Item(name="Fuel")
+i.add_child(Item(name="Oxidizer"))
 print(i.dump())
 # → item Fuel {
 #        item Oxidizer;
@@ -957,7 +957,7 @@ print(i.dump())
 <p>Parts work like items::</p>
 <div class="highlight"><pre><span></span><code>from sysmlpy import Part
 
-p = Part(name=&quot;Engine&quot;)
+p = Part(name="Engine")
 print(p.dump())
 # → part Engine;
 </code></pre></div>
@@ -965,7 +965,7 @@ print(p.dump())
 <p>Attributes with values::</p>
 <div class="highlight"><pre><span></span><code>from sysmlpy import Attribute, ureg
 
-a = Attribute(name=&quot;mass&quot;)
+a = Attribute(name="mass")
 a.set_value(100 * ureg.kilogram)
 print(a.dump())
 # → attribute mass = 100 [kilogram];
@@ -973,9 +973,9 @@ print(a.dump())
 <p>Composite structures::</p>
 <div class="highlight"><pre><span></span><code>from sysmlpy import Part, Attribute
 
-p = Part(name=&quot;Stage1&quot;)
-p.add_child(Attribute(name=&quot;mass&quot;))
-p.add_child(Attribute(name=&quot;thrust&quot;))
+p = Part(name="Stage1")
+p.add_child(Attribute(name="mass"))
+p.add_child(Attribute(name="thrust"))
 print(p.dump())
 # → part Stage1 {
 #        attribute mass;
@@ -987,16 +987,16 @@ print(p.dump())
 <div class="highlight"><pre><span></span><code>from sysmlpy import Action
 
 # Action definition with typed inputs/outputs
-a = Action(definition=True, name=&#39;Focus&#39;)
-a.add_input(&#39;scene&#39;, &#39;Scene&#39;)
-a.add_output(&#39;image&#39;, &#39;Image&#39;)
+a = Action(definition=True, name='Focus')
+a.add_input('scene', 'Scene')
+a.add_output('image', 'Image')
 print(a.dump())
 # → action def Focus { in scene : Scene; out image : Image; }
 
 # Action usage with references
-b = Action(name=&#39;TakePicture&#39;)
-b.add_input(&#39;scene&#39;)
-b.add_output(&#39;picture&#39;)
+b = Action(name='TakePicture')
+b.add_input('scene')
+b.add_output('picture')
 print(b.dump())
 # → action TakePicture { in scene; out picture; }
 </code></pre></div>
@@ -1005,19 +1005,19 @@ print(b.dump())
 <div class="highlight"><pre><span></span><code>from sysmlpy import Reference, Item
 
 # Simple reference
-r = Reference(name=&#39;driver&#39;)
+r = Reference(name='driver')
 print(r.dump())
 # → ref driver;
 
 # Reference with type
-person = Item(name=&#39;Person&#39;)
-r2 = Reference(name=&#39;driver&#39;)
+person = Item(name='Person')
+r2 = Reference(name='driver')
 r2.set_type(person)
 print(r2.dump())
 # → ref driver : Person;
 
 # Reference redefinition
-r3 = Reference(name=&#39;payload&#39;, redefines=True)
+r3 = Reference(name='payload', redefines=True)
 r3.set_type(person)
 print(r3.dump())
 # → ref :&gt;&gt; payload : Person;
@@ -1027,10 +1027,10 @@ print(r3.dump())
 <div class="highlight"><pre><span></span><code>from sysmlpy import Item
 
 # Create definition
-fuel_def = Item(definition=True, name=&quot;Fuel&quot;)
+fuel_def = Item(definition=True, name="Fuel")
 
 # Create usage typed by definition
-hydrogen = Item(name=&quot;Hydrogen&quot;)
+hydrogen = Item(name="Hydrogen")
 hydrogen.set_typed_by(fuel_def)
 print(hydrogen.dump())
 # → item Hydrogen : Fuel;
@@ -1040,8 +1040,8 @@ print(hydrogen.dump())
 <div class="highlight"><pre><span></span><code>from sysmlpy import Model, Package
 
 m = Model()
-m.add_child(Package(name=&quot;Rocket&quot;))
-m.add_child(Package(name=&quot;Payload&quot;))
+m.add_child(Package(name="Rocket"))
+m.add_child(Package(name="Payload"))
 print(m.dump())
 # → package Rocket;
 #     package Payload;
@@ -1050,10 +1050,10 @@ print(m.dump())
 <p>Parse complete SysML text::</p>
 <div class="highlight"><pre><span></span><code>from sysmlpy import loads
 
-text = &quot;&quot;&quot;package Rocket {
+text = """package Rocket {
        item def Fuel;
        item Hydrogen : Fuel;
-    }&quot;&quot;&quot;
+    }"""
 
 model = loads(text)
 print(model.dump())
@@ -1064,56 +1064,56 @@ print(model.dump())
 <p>All classes have <code>__repr__</code> that returns constructor-style output::</p>
 <div class="highlight"><pre><span></span><code>from sysmlpy import Package, Item, Part, Attribute, Action, Reference
 
-p = Package(name=&#39;Rocket&#39;)
+p = Package(name='Rocket')
 print(repr(p))
-# → Package(name=&#39;Rocket&#39;)
+# → Package(name='Rocket')
 
-i = Item(definition=True, name=&#39;Fuel&#39;)
+i = Item(definition=True, name='Fuel')
 print(repr(i))
-# → Item(definition=True, name=&#39;Fuel&#39;)
+# → Item(definition=True, name='Fuel')
 
-part = Part(name=&#39;Engine&#39;)
+part = Part(name='Engine')
 print(repr(part))
-# → Part(name=&#39;Engine&#39;)
+# → Part(name='Engine')
 
-attr = Attribute(name=&#39;mass&#39;)
+attr = Attribute(name='mass')
 print(repr(attr))
-# → Attribute(name=&#39;mass&#39;)
+# → Attribute(name='mass')
 </code></pre></div>
 <p>Anonymous elements show a UUID until named::</p>
 <div class="highlight"><pre><span></span><code>from sysmlpy import Package
 p = Package()
 print(repr(p))
-# → Package(name=&#39;a1b2c3d4-...&#39;)  # UUID
+# → Package(name='a1b2c3d4-...')  # UUID
 </code></pre></div>
 <h2 id="storage-backends">Storage Backends<a class="headerlink" href="#storage-backends" title="Permanent link">&para;</a></h2>
 <p>sysmlpy provides a unified storage protocol with multiple backends::</p>
 <div class="highlight"><pre><span></span><code>from sysmlpy.store import create_store
 
 # In-memory (default, zero dependencies)
-store = create_store(&quot;memory&quot;)
+store = create_store("memory")
 
 # NetworkX graph (analysis, shortest paths, centrality)
-store = create_store(&quot;networkx&quot;)
+store = create_store("networkx")
 
 # Kuzu embedded graph DB (disk persistence, Cypher queries)
-store = create_store(&quot;kuzu&quot;, database=&quot;/tmp/model.db&quot;)
+store = create_store("kuzu", database="/tmp/model.db")
 
 # Cayley remote graph DB (HTTP API, BoltDB/LevelDB backends)
-store = create_store(&quot;cayley&quot;, host=&quot;localhost&quot;, port=64210)
+store = create_store("cayley", host="localhost", port=64210)
 </code></pre></div>
 <p>All backends share the same API::</p>
 <div class="highlight"><pre><span></span><code>from sysmlpy.store import new_id
 
 eid = new_id()
-store.put(eid, {&quot;name&quot;: &quot;Engine&quot;, &quot;sysml_type&quot;: &quot;part&quot;})
-data = store.get(eid)       # → {&quot;name&quot;: &quot;Engine&quot;, &quot;sysml_type&quot;: &quot;part&quot;}
+store.put(eid, {"name": "Engine", "sysml_type": "part"})
+data = store.get(eid)       # → {"name": "Engine", "sysml_type": "part"}
 store.has(eid)              # → True
 store.delete(eid)           # → True
 
 # Query elements
-results = store.query(sysml_type=&quot;part&quot;)
-results = store.query(name=&quot;Engine*&quot;)  # wildcard
+results = store.query(sysml_type="part")
+results = store.query(name="Engine*")  # wildcard
 
 # Graph traversal
 store.descendants(root_id)
@@ -1134,39 +1134,39 @@ cross-file import resolution.</p>
 <div class="highlight"><pre><span></span><code>from sysmlpy import load_files, analyze
 
 model = load_files([
-    &#39;models/Shared/Types.sysml&#39;,
-    &#39;models/SystemGateway/SystemGatewayMain.sysml&#39;,
+    'models/Shared/Types.sysml',
+    'models/SystemGateway/SystemGatewayMain.sysml',
 ])
 issues = analyze(model)
 </code></pre></div>
 <p>Packages with the same name are automatically merged::</p>
 <div class="highlight"><pre><span></span><code># types1.sysml: package Types { part def Engine; }
 # types2.sysml: package Types { part def Wheel; }
-model = load_files([&#39;types1.sysml&#39;, &#39;types2.sysml&#39;])
+model = load_files(['types1.sysml', 'types2.sysml'])
 # Both Engine and Wheel are in the same Types package
 </code></pre></div>
 <p>Load an entire project directory::</p>
 <div class="highlight"><pre><span></span><code>from sysmlpy import load_project
 
 # Load all .sysml and .kerml files recursively
-model = load_project(&#39;models/&#39;)
+model = load_project('models/')
 
 # Load from an entry point (only reachable files)
-model = load_project(&#39;models/&#39;, entry=&#39;models/main.sysml&#39;)
+model = load_project('models/', entry='models/main.sysml')
 </code></pre></div>
 <p>Load a file with automatic dependency resolution::</p>
 <div class="highlight"><pre><span></span><code>from sysmlpy import load_with_dependencies
 
 model = load_with_dependencies(
-    &#39;models/SystemGateway/SystemGatewayMain.sysml&#39;,
-    search_paths=[&#39;models/SystemGateway&#39;, &#39;models/Shared&#39;],
+    'models/SystemGateway/SystemGatewayMain.sysml',
+    search_paths=['models/SystemGateway', 'models/Shared'],
 )
 </code></pre></div>
 <p>Standard library imports (ScalarValues, ISQ, etc.) are validated when a library
 path is provided::</p>
 <div class="highlight"><pre><span></span><code>import sysmlpy
-library_path = &#39;/path/to/sysmlpy/library&#39;
-model = load_files([&#39;main.sysml&#39;], library=library_path)
+library_path = '/path/to/sysmlpy/library'
+model = load_files(['main.sysml'], library=library_path)
 </code></pre></div>
 <h2 id="plantuml-view-renderings">PlantUML View Renderings<a class="headerlink" href="#plantuml-view-renderings" title="Permanent link">&para;</a></h2>
 <p>sysmlpy provides <strong>17 view rendering functions</strong> for generating diagrams from
@@ -1186,7 +1186,7 @@ journal articles, and accept <code>focus=</code>, <code>style="color"</code>, an
     as_textual_notation,        # Indented text notation
 )
 
-model = sysmlpy.loads(&quot;package P { part def Engine { port intake; } }&quot;)
+model = sysmlpy.loads("package P { part def Engine { port intake; } }")
 
 # General View: all elements as a graph of nodes and edges
 print(as_general_view(model))
@@ -1205,20 +1205,20 @@ print(as_state_transition_view(model))
 )
 
 # Markdown table for docs
-print(as_tabular_view(model, output_format=&quot;markdown&quot;))
+print(as_tabular_view(model, output_format="markdown"))
 
 # HTML table with CSS classes
-print(as_data_value_tabular_view(model, output_format=&quot;html&quot;))
+print(as_data_value_tabular_view(model, output_format="html"))
 
 # Relationship matrix with type filtering
-print(as_relationship_matrix_view(model, row_type=&quot;part&quot;,
-                                  output_format=&quot;markdown&quot;))
+print(as_relationship_matrix_view(model, row_type="part",
+                                  output_format="markdown"))
 </code></pre></div>
 <p>All rendering functions accept <code>style="color"</code> for colored output and
 <code>custom_style</code> for user-defined PlantUML style overrides::</p>
 <div class="highlight"><pre><span></span><code>puml = as_tree_diagram(model, custom_style=[
-    &#39;skinparam defaultFontSize 14&#39;,
-    &#39;skinparam rectangle { LineThickness 2.5 }&#39;,
+    'skinparam defaultFontSize 14',
+    'skinparam rectangle { LineThickness 2.5 }',
 ])
 </code></pre></div>
 <p>See the README for rendered examples of all 16 view types:
@@ -1228,15 +1228,15 @@ print(as_relationship_matrix_view(model, row_type=&quot;part&quot;,
 naming convention violations and file-package mismatches::</p>
 <div class="highlight"><pre><span></span><code>from sysmlpy import loads, analyze
 
-model = loads(&quot;package mypkg { part def engine; }&quot;)
+model = loads("package mypkg { part def engine; }")
 
 # Default: stylistic checks enabled
 issues = analyze(model)
-# → NAMING_CONVENTION warnings for &#39;mypkg&#39;, &#39;engine&#39;
+# → NAMING_CONVENTION warnings for 'mypkg', 'engine'
 
 # With filename check
-issues = analyze(model, filename=&quot;Engine.sysml&quot;)
-# → FILE_PACKAGE_MISMATCH warning for &#39;mypkg&#39; vs &#39;Engine&#39;
+issues = analyze(model, filename="Engine.sysml")
+# → FILE_PACKAGE_MISMATCH warning for 'mypkg' vs 'Engine'
 
 # Disable stylistic checks
 issues = analyze(model, style_checks=False)

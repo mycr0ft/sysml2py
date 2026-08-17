@@ -688,11 +688,11 @@ syntax.</p>
 </code></pre></div>
 <h3 id="guard-with-trigger-only">Guard with trigger only<a class="headerlink" href="#guard-with-trigger-only" title="Permanent link">&para;</a></h3>
 <p>From the OMG validation examples:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>transition &#39;off-starting&#39;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>transition 'off-starting'
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    first off
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    accept &#39;Vehicle Start Signal&#39;
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    if vehicle1_c1.&#39;brake pedal depressed&#39;
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    do send new &#39;Start Signal&#39;() to vehicle1_c1.vehicleController
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    accept 'Vehicle Start Signal'
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    if vehicle1_c1.'brake pedal depressed'
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    do send new 'Start Signal'() to vehicle1_c1.vehicleController
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    then starting;
 </code></pre></div>
 <h3 id="guard-only-transition-no-trigger-no-effect">Guard-only transition (no trigger, no effect)<a class="headerlink" href="#guard-only-transition-no-trigger-no-effect" title="Permanent link">&para;</a></h3>
@@ -702,7 +702,7 @@ syntax.</p>
 <p>From Advent of SysML v2:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>accept StartMission via hmi
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>if reindeerCount == 9 and totalPower &gt;= 36 [SI::kW]
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>do send new Command(&quot;Gee-up!&quot;) via eyelet
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>do send new Command("Gee-up!") via eyelet
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>then mission;
 </code></pre></div>
 <h3 id="guard-on-a-trigger-less-transition">Guard on a trigger-less transition<a class="headerlink" href="#guard-on-a-trigger-less-transition" title="Permanent link">&para;</a></h3>
@@ -717,7 +717,7 @@ syntax.</p>
 </code></pre></div>
 <h2 id="common-mistakes">Common Mistakes<a class="headerlink" href="#common-mistakes" title="Permanent link">&para;</a></h2>
 <h3 id="mistake-1-using-guard-instead-of-if">Mistake 1: Using <code>guard</code> instead of <code>if</code><a class="headerlink" href="#mistake-1-using-guard-instead-of-if" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>// WRONG — &#39;guard&#39; is not a keyword in the spec
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>// WRONG — 'guard' is not a keyword in the spec
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>transition first S1 guard condition then S2;
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>// CORRECT

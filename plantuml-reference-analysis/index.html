@@ -691,8 +691,8 @@ visual approximations and relying on stereotypes/legends for semantic clarity.</
 <h3 id="how-the-reference-implementation-renders-them">How the Reference Implementation Renders Them<a class="headerlink" href="#how-the-reference-implementation-renders-them" title="Permanent link">&para;</a></h3>
 <p>Both are rendered using PlantUML's <code>rectangle</code> keyword. The visual distinction is achieved
 through <strong>stereotypes</strong>, not different shapes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>rectangle &quot;Wheel&quot; as E1 &lt;&lt;(D,brown) part def&gt;&gt;
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>rectangle &quot;frontLeft&quot; as E2 &lt;&lt;(P,limegreen) part&gt;&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>rectangle "Wheel" as E1 &lt;&lt;(D,brown) part def&gt;&gt;
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>rectangle "frontLeft" as E2 &lt;&lt;(P,limegreen) part&gt;&gt;
 </code></pre></div>
 <p><strong>Key mechanism:</strong> <code>styleString(Type typ)</code> in <code>SysML2PlantUMLText.java</code></p>
 <ol>
@@ -951,7 +951,7 @@ specific arrow string.</p>
 <hr />
 <h2 id="3-redefinition-decoration-on-features">3. Redefinition Decoration on Features<a class="headerlink" href="#3-redefinition-decoration-on-features" title="Permanent link">&para;</a></h2>
 <p>When <code>decoratedRedefined</code> style is enabled, redefined features get inline decoration:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>&quot;featureName&quot; as E1 &lt;&lt;(U,orange) feature&gt;&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>"featureName" as E1 &lt;&lt;(U,orange) feature&gt;&gt;
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>E1 :&gt; redefinedFeatureName
 </code></pre></div>
 <p>The code in <code>VStructure.java</code> adds <code>\n//:&gt;&gt;redefinedFeature//</code> as a note inside the box,
@@ -968,7 +968,7 @@ or uses the PlantUML icon <code>&lt;&amp;bar-trig&gt;</code> prefix with the red
 - States
 - Actions</p>
 <p>These are rendered as PlantUML compartment sections within <code>rectangle</code> or <code>component</code> blocks:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>rectangle &quot;Wheel&quot; as E1 &lt;&lt;part def&gt;&gt; {
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>rectangle "Wheel" as E1 &lt;&lt;part def&gt;&gt; {
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  attribute radius : LengthValue
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  port hub : PortDefinition
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>}

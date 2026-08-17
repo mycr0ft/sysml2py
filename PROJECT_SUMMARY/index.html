@@ -1017,8 +1017,8 @@
 <h1 id="sysmlpy-project-work-summary">sysmlpy — Project Work Summary<a class="headerlink" href="#sysmlpy-project-work-summary" title="Permanent link">&para;</a></h1>
 <blockquote>
 <p><strong>For:</strong> Future agents and team members
-<strong>Last Updated:</strong> July 18, 2026
-<strong>Current Version:</strong> v0.36.0
+<strong>Last Updated:</strong> August 17, 2026
+<strong>Current Version:</strong> v0.36.1
 <strong>Repository:</strong> https://github.com/mycr0ft/sysmlpy</p>
 </blockquote>
 <hr />
@@ -1509,7 +1509,7 @@
 <tr>
 <td><strong>PackageBodyElement name hardcoded</strong></td>
 <td><code>grammar/classes.py</code></td>
-<td>Comment says <code class="highlight">This isn&#39;t always the case</code>.</td>
+<td>Comment says <code class="highlight">This isn't always the case</code>.</td>
 </tr>
 <tr>
 <td><strong>RootNamespace doesn't handle AliasMember/Import</strong></td>
@@ -1692,7 +1692,7 @@
 <a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>pytest<span class="w"> </span>tests/conformance_test.py<span class="w">    </span><span class="c1"># OMG conformance (slow)</span>
 <a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
 <a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="c1"># Skip conformance (fast development)</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;not conformance&quot;</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">"not conformance"</span>
 </code></pre></div>
 <h3 id="adding-a-new-ocl-constraint">Adding a New OCL Constraint<a class="headerlink" href="#adding-a-new-ocl-constraint" title="Permanent link">&para;</a></h3>
 <ol>
@@ -1713,9 +1713,9 @@
 <p>Add tests to <code>tests/semantic_test.py</code>:
    <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">TestMyConstraint</span><span class="p">:</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">test_violation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>        <span class="n">model</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="s2">&quot;...&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>        <span class="n">model</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="s2">"..."</span><span class="p">)</span>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>        <span class="n">issues</span> <span class="o">=</span> <span class="n">analyze</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        <span class="k">assert</span> <span class="nb">any</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="s2">&quot;MY_CONSTRAINT&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">issues</span><span class="p">)</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        <span class="k">assert</span> <span class="nb">any</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="s2">"MY_CONSTRAINT"</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">issues</span><span class="p">)</span>
 </code></pre></div></p>
 </li>
 </ol>
@@ -1731,7 +1731,7 @@
 </li>
 <li>
 <p>Register in <code>create_store()</code>:
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">elif</span> <span class="n">backend</span> <span class="o">==</span> <span class="s2">&quot;my&quot;</span><span class="p">:</span>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">elif</span> <span class="n">backend</span> <span class="o">==</span> <span class="s2">"my"</span><span class="p">:</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="k">return</span> <span class="n">MyStore</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div></p>
 </li>
