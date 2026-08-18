@@ -431,6 +431,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0362-2026-08-18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.36.2 (2026-08-18)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.36.2 (2026-08-18)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bug-bug-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :bug: Bug Fixes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0361-2026-08-17" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1766,6 +1794,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0362-2026-08-18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.36.2 (2026-08-18)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.36.2 (2026-08-18)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bug-bug-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :bug: Bug Fixes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0361-2026-08-17" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3060,6 +3116,35 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0362-2026-08-18">v0.36.2 (2026-08-18)<a class="headerlink" href="#v0362-2026-08-18" title="Permanent link">&para;</a></h2>
+<h3 id="bug-bug-fixes">:bug: Bug Fixes<a class="headerlink" href="#bug-bug-fixes" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><code>Requirement.load_from_grammar</code> now preserves short name, doc, and
+  nested children in <code>dump()</code>.</strong> Three gaps in the public <code>Requirement</code>
+  class (in <code>usage.py</code>) were dropping data that the parser had correctly
+  captured:</li>
+<li><strong>Short name</strong> (<code>requirement &lt;'1'&gt; R { … }</code>) — <code>declaredShortName</code>
+    was read by the grammar layer but never propagated to
+    <code>self.req_shortname</code>, so <code>dump()</code> emitted <code>requirement R;</code> with no
+    <code>&lt;'1'&gt;</code>. Now extracted for both <code>RequirementUsage</code> and
+    <code>RequirementDefinition</code>, with the <code>&lt;&gt;</code> wrappers stripped.</li>
+<li><strong>Doc</strong> (<code>doc /* … */</code>) — the body walk visited <code>DefinitionBodyItem</code>
+    only to look for nested requirements; the <code>Documentation</code> /
+    <code>CommentSysML</code> node inside <code>AnnotatingElement</code> was walked past and
+    <code>self.doc</code> was never set. New <code>_extract_doc_from_body_item</code> helper
+    walks <code>DefinitionBodyItem → DefinitionMember → DefinitionElement →
+    AnnotatingElement → Documentation</code> and extracts the comment text via
+    the new <code>_comment_body_to_text</code> module helper (strips <code>/* */</code> and
+    <code>*</code> line prefixes).</li>
+<li><strong>Nested children in <code>dump()</code></strong> — <code>dump()</code> built its body from
+    <code>doc</code>/<code>subject</code>/<code>actors</code>/<code>req_attributes</code>/<code>req_constraints</code>/
+    <code>assume_constraints</code> but never iterated <code>self.children</code>, so nested
+    <code>requirement</code> usages were silently omitted from the output even
+    though they were correctly stored on the parent. <code>dump()</code> now
+    appends <code>child.dump()</code> for each child and indents multi-line body
+    items (including multi-line doc blocks) so nested bodies render at
+    the correct indentation level.</li>
+</ul>
 <h2 id="v0361-2026-08-17">v0.36.1 (2026-08-17)<a class="headerlink" href="#v0361-2026-08-17" title="Permanent link">&para;</a></h2>
 <h3 id="sparkles-new-features">:sparkles: New Features<a class="headerlink" href="#sparkles-new-features" title="Permanent link">&para;</a></h3>
 <ul>
