@@ -2585,7 +2585,12 @@ class Requirement(Usage):
         body_items = []
 
         if self.doc:
-            body_items.append(f"doc /* {self.doc} */")
+            if '\n' in self.doc:
+                lines = self.doc.split('\n')
+                doc_block = ['doc /*'] + [f' * {l}' for l in lines] + [' */']
+                body_items.append('\n'.join(doc_block))
+            else:
+                body_items.append(f"doc /* {self.doc} */")
 
         if self.subject:
             subj_name, subj_type = self.subject
@@ -2612,8 +2617,12 @@ class Requirement(Usage):
         for expr in self.assume_constraints:
             body_items.append(f"assume constraint {{ {expr} }}")
 
+        for child in self.children:
+            body_items.append(child.dump())
+
         if body_items:
-            body = " {\n   " + "\n   ".join(body_items) + "\n}"
+            indented = [item.replace('\n', '\n   ') for item in body_items]
+            body = " {\n   " + "\n   ".join(indented) + "\n}"
             return f"{keyword}{shortname_str} {name_str}{type_suffix}{body}"
         else:
             return f"{keyword}{shortname_str} {name_str}{type_suffix};"
@@ -2641,7 +2650,13 @@ class Requirement(Usage):
             # Extract name from declaration.identification
             if hasattr(grammar, 'declaration') and grammar.declaration:
                 if hasattr(grammar.declaration, 'identification') and grammar.declaration.identification:
-                    self.name = grammar.declaration.identification.declaredName
+                    ident = grammar.declaration.identification
+                    self.name = ident.declaredName
+                    sn = getattr(ident, 'declaredShortName', None)
+                    if sn:
+                        sn = sn.strip('<>').strip()
+                        if sn:
+                            self.req_shortname = sn
         else:
             # RequirementUsage
             self.is_definition = False
@@ -2654,7 +2669,13 @@ class Requirement(Usage):
                     if hasattr(inner_decl, 'declaration') and inner_decl.declaration:
                         feat_decl = inner_decl.declaration
                         if hasattr(feat_decl, 'identification') and feat_decl.identification:
-                            self.name = feat_decl.identification.declaredName
+                            ident = feat_decl.identification
+                            self.name = ident.declaredName
+                            sn = getattr(ident, 'declaredShortName', None)
+                            if sn:
+                                sn = sn.strip('<>').strip()
+                                if sn:
+                                    self.req_shortname = sn
         
         # Extract body content
         body = getattr(grammar, 'body', None)
@@ -2664,6 +2685,7 @@ class Requirement(Usage):
                     child_class = item.child.__class__.__name__
                     if child_class == "DefinitionBodyItem":
                         self._extract_nested_requirements(item.child)
+                        self._extract_doc_from_body_item(item.child)
                     elif child_class == "RequirementConstraintMember":
                         pass  # could extract constraints
                     elif child_class == "SubjectMember":
@@ -2707,6 +2729,55 @@ class Requirement(Usage):
                     self.children.append(c)
                 elif target_cls and "Requirement" in target_cls:
                     print(f"[Requirement] Unhandled nested requirement type: {target_cls}")
+
+    def _extract_doc_from_body_item(self, def_body_item):
+        """Find a Documentation node inside a DefinitionBodyItem and set self.doc.
+
+        Traversal path (per grammar/classes.py):
+            DefinitionBodyItem
+              -> DefinitionMember          (other member types hold requirements, not docs)
+                -> DefinitionElement
+                  -> AnnotatingElement
+                    -> Documentation  (stored as .children, single object)
+        """
+        for member in getattr(def_body_item, 'children', []) or []:
+            if member.__class__.__name__ != "DefinitionMember":
+                continue
+            for element in getattr(member, 'children', []) or []:
+                for ae in getattr(element, 'children', []) or []:
+                    if ae.__class__.__name__ != "AnnotatingElement":
+                        continue
+                    doc = getattr(ae, 'children', None)
+                    if doc is None:
+                        continue
+                    doc_cls = doc.__class__.__name__
+                    if doc_cls in ("Documentation", "CommentSysML"):
+                        text = _comment_body_to_text(getattr(doc, 'body', ''))
+                        if text:
+                            self.doc = text
+
+
+def _comment_body_to_text(body):
+    """Extract plain text from a SysML comment body like '/* ... */'.
+
+    Strips the comment delimiters and the leading '*' marker from each line,
+    then collapses to non-empty lines joined by newlines.
+    """
+    if not body:
+        return None
+    s = body.strip()
+    if s.startswith('/*'):
+        s = s[2:]
+    if s.endswith('*/'):
+        s = s[:-2]
+    lines = []
+    for line in s.splitlines():
+        line = line.strip()
+        if line.startswith('*'):
+            line = line[1:].lstrip()
+        if line:
+            lines.append(line)
+    return '\n'.join(lines) if lines else None
 
 
 class Message(Usage):

@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## v0.36.2 (2026-08-18)
+
+### :bug: Bug Fixes
+
+- **`Requirement.load_from_grammar` now preserves short name, doc, and
+  nested children in `dump()`.** Three gaps in the public `Requirement`
+  class (in `usage.py`) were dropping data that the parser had correctly
+  captured:
+  - **Short name** (`requirement <'1'> R { … }`) — `declaredShortName`
+    was read by the grammar layer but never propagated to
+    `self.req_shortname`, so `dump()` emitted `requirement R;` with no
+    `<'1'>`. Now extracted for both `RequirementUsage` and
+    `RequirementDefinition`, with the `<>` wrappers stripped.
+  - **Doc** (`doc /* … */`) — the body walk visited `DefinitionBodyItem`
+    only to look for nested requirements; the `Documentation` /
+    `CommentSysML` node inside `AnnotatingElement` was walked past and
+    `self.doc` was never set. New `_extract_doc_from_body_item` helper
+    walks `DefinitionBodyItem → DefinitionMember → DefinitionElement →
+    AnnotatingElement → Documentation` and extracts the comment text via
+    the new `_comment_body_to_text` module helper (strips `/* */` and
+    ` * ` line prefixes).
+  - **Nested children in `dump()`** — `dump()` built its body from
+    `doc`/`subject`/`actors`/`req_attributes`/`req_constraints`/
+    `assume_constraints` but never iterated `self.children`, so nested
+    `requirement` usages were silently omitted from the output even
+    though they were correctly stored on the parent. `dump()` now
+    appends `child.dump()` for each child and indents multi-line body
+    items (including multi-line doc blocks) so nested bodies render at
+    the correct indentation level.
+
 ## v0.36.1 (2026-08-17)
 
 ### :sparkles: New Features
