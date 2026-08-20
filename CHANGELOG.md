@@ -1,5 +1,38 @@
 # CHANGELOG
 
+## v0.36.3 (2026-08-20)
+
+### :bug: Bug Fixes
+
+- **View (and other prefixed-usage) body children are now exposed on the
+  public API tree.** `Package.load_from_grammar` (in `definition.py`)
+  built `View` objects for `ViewUsage` / `ViewDefinition` manually —
+  setting `grammar` and `name` directly but never calling
+  `load_from_grammar` — so `View.children` stayed empty and
+  `view.attributes` (along with every other typed accessor) returned
+  `[]` even when the body contained `attribute`, `part`, etc. The
+  `ViewUsage` / `ViewDefinition` branches now call
+  `View().load_from_grammar(...)` / `View(definition=True).load_from_grammar(...)`,
+  matching how `Part` and the other occurrence usages are handled.
+
+  Two supporting fixes in `usage.py` make prefixed usages fully
+  round-trip:
+  - `Usage.load_from_grammar` — the `declaration` branch (taken by
+    prefixed usages such as `ViewUsage`, which carry their body directly
+    on `grammar.body` — a `ViewBody` / `ViewDefinitionBody` — rather
+    than nested under `grammar.usage.completion.body.body`) previously
+    hardcoded `children = []`. It now extracts the body children with
+    the same `DefinitionBodyItem → member → element` walk used by the
+    usage path.
+  - `Usage._ensure_body` — now handles grammars whose body lives
+    directly on `grammar.body` (a body object with a `children` list),
+    so `dump()` / re-serialization round-trips instead of raising
+    `AttributeError: 'ViewUsage' object has no attribute 'usage'`.
+
+  Regression tests added in `tests/navigate_test.py` (public-API
+  accessor + `dump` content) and `tests/grammar_test.py` (full
+  `load_grammar` → `classtree` → `dump()` round-trip).
+
 ## v0.36.2 (2026-08-18)
 
 ### :bug: Bug Fixes

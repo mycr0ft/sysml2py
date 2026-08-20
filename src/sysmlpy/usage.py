@@ -151,15 +151,24 @@ class Usage(Searchable):
             )
 
         if len(body) > 0:
-            target = getattr(self.grammar, subgrammar)
-            if hasattr(target, 'completion'):
+            # Most usages (Part, Item, Attribute, ...) nest their body under
+            # ``grammar.usage.completion.body.body`` (a DefinitionBody).  Prefixed
+            # usages such as ViewUsage carry the body directly on ``grammar.body``
+            # (a ViewBody / ViewDefinitionBody) whose ``children`` are the
+            # DefinitionBodyItem objects themselves.
+            target = getattr(self.grammar, subgrammar, None)
+            if target is not None and hasattr(target, 'completion'):
                 target.completion.body.body = DefinitionBody(
                     {"name": "DefinitionBody", "ownedRelatedElement": body}
                 )
-            else:
+            elif target is not None and hasattr(target, 'body'):
                 target.body = DefinitionBody(
                     {"name": "DefinitionBody", "ownedRelatedElement": body}
                 )
+            elif hasattr(self.grammar, 'body') and hasattr(self.grammar.body, 'children'):
+                self.grammar.body.children = [
+                    DefinitionBodyItem(item) for item in body
+                ]
         return self
 
     def usage_dump(self, child):
@@ -780,7 +789,29 @@ class Usage(Searchable):
             # Check direct identification (for RequirementDefinition, UseCaseDefinition)
             elif hasattr(decl, 'identification') and decl.identification:
                 u_name = decl.identification.declaredName
+            # Prefixed usages (e.g. ViewUsage, ViewDefinition) and other
+            # declaration-based types carry their body directly on
+            # ``grammar.body`` rather than nested under
+            # ``grammar.usage.completion.body.body``.  Extract children the
+            # same way the usage path does when the body exposes a
+            # ``children`` list (ViewBody / ViewDefinitionBody /
+            # DefinitionBody).  Bodies that use ``items`` instead
+            # (RequirementBody, CaseBody) are left untouched here.
             children = []
+            body = getattr(grammar, 'body', None)
+            if body is not None and hasattr(body, 'children') and body.children:
+                children_list = []
+                for body_item in body.children:
+                    if hasattr(body_item, 'children') and body_item.children:
+                        member = body_item.children[0]
+                        mc = member.children if isinstance(member.children, list) else [member.children]
+                        for inner in mc:
+                            if inner is None:
+                                continue
+                            if inner.__class__.__name__ == 'DefinitionElement' and hasattr(inner, 'children') and inner.children:
+                                inner = inner.children[0]
+                            children_list.append(inner)
+                children = children_list
         else:
             u_name = None
             children = []

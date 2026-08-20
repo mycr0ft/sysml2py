@@ -1168,23 +1168,11 @@ class Package(Searchable):
                 f.parent = self
                 self.children.append(f)
             elif inner_class == "ViewDefinition":
-                v = View(definition=True)
-                v.grammar = inner_element
-                if hasattr(inner_element, 'declaration') and inner_element.declaration:
-                    decl = inner_element.declaration
-                    if hasattr(decl, 'identification') and decl.identification:
-                        v.name = decl.identification.declaredName
+                v = View(definition=True).load_from_grammar(inner_element)
                 v.parent = self
                 self.children.append(v)
             elif inner_class == "ViewUsage":
-                v = View()
-                v.grammar = inner_element
-                if hasattr(inner_element, 'declaration') and inner_element.declaration:
-                    decl = inner_element.declaration
-                    if hasattr(decl, 'declaration') and decl.declaration:
-                        feat_decl = decl.declaration
-                        if hasattr(feat_decl, 'identification') and feat_decl.identification:
-                            v.name = feat_decl.identification.declaredName
+                v = View().load_from_grammar(inner_element)
                 v.parent = self
                 self.children.append(v)
             elif inner_class == "ViewpointDefinition":

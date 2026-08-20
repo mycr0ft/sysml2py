@@ -474,3 +474,52 @@ def test_find_one_on_nested_element():
     result = m.find_one("cylinder")
     assert result is not None
     assert result.name == "cylinder"
+
+
+# ---------------------------------------------------------------------------
+# view / viewpoint attribute parsing (regression for body children not
+# being exposed on prefixed usages such as ViewUsage)
+# ---------------------------------------------------------------------------
+
+
+def test_view_usage_exposes_nested_attributes():
+    m = loads("""
+    package DummyModel {
+        private import ScalarValues::String;
+
+        view ExampleView {
+            attribute exampleAttribute = "View Attribute";
+        }
+
+        part ExamplePart {
+            attribute exampleAttribute = "Part Attribute";
+        }
+    }
+    """)
+    pkg = m.packages[0]
+
+    views = pkg.views
+    assert len(views) == 1
+    assert views[0].name == "ExampleView"
+    view_attrs = views[0].attributes
+    assert len(view_attrs) == 1
+    assert view_attrs[0].name == "exampleAttribute"
+    assert view_attrs[0].sysml_type == "attribute"
+
+    parts = pkg.parts
+    assert len(parts) == 1
+    assert parts[0].attributes[0].name == "exampleAttribute"
+
+
+def test_view_usage_dump_round_trips():
+    m = loads("""
+    package DummyModel {
+        view ExampleView {
+            attribute exampleAttribute = "View Attribute";
+        }
+    }
+    """)
+    out = m.dump()
+    assert "view ExampleView" in out
+    assert "attribute exampleAttribute" in out
+

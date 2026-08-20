@@ -2447,12 +2447,37 @@ def test_portion_usage_timeslice_snapshot_roundtrip():
 def test_portion_usage_nested_timeslice_snapshot():
     """Nested timeslice with snapshot child should parse correctly."""
     text = """package P {
-    individual part individual1 {
-        timeslice timeslice1 {
-            snapshot snapshot1;
+        individual part individual1 {
+            timeslice timeslice1 {
+                snapshot snapshot1;
+            }
         }
-    }
-}"""
+    }"""
     a = loads(text)
     b = classtree(a)
     assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_view_usage_with_attribute_roundtrip():
+    """attribute inside a view usage body should parse and round-trip.
+
+    Regression: ViewUsage is a prefixed usage that carries its body directly
+    on ``grammar.body`` (a ViewBody) rather than nested under
+    ``grammar.usage.completion.body.body``.  Previously the body children
+    were dropped during load, so ``view.attributes`` returned an empty list.
+    """
+    text = """package DummyModel {
+        private import ScalarValues::String;
+
+        view ExampleView {
+            attribute exampleAttribute = "View Attribute";
+        }
+
+        part ExamplePart {
+            attribute exampleAttribute = "Part Attribute";
+        }
+    }"""
+    a = loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
