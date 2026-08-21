@@ -1029,13 +1029,13 @@
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── src/sysmlpy/
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│   ├── __init__.py          # Public API: loads(), load(), analyze(), load_files(), load_project()
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   ├── antlr_parser.py      # ANTLR4 lexer/parser setup
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│   ├── antlr_visitor.py     # ~11K lines: parse tree → internal dict
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│   ├── antlr_visitor.py     # ~12.3K lines: parse tree → internal dict
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   ├── grammar/
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│   │   ├── classes.py       # ~8.8K lines: grammar class hierarchy (no NotImplementedError)
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│   │   ├── classes.py       # ~9.7K lines: grammar class hierarchy (no NotImplementedError)
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│   │   └── antlr4/          # Generated ANTLR parser/lexer
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│   ├── definition.py        # Model, Package, RootNamespace classes
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│   ├── usage.py             # Part, Item, Attribute, Port, Action, etc.
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│   ├── semantic.py          # Semantic analysis engine (~1.8K lines)
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│   ├── semantic.py          # Semantic analysis engine (~2.3K lines)
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│   ├── project.py           # Multi-file project loading (load_files, load_project)
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   ├── store.py             # Storage backends (memory, NetworkX, Kuzu, Cayley)
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│   ├── plantuml.py          # PlantUML diagram generation
@@ -1048,16 +1048,16 @@
 <a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>│       └── domain/          # ISQ, SI units, base quantities
 <a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>├── tests/
 <a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>│   ├── grammar_test.py      # 96 round-trip tests (96 pass, 0 deferred)
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>│   ├── class_test.py        # 56 programmatic API tests
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>│   ├── class_test.py        # 61 programmatic API tests
 <a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>│   ├── main_test.py         # 7 integration tests
-<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│   ├── plantuml_test.py     # 108 PlantUML view rendering tests
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│   ├── plantuml_test.py     # 122 PlantUML view rendering tests
 <a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>│   ├── boxes_view_test.py   # 19 boxes-backed state-machine visualizer tests (v0.36.0)
-<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│   ├── semantic_test.py     # 107 semantic analysis tests
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│   ├── semantic_test.py     # 124 semantic analysis tests
 <a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>│   ├── project_test.py      # 17 multi-file loading tests
-<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>│   ├── navigate_test.py     # 33 model navigation tests
-<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>│   ├── import_test.py       # 16 import resolution tests
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>│   ├── navigate_test.py     # 42 model navigation tests
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>│   ├── import_test.py       # 21 import resolution tests
 <a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>│   ├── validator_test.py    # 34 validator tests
-<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>│   ├── store_test.py        # 46 storage backend tests
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>│   ├── store_test.py        # 82 storage backend tests
 <a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>│   ├── conformance_test.py  # 123 OMG XPect conformance tests
 <a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>│   └── sysmlv2/             # Conformance test fixtures
 <a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>└── docs/                    # Documentation
@@ -1074,13 +1074,12 @@
 <ul>
 <li><strong>ANTLR4 parser</strong> with full SysML v2 grammar support</li>
 <li><strong>123/123 OMG XPect conformance tests pass</strong> (100%)</li>
-<li>Visitor converts parse trees to internal dict representation (~11K lines)</li>
+<li>Visitor converts parse trees to internal dict representation (~12.3K lines)</li>
 <li>Supports all SysML v2 element types: packages, parts, items, ports, actions, states, requirements, interfaces, flows, connections, calculations, constraints, enumerations, cases, views, viewpoints, etc.</li>
 </ul>
 <h3 id="grammar-round-trip">Grammar Round-Trip<a class="headerlink" href="#grammar-round-trip" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>61/77 grammar round-trip tests pass</strong>; all 61 non-control-flow tests pass (100%)</li>
-<li>16 tests deferred pending action control-flow node classes (<code>IfNode</code>, <code>WhileLoopNode</code>, <code>ControlNode</code>, <code>SendNode</code>, <code>AcceptNode</code>, <code>TerminateNode</code>)</li>
+<li><strong>96/96 grammar round-trip tests pass</strong> (100%)</li>
 <li>Every grammar class has <code>dump()</code> and <code>get_definition()</code> for serialization</li>
 <li>All 68+ <code>raise NotImplementedError</code> stubs replaced with graceful handling (v0.27.0)</li>
 <li>Missing classes added: <code>DefinitionBody</code>, <code>DefinitionBodyItem</code>, <code>FeatureSpecializationPart</code>, <code>SubclassificationPart</code></li>
@@ -1434,7 +1433,7 @@
 <h3 id="1-antlr4-over-textx">1. ANTLR4 over textX<a class="headerlink" href="#1-antlr4-over-textx" title="Permanent link">&para;</a></h3>
 <p>The project originally used textX but migrated to ANTLR4 for better conformance with the OMG SysML v2 grammar. The textX runtime and all related files have been removed.</p>
 <h3 id="2-grammar-class-hierarchy">2. Grammar Class Hierarchy<a class="headerlink" href="#2-grammar-class-hierarchy" title="Permanent link">&para;</a></h3>
-<p>The <code>grammar/classes.py</code> file contains ~319 classes that mirror the SysML v2 metamodel. Each class has:
+<p>The <code>grammar/classes.py</code> file contains ~354 classes that mirror the SysML v2 metamodel. Each class has:
 - <code>__init__()</code> — constructs from a dict (produced by the visitor)
 - <code>dump()</code> — serializes back to SysML v2 text
 - <code>get_definition()</code> — serializes back to dict (for round-trip)
