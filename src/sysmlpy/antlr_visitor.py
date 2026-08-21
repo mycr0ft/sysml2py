@@ -806,10 +806,59 @@ def _visit_package_body_element_dict(elem_ctx):
     return None
 
 
+def _make_dependency_dict(ctx, prefix=None):
+    """Create a Dependency dictionary.
+
+    dependency: prefixMetadataAnnotation* DEPENDENCY dependencyDeclaration relationshipBody
+    dependencyDeclaration: identification? FROM? qualifiedName (COMMA qualifiedName)*
+                           TO qualifiedName (COMMA qualifiedName)*
+    Client qualified names come before the TO token, suppliers after.
+    """
+    identification = None
+    clients = []
+    suppliers = []
+    if ctx is not None:
+        decl = ctx
+        if hasattr(ctx, 'dependencyDeclaration') and ctx.dependencyDeclaration():
+            decl = ctx.dependencyDeclaration()
+        if hasattr(decl, 'identification') and decl.identification():
+            identification = _build_identification_dict(decl.identification())
+        after_to = False
+        for child in decl.getChildren():
+            class_name = child.__class__.__name__
+            if class_name == 'QualifiedNameContext':
+                names = child.getText().split('::')
+                target = suppliers if after_to else clients
+                target.append({"name": "QualifiedName", "names": names})
+            elif not after_to and hasattr(child, 'getText') and child.getText() == 'to':
+                after_to = True
+    return {
+        "name": "PackageMember",
+        "prefix": prefix,
+        "ownedRelatedElement": {
+            "name": "DefinitionElement",
+            "ownedRelatedElement": {
+                "name": "Dependency",
+                "identification": identification,
+                "client": clients,
+                "supplier": suppliers,
+                "body": {
+                    "name": "RelationshipBody",
+                    "ownedRelatedElement": []
+                }
+            }
+        }
+    }
+
+
 def _visit_definition_element_dict(def_elem_ctx, prefix=None):
     """Visit a definition element context and return a dictionary."""
     # Try different definition types
-    # Check package first (nested packages)
+    # Check dependency first (a relationship, not a classifier)
+    if hasattr(def_elem_ctx, 'dependency') and def_elem_ctx.dependency():
+        ctx = def_elem_ctx.dependency()
+        return _make_dependency_dict(ctx, prefix)
+    # Check package (nested packages)
     if hasattr(def_elem_ctx, 'package') and def_elem_ctx.package():
         ctx = def_elem_ctx.package()
         return _make_nested_package_dict(ctx, prefix)
