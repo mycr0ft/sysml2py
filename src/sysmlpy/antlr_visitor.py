@@ -7767,6 +7767,7 @@ def _make_allocation_usage_dict(ctx, prefix=None):
     """
     name = None
     shortname = None
+    connector_part = None
     if ctx is not None:
         aud = None
         if hasattr(ctx, 'allocationUsageDeclaration') and ctx.allocationUsageDeclaration():
@@ -7787,6 +7788,10 @@ def _make_allocation_usage_dict(ctx, prefix=None):
                     elif len(name_list) == 1:
                         name_text = name_list[0].getText()
                         name, shortname = _extract_name_shortname(name_text)
+        
+        # Get connectorPart (e.g., "allocate powerBudget to amplifier")
+        if aud and hasattr(aud, 'connectorPart') and aud.connectorPart():
+            connector_part = _build_connector_part_dict(aud.connectorPart())
     
     return {
         "name": "PackageMember",
@@ -7812,6 +7817,7 @@ def _make_allocation_usage_dict(ctx, prefix=None):
                                 "specialization": None
                             }
                         },
+                        "part": connector_part,
                         "body": {
                             "name": "UsageBody",
                             "body": {
