@@ -314,10 +314,18 @@ def _visit_metadata_feature_dict(ctx):
                 })
     
     body = ""
-    if ctx.metadataBody() and ctx.metadataBody().SEMI():
-        body = ";"
+    body_features = []
+    if ctx.metadataBody():
+        mb = ctx.metadataBody()
+        if mb.SEMI():
+            body = ";"
+        elif mb.LBRACE():
+            # A braced body carries feature values (`key = value;`); keep
+            # each element's source text so callers can recover them.
+            for elem in (mb.metadataBodyElement() or []):
+                body_features.append(elem.getText())
     
-    return {
+    result = {
         "name": "MetadataFeature",
         "prefixMetadataMember": prefix_members,
         "identification": identification,
@@ -325,6 +333,9 @@ def _visit_metadata_feature_dict(ctx):
         "ownedRelationship_about": annotations,
         "body": body
     }
+    if body_features:
+        result["bodyFeatures"] = body_features
+    return result
 
 
 def _visit_prefix_metadata_member_dict(ctx):

@@ -2481,3 +2481,42 @@ def test_view_usage_with_attribute_roundtrip():
     b = classtree(a)
     assert strip_ws(text) == strip_ws(b.dump())
 
+
+
+def test_metadata_braced_body_features_surface():
+    """A braced metadata body's feature texts reach the raw dict.
+
+    Previously only the SEMI form was inspected, so `metadata x { k = v; }`
+    lost its key-value features entirely.
+    """
+    import sysmlpy
+
+    raw = sysmlpy.load_grammar_antlr(
+        "package P {\n"
+        "    analysis study;\n"
+        "    metadata verificationBinding about study {\n"
+        '        engine = "demo";\n'
+        "        costSeconds = 0.5;\n"
+        "    }\n"
+        "}"
+    )
+
+    def find(node, name):
+        if isinstance(node, dict):
+            if node.get("name") == name:
+                return node
+            for key, value in node.items():
+                if key != "name":
+                    found = find(value, name)
+                    if found:
+                        return found
+        elif isinstance(node, list):
+            for item in node:
+                found = find(item, name)
+                if found:
+                    return found
+        return None
+
+    feature = find(raw, "MetadataFeature")
+    assert feature is not None
+    assert feature.get("bodyFeatures") == ['engine="demo";', 'costSeconds=0.5;']
