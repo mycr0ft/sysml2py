@@ -53,8 +53,8 @@ All **79 grammar round-trip tests pass** (100%) as of v0.31.3+.
 SysML text
   → ANTLR4 Lexer/Parser       antlr_parser.py
   → Parse Tree
-  → antlr_visitor.py           parse_to_dict() → internal dict (~11K lines)
-  → grammar/classes.py         grammar object hierarchy (~8.8K lines, ~319 classes)
+  → antlr_visitor.py           parse_to_dict() → internal dict (~12.3K lines)
+  → grammar/classes.py         grammar object hierarchy (~9.7K lines, ~354 classes)
   → usage.py / definition.py   public API: Part, Item, Attribute, Port, …
   → plantuml.py                view rendering (8 view functions + helpers)
   → semantic.py                SemanticAnalyzer, SymbolTable
@@ -66,8 +66,8 @@ SysML text
 | File | Purpose |
 |------|---------|
 | `src/sysmlpy/__init__.py` | Public API: `loads()`, `load()`, `analyze()`, `load_files()`, etc. |
-| `src/sysmlpy/antlr_visitor.py` | ~11K lines — ANTLR parse tree → internal dict |
-| `src/sysmlpy/grammar/classes.py` | ~8.8K lines — grammar class hierarchy |
+| `src/sysmlpy/antlr_visitor.py` | ~12.3K lines — ANTLR parse tree → internal dict |
+| `src/sysmlpy/grammar/classes.py` | ~9.7K lines — grammar class hierarchy |
 | `src/sysmlpy/definition.py` | `Model`, `Package`, `RootNamespace` |
 | `src/sysmlpy/usage.py` | `Part`, `Item`, `Attribute`, `Port`, `Action`, `State`, etc. |
 | `src/sysmlpy/plantuml.py` | All `as_*_view()` functions and `PlantUMLGenerator` |
@@ -250,7 +250,7 @@ A standalone interactive diagram editor using **Gaphas** (GTK4 + Cairo) +
 
 - **Gaphas** provides the canvas, constraint solver, items (Element/Line),
   handles, zoom/pan, GTK integration — all manual positioning for free.
-- **sysmlpy** provides parsing, grammar classes (319 types), semantic
+- **sysmlpy** provides parsing, grammar classes (354 types), semantic
   analysis, round-trip `dump()`, and PlantUML export.
 - A thin adapter layer maps sysmlpy grammar classes to Gaphas Items.
 

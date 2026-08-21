@@ -18,13 +18,13 @@ sysmlpy/
 ├── src/sysmlpy/
 │   ├── __init__.py          # Public API: loads(), load(), analyze(), load_files(), load_project()
 │   ├── antlr_parser.py      # ANTLR4 lexer/parser setup
-│   ├── antlr_visitor.py     # ~11K lines: parse tree → internal dict
+│   ├── antlr_visitor.py     # ~12.3K lines: parse tree → internal dict
 │   ├── grammar/
-│   │   ├── classes.py       # ~8.8K lines: grammar class hierarchy (no NotImplementedError)
+│   │   ├── classes.py       # ~9.7K lines: grammar class hierarchy (no NotImplementedError)
 │   │   └── antlr4/          # Generated ANTLR parser/lexer
 │   ├── definition.py        # Model, Package, RootNamespace classes
 │   ├── usage.py             # Part, Item, Attribute, Port, Action, etc.
-│   ├── semantic.py          # Semantic analysis engine (~1.8K lines)
+│   ├── semantic.py          # Semantic analysis engine (~2.3K lines)
 │   ├── project.py           # Multi-file project loading (load_files, load_project)
 │   ├── store.py             # Storage backends (memory, NetworkX, Kuzu, Cayley)
 │   ├── plantuml.py          # PlantUML diagram generation
@@ -37,16 +37,16 @@ sysmlpy/
 │       └── domain/          # ISQ, SI units, base quantities
 ├── tests/
 │   ├── grammar_test.py      # 96 round-trip tests (96 pass, 0 deferred)
-│   ├── class_test.py        # 56 programmatic API tests
+│   ├── class_test.py        # 61 programmatic API tests
 │   ├── main_test.py         # 7 integration tests
-│   ├── plantuml_test.py     # 108 PlantUML view rendering tests
+│   ├── plantuml_test.py     # 122 PlantUML view rendering tests
 │   ├── boxes_view_test.py   # 19 boxes-backed state-machine visualizer tests (v0.36.0)
-│   ├── semantic_test.py     # 107 semantic analysis tests
+│   ├── semantic_test.py     # 124 semantic analysis tests
 │   ├── project_test.py      # 17 multi-file loading tests
-│   ├── navigate_test.py     # 33 model navigation tests
-│   ├── import_test.py       # 16 import resolution tests
+│   ├── navigate_test.py     # 42 model navigation tests
+│   ├── import_test.py       # 21 import resolution tests
 │   ├── validator_test.py    # 34 validator tests
-│   ├── store_test.py        # 46 storage backend tests
+│   ├── store_test.py        # 82 storage backend tests
 │   ├── conformance_test.py  # 123 OMG XPect conformance tests
 │   └── sysmlv2/             # Conformance test fixtures
 └── docs/                    # Documentation
@@ -69,13 +69,12 @@ SysML text → ANTLR4 Lexer/Parser → Parse Tree
 
 - **ANTLR4 parser** with full SysML v2 grammar support
 - **123/123 OMG XPect conformance tests pass** (100%)
-- Visitor converts parse trees to internal dict representation (~11K lines)
+- Visitor converts parse trees to internal dict representation (~12.3K lines)
 - Supports all SysML v2 element types: packages, parts, items, ports, actions, states, requirements, interfaces, flows, connections, calculations, constraints, enumerations, cases, views, viewpoints, etc.
 
 ### Grammar Round-Trip
 
-- **61/77 grammar round-trip tests pass**; all 61 non-control-flow tests pass (100%)
-- 16 tests deferred pending action control-flow node classes (`IfNode`, `WhileLoopNode`, `ControlNode`, `SendNode`, `AcceptNode`, `TerminateNode`)
+- **96/96 grammar round-trip tests pass** (100%)
 - Every grammar class has `dump()` and `get_definition()` for serialization
 - All 68+ `raise NotImplementedError` stubs replaced with graceful handling (v0.27.0)
 - Missing classes added: `DefinitionBody`, `DefinitionBodyItem`, `FeatureSpecializationPart`, `SubclassificationPart`
@@ -204,7 +203,7 @@ The project originally used textX but migrated to ANTLR4 for better conformance 
 
 ### 2. Grammar Class Hierarchy
 
-The `grammar/classes.py` file contains ~319 classes that mirror the SysML v2 metamodel. Each class has:
+The `grammar/classes.py` file contains ~354 classes that mirror the SysML v2 metamodel. Each class has:
 - `__init__()` — constructs from a dict (produced by the visitor)
 - `dump()` — serializes back to SysML v2 text
 - `get_definition()` — serializes back to dict (for round-trip)

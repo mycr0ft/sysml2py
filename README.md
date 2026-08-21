@@ -302,7 +302,7 @@ tree = classtree(model)
 print(tree.dump())
 ```
 
-**All 77 grammar round-trip tests pass** (100%). Covered categories: packages, parts, items, ports, interfaces, binding connectors, flow connections, all action forms (definition, shorthand, succession, decomposition), expressions, calculations, constraints, state definitions, requirements, analysis cases, control flow (if/else, while, loop, fork, join, decision, send, accept, terminate), and trade studies.
+**All 96 grammar round-trip tests pass** (100%). Covered categories: packages, parts, items, ports, interfaces, binding connectors, flow connections, all action forms (definition, shorthand, succession, decomposition), expressions, calculations, constraints, state definitions, requirements, analysis cases, control flow (if/else, while, loop, fork, join, decision, send, accept, terminate), trade studies, views, viewpoints, render states, portion usages, and annotations.
 
 ## Semantic Analysis
 
@@ -744,6 +744,36 @@ See [`docs/plantuml-examples/`](docs/plantuml-examples/) for all rendered exampl
 | 16 | Tabular View — Color | Tabular View (color) |
 
 ## Changelog
+
+- **v0.36.3** — Fix view (and other prefixed-usage) body children being
+  dropped from the public API tree. `Package.load_from_grammar` built
+  `View` objects manually without calling `load_from_grammar`, so
+  `view.attributes` (and all other typed accessors) returned `[]` even
+  when the view body contained attributes, parts, etc. Now calls
+  `View().load_from_grammar(...)` matching `Part` and other usages.
+  Also fixes `Usage.load_from_grammar` (declaration branch) and
+  `Usage._ensure_body` to handle prefixed usages whose body lives on
+  `grammar.body` rather than `grammar.usage.completion.body.body`.
+
+- **v0.36.2** — Preserve short name, doc, and nested children in
+  `Requirement.dump()`/`load_from_grammar`. Three gaps in the public
+  `Requirement` class were dropping data the parser had captured:
+  `declaredShortName` was never propagated, `doc /* … */` nodes were
+  walked past, and `dump()` never iterated `self.children` so nested
+  `requirement` usages were omitted from output.
+
+- **v0.36.1** — Populate nested requirement children in
+  `Requirement.load_from_grammar`. Previously the body walk stubbed out
+  `DefinitionBodyItem` with `pass`, so nested requirements were parsed
+  by the grammar but dropped from the public object tree.
+
+- **v0.36.0** — Boxes-backed state-machine visualizer:
+  `as_state_transition_view_boxes()`, `render_state_transition_view()`,
+  `render_state_transition_view_svg()` produce native UML `«state»`
+  shapes, initial pseudostate, final bullseye, and orthogonal routing
+  via the optional [`boxes`](https://github.com/mycr0ft/boxes) package.
+  19 new boxes_view tests. Also fixes the INCOSE flashlight
+  `interface … connect … { perform …; }` parse crash.
 
 - **v0.32.5** — Fix double-space in dump output when `:>>` (redefinition) or
   `: ` (typing) appears after `attribute`, `part`, or other usage keywords.
