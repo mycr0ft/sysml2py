@@ -431,6 +431,56 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0370-2026-08-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.37.0 (2026-08-25)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.37.0 (2026-08-25)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bug-bug-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :bug: Bug Fixes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sparkles-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :sparkles: Improvements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0363-2026-08-20" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -443,7 +493,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#bug-bug-fixes" class="md-nav__link">
+  <a href="#bug-bug-fixes_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         :bug: Bug Fixes
@@ -471,7 +521,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#bug-bug-fixes_1" class="md-nav__link">
+  <a href="#bug-bug-fixes_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         :bug: Bug Fixes
@@ -1263,7 +1313,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#white_check_mark-verification" class="md-nav__link">
+  <a href="#white_check_mark-verification_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         :white_check_mark: Verification
@@ -1822,6 +1872,56 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0370-2026-08-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.37.0 (2026-08-25)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.37.0 (2026-08-25)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bug-bug-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :bug: Bug Fixes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sparkles-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :sparkles: Improvements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0363-2026-08-20" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1834,7 +1934,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#bug-bug-fixes" class="md-nav__link">
+  <a href="#bug-bug-fixes_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         :bug: Bug Fixes
@@ -1862,7 +1962,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#bug-bug-fixes_1" class="md-nav__link">
+  <a href="#bug-bug-fixes_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         :bug: Bug Fixes
@@ -2654,7 +2754,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#white_check_mark-verification" class="md-nav__link">
+  <a href="#white_check_mark-verification_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         :white_check_mark: Verification
@@ -3172,8 +3272,80 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
-<h2 id="v0363-2026-08-20">v0.36.3 (2026-08-20)<a class="headerlink" href="#v0363-2026-08-20" title="Permanent link">&para;</a></h2>
+<h2 id="v0370-2026-08-25">v0.37.0 (2026-08-25)<a class="headerlink" href="#v0370-2026-08-25" title="Permanent link">&para;</a></h2>
 <h3 id="bug-bug-fixes">:bug: Bug Fixes<a class="headerlink" href="#bug-bug-fixes" title="Permanent link">&para;</a></h3>
+<p>Round-trip fixes found by benchmarking gosysml against the 123-file OMG
+spec corpus (<code>tests/sysmlv2/</code>); Python now loads <strong>122/123</strong> corpus files
+without exception (the one remaining failure, <code>Import_Visibility_Valid.sysml</code>,
+has an XPECT header that <em>expects</em> a syntax error):</p>
+<ul>
+<li>
+<p><strong>Implicit-package wrap could swallow its own closing brace.</strong>
+  <code>load_grammar</code> wraps non-<code>package</code> input in
+  <code>package __implicit__ { ... }</code> by appending the closing brace to the raw
+  source. When the source ended with a line comment and no trailing newline
+  (e.g. <code>Subsetting_OwningType.sysml</code>), the brace landed on the comment line
+  and was lexed away, producing <code>missing '}' at &lt;EOF&gt;</code>. The wrapped source is
+  now newline-terminated before the brace is appended.</p>
+</li>
+<li>
+<p><strong><code>AnnotatingElement</code> crashed on metadata / textual representations.</strong>
+  Only <code>Documentation</code> and <code>CommentSysML</code> were dispatched; a
+  <code>MetadataFeature</code> or <code>TextualRepresentation</code> child set <code>children = None</code>
+  and <code>dump()</code> raised <code>AttributeError</code>. Both now dispatch to their existing
+  classes (which were present but unreachable) and unknown children dump as
+  <code>""</code> instead of raising.</p>
+</li>
+<li>
+<p><strong><code>BinaryInterfacePart.dump()</code> IndexError on malformed interface ends</strong>
+  (<code>InterfaceUsage_Invalid.sysml</code>). Now degrades gracefully for 0/1-end
+  parts per the graceful-fallback contract.</p>
+</li>
+<li>
+<p><strong>Missing grammar classes for action-body successions.</strong> The visitor has
+  emitted <code>InitialNodeMember</code>, <code>ActionTargetSuccessionMember</code>, and
+  <code>GuardedSuccessionMember</code> dicts since the control-flow work, but no
+  matching grammar classes existed — any action body containing
+  <code>first X;</code> / <code>then Y;</code> / <code>if c then X else Y;</code> raised
+  <code>KeyError</code> at load time (broke <code>ActionTest.sysml</code>,
+  <code>ControlNodeTest.sysml</code>, <code>DecisionTest.sysml</code>). Three new classes match
+  the visitor dict shapes exactly, including <code>hasSemi</code> tracking so chained
+  successions re-emit their own semicolons.</p>
+</li>
+<li>
+<p><strong><code>TriggerExpression</code> lost WHEN triggers and crashed on empty ones.</strong>
+  The emitter only extracted <code>(AT|AFTER) argumentMember</code>; the
+  <code>WHEN argumentExpressionMember</code> alternative was dropped and a missing
+  argument member crashed with <code>TypeError: 'NoneType' object is not
+  subscriptable</code>. <code>TimeTriggerKind</code> gained <code>isWhen</code>.</p>
+</li>
+</ul>
+<h3 id="sparkles-improvements">:sparkles: Improvements<a class="headerlink" href="#sparkles-improvements" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>then merge m;</code> / <code>decide</code> / <code>join</code> / <code>fork</code> control nodes now carry
+  their declared name through the visitor (<code>ControlNode.declaredName</code>)
+  and dump it back.</li>
+<li>Guarded target successions (<code>if &lt;cond&gt; then X;</code>) and default targets
+  (<code>else Y;</code>) round-trip inside action bodies.</li>
+<li>Nested <code>ref action a : A;</code> usages keep their <code>ref</code> prefix
+  (<code>_make_action_usage_element</code> now extracts the occurrence prefix).</li>
+<li><code>succession S first A1 if x==0 then A2;</code> round-trips including the
+  succession name.</li>
+<li><code>ActionBodyItem.dump()</code> appends the statement-terminating <code>;</code> for bare
+  succession statements (skipped after <code>{...}</code> bodies or trailing doc
+  comments).</li>
+</ul>
+<h3 id="white_check_mark-verification">:white_check_mark: Verification<a class="headerlink" href="#white_check_mark-verification" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>tests/grammar_test.py</code>: <strong>96/96 passing</strong> (includes full-model
+  round-trips of ActionTest, ControlNodeTest, DecisionTest which now
+  produce byte-identical strip_ws output).</li>
+<li>class/main/navigate/semantic/repr suites: all passing (268 tests).</li>
+<li>Conformance suite: 118 passed / 5 failed — identical failure set to the
+  v0.36.3 baseline (no regressions).</li>
+</ul>
+<h2 id="v0363-2026-08-20">v0.36.3 (2026-08-20)<a class="headerlink" href="#v0363-2026-08-20" title="Permanent link">&para;</a></h2>
+<h3 id="bug-bug-fixes_1">:bug: Bug Fixes<a class="headerlink" href="#bug-bug-fixes_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>View (and other prefixed-usage) body children are now exposed on the
   public API tree.</strong> <code>Package.load_from_grammar</code> (in <code>definition.py</code>)
@@ -3203,7 +3375,7 @@
   accessor + <code>dump</code> content) and <code>tests/grammar_test.py</code> (full
   <code>load_grammar</code> → <code>classtree</code> → <code>dump()</code> round-trip).</p>
 <h2 id="v0362-2026-08-18">v0.36.2 (2026-08-18)<a class="headerlink" href="#v0362-2026-08-18" title="Permanent link">&para;</a></h2>
-<h3 id="bug-bug-fixes_1">:bug: Bug Fixes<a class="headerlink" href="#bug-bug-fixes_1" title="Permanent link">&para;</a></h3>
+<h3 id="bug-bug-fixes_2">:bug: Bug Fixes<a class="headerlink" href="#bug-bug-fixes_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong><code>Requirement.load_from_grammar</code> now preserves short name, doc, and
   nested children in <code>dump()</code>.</strong> Three gaps in the public <code>Requirement</code>
@@ -3692,7 +3864,7 @@ making debugging in REPLs and notebooks vastly more informative.</p>
 <li>Removed 14 stale/duplicate PlantUML example files</li>
 <li>All 10 PNG examples referenced in README.md verified to render without errors</li>
 </ul>
-<h3 id="white_check_mark-verification">:white_check_mark: Verification<a class="headerlink" href="#white_check_mark-verification" title="Permanent link">&para;</a></h3>
+<h3 id="white_check_mark-verification_1">:white_check_mark: Verification<a class="headerlink" href="#white_check_mark-verification_1" title="Permanent link">&para;</a></h3>
 <p>All PlantUML examples render without errors:
 - ✓ 03-vehicle-structure.png
 - ✓ 06-interconnection.png
