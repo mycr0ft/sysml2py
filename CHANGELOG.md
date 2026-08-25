@@ -1,5 +1,53 @@
 # CHANGELOG
 
+## v0.38.0 (2026-08-25)
+
+### :sparkles: New Features
+
+- **Partial-parse recovery.** New opt-in entry points surface whatever did
+  parse when the input has syntax errors, instead of aborting with
+  ``SysMLSyntaxError``:
+
+  - ``PartialParseError`` (exception) carries ``.errors``,
+    ``.partial`` (the visitor dict for the parsed part of the input),
+    and ``.source``.
+  - ``loads_partial(text)`` — same as ``loads`` but raises
+    ``PartialParseError`` on errors; returns a clean dict on success.
+  - ``load_partial(text)`` — same as ``load`` but raises
+    ``PartialParseError`` with the partial visitor dict (still
+    round-trippable through ``classtree`` + ``dump``) on errors.
+
+  Motivating case: ``validation/valid/Import_Visibility_Valid.sysml``
+  (its XPECT header expects a parse error on the visibility-less
+  ``import ScalarValues;``, which the grammar legitimately rejects).
+  Before: every loader in the test suite crashed on it. Now:
+  ``loads_partial`` returns a dict with the three valid imports and the
+  broken import dropped; ``load_partial`` gives you a Model whose
+  ``Dump()`` produces:
+
+      package ImportVisibility {
+         public import ScalarValues;
+         private import ScalarValues;
+         protected import ScalarValues;
+      }
+
+  The strict ``loads`` / ``load`` are unchanged — they still raise
+  ``SysMLSyntaxError`` on errors. ANTLR's default error-recovery
+  strategy is used only when the partial entry point is called.
+
+### :white_check_mark: Verification
+
+- ``tests/partial_test.py``: 6/6 new tests passing.
+- ``tests/grammar_test.py`` + ``tests/class_test.py`` +
+  ``tests/main_test.py`` + ``tests/navigate_test.py`` +
+  ``tests/semantic_test.py`` + ``tests/repr_test.py`` +
+  ``tests/import_test.py``: 391/391 passing (zero regressions).
+- Conformance: 118 / 123 — identical failure set to v0.37.0 (no
+  regressions; the 5 failures, including ``Import_Visibility_Valid``
+  whose XPECT expects a syntax error, were pre-existing). The
+  conformance test uses the *strict* ``load_grammar`` path so its
+  behavior is unchanged by this release.
+
 ## v0.37.0 (2026-08-25)
 
 ### :bug: Bug Fixes

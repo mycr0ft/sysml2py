@@ -39,25 +39,32 @@ class ANTLRErrorListener(ErrorListener):
         pass
 
 
-def parse(source, library=None):
+def parse(source, library=None, recover=False):
     """Parse SysML v2.0 source and return a parse tree.
-    
+
     Parameters
     ----------
     source : str or file-like
         Either a string containing SysML v2.0 code, or a file object.
     library : str or Path, optional
         Path to SysML v2 library files for resolving imports.
-    
+    recover : bool, default False
+        When True, ANTLR's default error strategy is used and the parse tree
+        is returned even when there are syntax errors. Errors are collected
+        and returned alongside the tree. The returned tuple shape is
+        ``(tree, errors)``; ``tree`` may be ``None`` if nothing parsed.
+        When False (default), the function raises :class:`SysMLSyntaxError`
+        on the first syntax error, preserving the historical strict behavior.
+
     Returns
     -------
-    ParseTree
-        The ANTLR4 parse tree (PackageContext).
-    
+    ParseTree, or (ParseTree, list[str]) when recover=True
+        The ANTLR4 parse tree (PackageContext) — or a (tree, errors) tuple.
+
     Raises
     ------
     SysMLSyntaxError
-        If the source contains syntax errors.
+        If ``recover`` is False and the source contains syntax errors.
     """
     from pathlib import Path
     
@@ -94,11 +101,16 @@ def parse(source, library=None):
     
     # Parse the source - use rootNamespace to support multiple top-level packages
     tree = parser.rootNamespace()
-    
+
     # Check for errors
     if error_listener.errors:
+        if recover:
+            return tree, error_listener.errors
         raise SysMLSyntaxError("\n".join(error_listener.errors))
-    
+
+    if recover:
+        return tree, []
+
     return tree
 
 

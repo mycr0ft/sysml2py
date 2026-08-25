@@ -18,13 +18,14 @@ __all__ = [
     "as_tabular_view", "as_data_value_tabular_view", "as_relationship_matrix_view",
     "as_sequence_view", "as_case_view", "as_browser_view",
     "analyze", "AnalysisResult", "SemanticIssue", "SemanticAnalyzer",
-    "SysMLSyntaxError",
+    "SysMLSyntaxError", "PartialParseError",
+    "loads_partial", "load_partial",
     # boxes-backed optional renderers (require pip install -e ../boxes)
     "as_state_transition_view_boxes", "render_state_transition_view",
     "render_state_transition_view_svg", "boxes_view",
 ]
 __author__ = "Jon Fox"
-__version__ = "0.37.0"
+__version__ = "0.38.0"
 
 from sysmlpy.usage import (
     Item, Attribute, Part, Port, Action, Reference, UseCase, Requirement, Interface, Message,
@@ -40,6 +41,31 @@ from sysmlpy.store import Store, InMemoryStore, NetworkXStore, KuzuStore, Cayley
 
 from sysmlpy.usage import ureg
 from sysmlpy.antlr_parser import SysMLSyntaxError
+
+
+class PartialParseError(Exception):
+    """Raised by ``loads_partial`` / ``load_partial`` when the source has
+    syntax errors but at least one construct parsed successfully.
+
+    Attributes
+    ----------
+    errors : list[str]
+        ANTLR-style error messages collected during parsing.
+    partial : dict | None
+        Visitor dict for whatever did parse (``None`` if nothing did).
+    source : str
+        The original SysML source (helpful for tooling that wants to
+        serialize the partial result back to a file).
+    """
+
+    def __init__(self, errors, partial, source):
+        self.errors = list(errors)
+        self.partial = partial
+        self.source = source
+        super().__init__(
+            f"partial parse: {len(self.errors)} error(s); "
+            f"partial={'available' if partial is not None else 'empty'}"
+        )
 
 
 def load_grammar(s, debug=False):
@@ -105,6 +131,95 @@ def load_grammar(s, debug=False):
         return result
     except antlr_parser.SysMLSyntaxError as e:
         raise
+
+
+def _parse_with_recovery(source):
+    """Shared partial-recovery parse used by the ``_partial`` helpers.
+
+    Returns ``(dict_or_None, errors)``. On a fully clean parse the error
+    list is empty and the dict is the full visitor output (matching what
+    ``load_grammar`` returns on the success path).
+    """
+    import io
+    import sysmlpy.antlr_parser as antlr_parser
+    import sysmlpy.antlr_visitor as antlr_visitor
+
+    if hasattr(source, "read"):
+        text = source.read()
+    elif not isinstance(source, str):
+        raise TypeError(
+            f"the SysML object must be str or file, not {source.__class__.__name__}"
+        )
+    else:
+        text = source
+
+    s_stripped = text.strip()
+    needs_unwrap = not s_stripped.startswith("package")
+    if needs_unwrap:
+        if not s_stripped.endswith("\n"):
+            s_stripped += "\n"
+        wrapped = f"package __implicit__ {{ {s_stripped} }}"
+    else:
+        wrapped = text
+
+    tree, errors = antlr_parser.parse(wrapped, recover=True)
+    if tree is None:
+        return None, errors
+    result = antlr_visitor._visit_root_namespace_dict(tree)
+    if needs_unwrap and isinstance(result, dict):
+        try:
+            pkg_member = result["ownedRelationship"][0]
+            pkg_elem = pkg_member["ownedRelatedElement"]
+            pkg = pkg_elem["ownedRelatedElement"]
+            body = pkg["body"]
+            return {
+                "name": "PackageBodyElement",
+                "ownedRelationship": body["ownedRelationship"],
+            }, errors
+        except (KeyError, IndexError, TypeError):
+            return result, errors
+    return result, errors
+
+
+def loads_partial(text) -> dict:
+    """Parse SysML source and return the visitor dict, raising
+    :class:`PartialParseError` instead of :class:`SysMLSyntaxError` when
+    the input has syntax errors.
+
+    Use this when you want to recover from partial input — e.g. when
+    inspecting a file the spec expects to reject. The exception carries
+    the partial dict in ``e.partial`` so callers can still ``classtree``
+    and ``dump`` whatever did parse.
+    """
+    if hasattr(text, "read"):
+        source = text.read()
+        raw = source
+    else:
+        source = text
+        raw = text
+    partial, errors = _parse_with_recovery(source)
+    if errors:
+        raise PartialParseError(errors, partial, raw)
+    return partial
+
+
+def load_partial(text):
+    """Parse SysML source and return the typed :class:`Model`, raising
+    :class:`PartialParseError` on syntax errors. The exception carries
+    ``e.partial`` so callers can still inspect whatever did parse.
+
+    On full success the returned :class:`Model` behaves identically to
+    the one returned by :func:`load`.
+    """
+    if hasattr(text, "read"):
+        source = text.read()
+    else:
+        source = text
+    partial, errors = _parse_with_recovery(source)
+    if errors:
+        raise PartialParseError(errors, partial, source)
+    from sysmlpy.formatting import classtree
+    return classtree(partial)
 
 
 def load(fp) -> Model:
