@@ -2424,13 +2424,20 @@ class TriggerExpression:
     # ;
     def __init__(self, definition):
         self.kind = None
+        self.children = None
         if valid_definition(definition, self.__class__.__name__):
-            if definition["ownedRelationship"]["name"] == "OwnedExpressionMember":
-                self.kind = TimeTriggerKind(definition["kind"])
-                self.children = OwnedExpressionMember(definition["ownedRelationship"])
-            else:
-                self.kind = "when"
-                self.children = ChangeExpressionMember(definition["ownedRelationship"])
+            rel = definition.get("ownedRelationship")
+            if isinstance(rel, dict):
+                self.children = OwnedExpressionMember(rel)
+            kind = definition.get("kind")
+            if isinstance(kind, dict):
+                if kind.get("isWhen") and not (
+                    kind.get("isAt") or kind.get("isAfter")
+                ):
+                    # WHEN triggers carry a change expression
+                    self.kind = "when"
+                else:
+                    self.kind = TimeTriggerKind(kind)
 
     def dump(self):
         if isinstance(self.kind, str):
@@ -2438,20 +2445,33 @@ class TriggerExpression:
         else:
             kind = self.kind.dump()
 
+        if self.children is None:
+            return kind
         return " ".join([kind, self.children.dump()])
 
 
 class TimeTriggerKind:
     def __init__(self, definition):
         if valid_definition(definition, self.__class__.__name__):
-            self.isAt = definition["isAt"]
-            self.isAfter = definition["isAfter"]
+            self.isAt = definition.get("isAt", False)
+            self.isAfter = definition.get("isAfter", False)
+            self.isWhen = definition.get("isWhen", False)
 
     def dump(self):
         if self.isAt:
             return "at"
+        elif self.isWhen:
+            return "when"
         else:
             return "after"
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "isAt": self.isAt,
+            "isAfter": self.isAfter,
+            "isWhen": self.isWhen,
+        }
 
 
 class OwnedExpressionMember:
@@ -2618,9 +2638,15 @@ class ActionBodyItem:
             else:
                 output.append(" ")
 
-        if output[-1] == "\n":
+        if output and output[-1] == "\n":
             output = output[:-1]
-        return "".join(output)
+        text = "".join(output)
+        # Succession-style members (first/then/guard) form bare statements
+        # that need a terminating semicolon; members with bodies ({...}),
+        # their own ";", or a trailing doc comment terminate themselves.
+        if text and not text.rstrip().endswith((";", "}", "*/")):
+            text += ";"
+        return text
 
     def get_definition(self):
         return {
@@ -2673,6 +2699,158 @@ class ActionNodeMember:
         if self.children is not None:
             output["ownedRelatedElement"] = self.children.get_definition()
         return output
+
+
+class InitialNodeMember:
+    # initialNodeMember : memberPrefix FIRST qualifiedName relationshipBody
+    # Visitor dict shape (antlr_visitor.py _visit_initial_node_member):
+    #   {"name": "InitialNodeMember", "prefix": ...,
+    #    "ownedRelatedElement": {"name": "InitialNode", "declaredName": ...}}
+    def __init__(self, definition):
+        self.prefix = None
+        self.declared_name = None
+        self.has_semi = False
+        if valid_definition(definition, self.__class__.__name__):
+            if definition.get("prefix") is not None:
+                self.prefix = MemberPrefix(definition["prefix"])
+            ore = definition.get("ownedRelatedElement") or {}
+            if isinstance(ore, dict):
+                self.declared_name = ore.get("declaredName")
+                self.has_semi = bool(ore.get("hasSemi"))
+
+    def dump(self):
+        output = []
+        if self.prefix is not None:
+            output.append(self.prefix.dump())
+        output.append("first")
+        if self.declared_name:
+            output.append(self.declared_name)
+        text = " ".join(output)
+        if self.has_semi and not text.rstrip().endswith(";"):
+            text += ";"
+        return text
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "prefix": self.prefix.get_definition() if self.prefix else None,
+            "ownedRelatedElement": {
+                "name": "InitialNode",
+                "declaredName": self.declared_name,
+                "hasSemi": self.has_semi,
+                "ownedRelationship": [],
+            },
+        }
+
+
+class ActionTargetSuccessionMember:
+    # actionTargetSuccessionMember : memberPrefix actionTargetSuccession
+    # Visitor dict shape (_visit_action_target_succession_member).
+    # keyword is "then" (targetSuccession) or "else" (defaultTargetSuccession).
+    # has_semi records whether the succession carried its own usageBody ";".
+    def __init__(self, definition):
+        self.prefix = None
+        self.keyword = "then"
+        self.declared_name = None
+        self.condition = None
+        self.has_semi = False
+        if valid_definition(definition, self.__class__.__name__):
+            if definition.get("prefix") is not None:
+                self.prefix = MemberPrefix(definition["prefix"])
+            ore = definition.get("ownedRelatedElement") or {}
+            if isinstance(ore, dict):
+                self.keyword = ore.get("keyword") or self.keyword
+                self.declared_name = ore.get("declaredName")
+                self.condition = ore.get("condition")
+                self.has_semi = bool(ore.get("hasSemi"))
+
+    def dump(self):
+        output = []
+        if self.prefix is not None:
+            output.append(self.prefix.dump())
+        # `if <cond> then X` guarded form
+        if self.condition:
+            output.extend(["if", self.condition])
+        output.append(self.keyword)
+        if self.declared_name:
+            output.append(self.declared_name)
+        text = " ".join(output)
+        if self.has_semi and not text.rstrip().endswith(";"):
+            text += ";"
+        return text
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "prefix": self.prefix.get_definition() if self.prefix else None,
+            "ownedRelatedElement": {
+                "name": "ActionTargetSuccession",
+                "keyword": self.keyword,
+                "declaredName": self.declared_name,
+                "condition": self.condition,
+                "hasSemi": self.has_semi,
+                "ownedRelationship": [],
+            },
+        }
+
+
+class GuardedSuccessionMember:
+    # guardedSuccessionMember : memberPrefix guardedSuccession
+    # guardedSuccession: (SUCCESSION usageDeclaration?)? FIRST featureChainMember
+    #   guardExpressionMember? THEN transitionSuccessionMember usageBody?
+    # Dump form: `succession S first A1 if <cond> then A2;`
+    def __init__(self, definition):
+        self.prefix = None
+        self.keyword = "succession"
+        self.declared_name = None
+        self.source_name = None
+        self.condition = None
+        self.target_name = None
+        self.has_semi = False
+        if valid_definition(definition, self.__class__.__name__):
+            if definition.get("prefix") is not None:
+                self.prefix = MemberPrefix(definition["prefix"])
+            ore = definition.get("ownedRelatedElement") or {}
+            if isinstance(ore, dict):
+                self.keyword = ore.get("keyword") or self.keyword
+                self.declared_name = ore.get("declaredName")
+                self.source_name = ore.get("sourceName")
+                self.condition = ore.get("condition")
+                self.target_name = ore.get("targetName")
+                self.has_semi = bool(ore.get("hasSemi"))
+
+    def dump(self):
+        output = []
+        if self.prefix is not None:
+            output.append(self.prefix.dump())
+        if self.keyword and self.declared_name:
+            output.extend([self.keyword, self.declared_name])
+        if self.source_name:
+            output.extend(["first", self.source_name])
+        if self.condition:
+            output.extend(["if", self.condition])
+        if self.target_name:
+            output.extend(["then", self.target_name])
+        text = " ".join(output)
+        if text and not text.rstrip().endswith(";"):
+            text += ";"
+        return text
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "prefix": self.prefix.get_definition() if self.prefix else None,
+            "ownedRelatedElement": {
+                "name": "GuardedSuccession",
+                "keyword": self.keyword,
+                "declaredName": self.declared_name,
+                "sourceName": self.source_name,
+                "condition": self.condition,
+                "targetName": self.target_name,
+                "hasSemi": self.has_semi,
+                "ownedRelationship": [],
+            },
+        }
 
 
 class SendNode:
@@ -2787,7 +2965,7 @@ class IfNode:
         output.append("if")
         if self.condition is not None:
             output.append(self.condition)
-        if self.thenBody is not None:
+        if self.thenBody is not None and len(self.thenBody.children) > 0:
             output.append(self.thenBody.dump())
         if self.elseIf is not None:
             output.append("else")
@@ -2921,11 +3099,13 @@ class ControlNode:
     def __init__(self, definition):
         self.prefix = None
         self.keyword = None
+        self.declared_name = None
         self.body = None
         if valid_definition(definition, self.__class__.__name__):
             if definition.get("prefix") is not None:
                 self.prefix = OccurrenceUsagePrefix(definition["prefix"])
             self.keyword = definition.get("keyword")
+            self.declared_name = definition.get("declaredName")
             if definition.get("body") is not None:
                 self.body = ActionBody(definition["body"])
 
@@ -2935,6 +3115,8 @@ class ControlNode:
             output.append(self.prefix.dump())
         if self.keyword is not None:
             output.append(self.keyword)
+        if self.declared_name:
+            output.append(self.declared_name)
         if self.body is not None:
             output.append(self.body.dump())
         return " ".join(output)
@@ -2944,11 +3126,13 @@ class ControlNode:
             "name": self.__class__.__name__,
             "prefix": None,
             "keyword": None,
+            "declaredName": None,
             "body": None,
         }
         if self.prefix is not None:
             output["prefix"] = self.prefix.get_definition()
         output["keyword"] = self.keyword
+        output["declaredName"] = self.declared_name
         if self.body is not None:
             output["body"] = self.body.get_definition()
         return output
@@ -4214,12 +4398,16 @@ class AnnotatingElement:
                 self.children = Documentation(definition["ownedRelatedElement"])
             elif definition["ownedRelatedElement"]["name"] == "CommentSysML":
                 self.children = CommentSysML(definition["ownedRelatedElement"])
+            elif definition["ownedRelatedElement"]["name"] == "MetadataFeature":
+                self.children = MetadataFeature(definition["ownedRelatedElement"])
+            elif definition["ownedRelatedElement"]["name"] == "TextualRepresentation":
+                self.children = TextualRepresentation(definition["ownedRelatedElement"])
             else:
                 print(f"Unknown AnnotatingElement: {definition['ownedRelatedElement']['name']}")  # pragma: no cover
                 self.children = None  # pragma: no cover
 
     def dump(self):
-        return self.children.dump()
+        return self.children.dump() if self.children is not None else ""
 
     def get_definition(self):
         return {
@@ -7020,7 +7208,12 @@ class BinaryInterfacePart:
                 self.children.append(InterfaceEndMember(relationship))
 
     def dump(self):
-        # Assume this is only ever 2 long
+        # Graceful fallback: a malformed/invalid interface part may yield
+        # fewer than the expected two ends (e.g. InterfaceUsage_Invalid).
+        if not self.children:
+            return ""
+        if len(self.children) == 1:
+            return self.children[0].dump()
         if len(self.children) > 2:
             print("BinaryInterfacePart: more than 2 children")  # pragma: no cover
             return " to ".join([c.dump() for c in self.children[:2]])

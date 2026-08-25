@@ -24,7 +24,7 @@ __all__ = [
     "render_state_transition_view_svg", "boxes_view",
 ]
 __author__ = "Jon Fox"
-__version__ = "0.36.3"
+__version__ = "0.37.0"
 
 from sysmlpy.usage import (
     Item, Attribute, Part, Port, Action, Reference, UseCase, Requirement, Interface, Message,
@@ -78,6 +78,10 @@ def load_grammar(s, debug=False):
     s_stripped = s.strip()
     needs_unwrap = not s_stripped.startswith('package')
     if needs_unwrap:
+        # Ensure the implicit closing brace cannot be swallowed by a
+        # trailing line comment without a terminating newline.
+        if not s_stripped.endswith('\n'):
+            s_stripped += '\n'
         s = f'package __implicit__ {{ {s_stripped} }}'
 
     try:

@@ -1,5 +1,73 @@
 # CHANGELOG
 
+## v0.37.0 (2026-08-25)
+
+### :bug: Bug Fixes
+
+Round-trip fixes found by benchmarking gosysml against the 123-file OMG
+spec corpus (`tests/sysmlv2/`); Python now loads **122/123** corpus files
+without exception (the one remaining failure, `Import_Visibility_Valid.sysml`,
+has an XPECT header that *expects* a syntax error):
+
+- **Implicit-package wrap could swallow its own closing brace.**
+  `load_grammar` wraps non-`package` input in
+  ``package __implicit__ { ... }`` by appending the closing brace to the raw
+  source. When the source ended with a line comment and no trailing newline
+  (e.g. `Subsetting_OwningType.sysml`), the brace landed on the comment line
+  and was lexed away, producing `missing '}' at <EOF>`. The wrapped source is
+  now newline-terminated before the brace is appended.
+
+- **`AnnotatingElement` crashed on metadata / textual representations.**
+  Only `Documentation` and `CommentSysML` were dispatched; a
+  `MetadataFeature` or `TextualRepresentation` child set `children = None`
+  and `dump()` raised `AttributeError`. Both now dispatch to their existing
+  classes (which were present but unreachable) and unknown children dump as
+  `""` instead of raising.
+
+- **`BinaryInterfacePart.dump()` IndexError on malformed interface ends**
+  (`InterfaceUsage_Invalid.sysml`). Now degrades gracefully for 0/1-end
+  parts per the graceful-fallback contract.
+
+- **Missing grammar classes for action-body successions.** The visitor has
+  emitted `InitialNodeMember`, `ActionTargetSuccessionMember`, and
+  `GuardedSuccessionMember` dicts since the control-flow work, but no
+  matching grammar classes existed — any action body containing
+  `first X;` / `then Y;` / `if c then X else Y;` raised
+  `KeyError` at load time (broke `ActionTest.sysml`,
+  `ControlNodeTest.sysml`, `DecisionTest.sysml`). Three new classes match
+  the visitor dict shapes exactly, including `hasSemi` tracking so chained
+  successions re-emit their own semicolons.
+
+- **`TriggerExpression` lost WHEN triggers and crashed on empty ones.**
+  The emitter only extracted `(AT|AFTER) argumentMember`; the
+  `WHEN argumentExpressionMember` alternative was dropped and a missing
+  argument member crashed with `TypeError: 'NoneType' object is not
+  subscriptable`. `TimeTriggerKind` gained `isWhen`.
+
+### :sparkles: Improvements
+
+- `then merge m;` / `decide` / `join` / `fork` control nodes now carry
+  their declared name through the visitor (`ControlNode.declaredName`)
+  and dump it back.
+- Guarded target successions (`if <cond> then X;`) and default targets
+  (`else Y;`) round-trip inside action bodies.
+- Nested `ref action a : A;` usages keep their `ref` prefix
+  (`_make_action_usage_element` now extracts the occurrence prefix).
+- `succession S first A1 if x==0 then A2;` round-trips including the
+  succession name.
+- `ActionBodyItem.dump()` appends the statement-terminating `;` for bare
+  succession statements (skipped after `{...}` bodies or trailing doc
+  comments).
+
+### :white_check_mark: Verification
+
+- `tests/grammar_test.py`: **96/96 passing** (includes full-model
+  round-trips of ActionTest, ControlNodeTest, DecisionTest which now
+  produce byte-identical strip_ws output).
+- class/main/navigate/semantic/repr suites: all passing (268 tests).
+- Conformance suite: 118 passed / 5 failed — identical failure set to the
+  v0.36.3 baseline (no regressions).
+
 ## v0.36.3 (2026-08-20)
 
 ### :bug: Bug Fixes

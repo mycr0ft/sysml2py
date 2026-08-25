@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.36.3** (2026-08-20)
+Current version: **v0.37.0** (2026-08-25)
 
 ---
 
@@ -64,7 +64,14 @@ These classes are fully implemented, have programmatic construction, `dump()` se
 
 ### Grammar Round-Trip Coverage (parse → dump)
 
-**79 / 79 tests passing (100%)** as of v0.31.3.
+**96 / 96 tests passing (100%)** as of v0.37.0.
+
+The suite grew from 79 to 96 cases (full-model round-trips drawn from the
+OMG spec corpus, including ActionTest / ControlNodeTest / DecisionTest
+action-body successions). v0.37.0 additionally fixed corpus-level load
+crashes: implicit-package wrap vs trailing line comments, MetadataFeature /
+TextualRepresentation annotating elements, missing succession-member
+classes, WHEN triggers, and malformed interface ends.
 
 All categories pass, including the 14 control flow node tests (IfNode,
 WhileLoopNode, ForLoopNode, ControlNode, SendNode, AcceptNode, TerminateNode).
@@ -91,7 +98,8 @@ WhileLoopNode, ForLoopNode, ControlNode, SendNode, AcceptNode, TerminateNode).
 | Analysis | 3 | 3 |
 | Control flow | 14 | 14 |
 | Lifecycle metadata | 9 | 9 |
-| **Total** | **79** | **79** | |
+| Corpus-driven full models | +17 | +17 |
+| **Total** | **96** | **96** | |
 
 ### Grammar Resilience (v0.27.0)
 
@@ -187,7 +195,7 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 
 | Test file | Tests | Status |
 |---|---|---|
-| `tests/grammar_test.py` | 79 | ✅ All pass (100%) |
+| `tests/grammar_test.py` | 96 | ✅ All pass (100%) |
 | `tests/class_test.py` | 54 | ✅ All pass |
 | `tests/main_test.py` | 7 | ✅ All pass |
 | `tests/plantuml_test.py` | 108 | ✅ All pass |
@@ -254,7 +262,7 @@ All private underscore-prefixed mutation methods given public aliases:
 
 ### Grammar Round-Trip (v0.31.0)
 
-- All 79 grammar tests pass (100%) — control flow, lifecycle metadata complete
+- All 96 grammar tests pass (100%) — control flow, successions, lifecycle metadata complete
 - No deferred tests remaining
 
 ---
@@ -331,7 +339,7 @@ Run with: `poetry run pytest -m conformance`
 | Grammar classes with `get_definition()` | ~260+ of 319 |
 | Grammar classes with graceful fallback | All 319 (no more NotImplementedError crashes) |
 | Unit + grammar + integration tests | 635 passing |
-| Grammar round-trip tests passing | **79 / 79 (100%)** |
+| Grammar round-trip tests passing | **96 / 96 (100%)** |
 | PlantUML rendering tests | **108 passing** |
 | Conformance tests (2026-03 XPect suite) | **123 / 123 (100%)** |
 | Semantic analysis tests | **118 passing** |

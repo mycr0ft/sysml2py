@@ -1907,13 +1907,22 @@ def _visit_initial_node_member(inm_ctx):
     name = None
     if hasattr(inm_ctx, 'qualifiedName') and inm_ctx.qualifiedName():
         name = inm_ctx.qualifiedName().getText()
-    
+
+    # relationshipBody may carry its own ";" (e.g. `first A3;` followed by
+    # further succession members in the same actionBodyItem).
+    has_semi = False
+    if hasattr(inm_ctx, 'relationshipBody') and inm_ctx.relationshipBody():
+        rb = inm_ctx.relationshipBody()
+        if rb.SEMI() is not None:
+            has_semi = True
+
     return {
         "name": "InitialNodeMember",
         "prefix": prefix,
         "ownedRelatedElement": {
             "name": "InitialNode",
             "declaredName": name,
+            "hasSemi": has_semi,
             "ownedRelationship": []
         }
     }
@@ -1921,14 +1930,15 @@ def _visit_initial_node_member(inm_ctx):
 
 def _visit_action_target_succession_member(atsm_ctx):
     """Visit an actionTargetSuccessionMember context and return an ActionTargetSuccessionMember dict.
-    
+
     actionTargetSuccessionMember: memberPrefix actionTargetSuccession
     actionTargetSuccession: (targetSuccession | guardedTargetSuccession | defaultTargetSuccession) usageBody
     targetSuccession: sourceEndMember THEN connectorEndMember
+    defaultTargetSuccession: ELSE transitionSuccessionMember
     """
     if atsm_ctx is None:
         return None
-    
+
     prefix = None
     if hasattr(atsm_ctx, 'memberPrefix') and atsm_ctx.memberPrefix():
         mp = atsm_ctx.memberPrefix()
@@ -1937,29 +1947,97 @@ def _visit_action_target_succession_member(atsm_ctx):
                 "name": "MemberPrefix",
                 "visibility": _visit_visibility_indicator_dict(mp.visibilityIndicator())
             }
-    
+
+    keyword = "then"
     name = None
+    condition = None
+    has_semi = False
     if hasattr(atsm_ctx, 'actionTargetSuccession') and atsm_ctx.actionTargetSuccession():
         ats = atsm_ctx.actionTargetSuccession()
-        # Try targetSuccession path
-        if hasattr(ats, 'targetSuccession') and ats.targetSuccession():
+
+        def _usage_body_has_semi(ats):
+            ub = ats.usageBody() if hasattr(ats, 'usageBody') else None
+            if ub is not None:
+                db = ub.definitionBody() if hasattr(ub, 'definitionBody') else None
+                if db is not None and hasattr(db, 'SEMI') and db.SEMI():
+                    return True
+            return False
+
+        # `else done` form (defaultTargetSuccession)
+        if hasattr(ats, 'defaultTargetSuccession') and ats.defaultTargetSuccession():
+            keyword = "else"
+            dts = ats.defaultTargetSuccession()
+            has_semi = _usage_body_has_semi(ats)
+            if hasattr(dts, 'transitionSuccessionMember') and dts.transitionSuccessionMember():
+                tsm2 = dts.transitionSuccessionMember()
+                if hasattr(tsm2, 'transitionSuccession') and tsm2.transitionSuccession():
+                    ts2 = tsm2.transitionSuccession()
+                    if hasattr(ts2, 'connectorEndMember') and ts2.connectorEndMember():
+                        cem2 = ts2.connectorEndMember()
+                        if cem2 is not None:
+                            name = _extract_connector_end_name(cem2)
+        # `if <cond> then X` form (guardedTargetSuccession)
+        elif hasattr(ats, 'guardedTargetSuccession') and ats.guardedTargetSuccession():
+            gts = ats.guardedTargetSuccession()
+            has_semi = _usage_body_has_semi(ats)
+            if hasattr(gts, 'guardExpressionMember') and gts.guardExpressionMember():
+                gem = gts.guardExpressionMember()
+                if hasattr(gem, 'ownedExpression') and gem.ownedExpression():
+                    condition = gem.ownedExpression().getText()
+            if hasattr(gts, 'transitionSuccessionMember') and gts.transitionSuccessionMember():
+                tsm3 = gts.transitionSuccessionMember()
+                if hasattr(tsm3, 'transitionSuccession') and tsm3.transitionSuccession():
+                    ts3 = tsm3.transitionSuccession()
+                    if hasattr(ts3, 'connectorEndMember') and ts3.connectorEndMember():
+                        cem3 = ts3.connectorEndMember()
+                        if cem3 is not None:
+                            name = _extract_connector_end_name(cem3)
+        # Standard `then X` form (targetSuccession)
+        elif hasattr(ats, 'targetSuccession') and ats.targetSuccession():
             ts = ats.targetSuccession()
+            has_semi = _usage_body_has_semi(ats)
             if hasattr(ts, 'connectorEndMember') and ts.connectorEndMember():
                 cem = ts.connectorEndMember()
-                if hasattr(cem, 'connectorEnd') and cem.connectorEnd():
-                    ce = cem.connectorEnd()
-                    if hasattr(ce, 'name') and ce.name():
-                        name = ce.name().getText()
-    
+                if cem is not None:
+                    name = _extract_connector_end_name(cem)
+
     return {
         "name": "ActionTargetSuccessionMember",
         "prefix": prefix,
         "ownedRelatedElement": {
             "name": "ActionTargetSuccession",
+            "keyword": keyword,
             "declaredName": name,
+            "condition": condition,
+            "hasSemi": has_semi,
             "ownedRelationship": []
         }
     }
+
+
+def _extract_connector_end_name(ce_member_ctx):
+    """Extract the target feature text from a connectorEndMember.
+
+    Handles plain names (connectorEnd.name), qualified references via
+    ownedReferenceSubsetting, and feature chains.
+    """
+    if ce_member_ctx is None:
+        return None
+    ce = None
+    if hasattr(ce_member_ctx, 'connectorEnd'):
+        ce = ce_member_ctx.connectorEnd()
+    if ce is None:
+        return None
+
+    if hasattr(ce, 'name') and ce.name():
+        return ce.name().getText()
+
+    # `then m` / `then some.chain` carry an ownedReferenceSubsetting whose
+    # qualifiedName holds the target (possibly dotted).
+    if hasattr(ce, 'ownedReferenceSubsetting') and ce.ownedReferenceSubsetting():
+        return ce.ownedReferenceSubsetting().getText()
+
+    return None
 
 
 def _visit_guarded_succession_member(gsm_ctx):
@@ -1980,6 +2058,9 @@ def _visit_guarded_succession_member(gsm_ctx):
                 "visibility": _visit_visibility_indicator_dict(mp.visibilityIndicator())
             }
     
+    keyword = "succession"
+    declared_name = None
+    has_semi = False
     source_name = None
     condition = None
     target_name = None
@@ -1997,27 +2078,40 @@ def _visit_guarded_succession_member(gsm_ctx):
             if hasattr(gem, 'ownedExpression') and gem.ownedExpression():
                 condition = gem.ownedExpression().getText()
         
+        # Extract declared name from optional usageDeclaration (`succession S ...`)
+        if hasattr(gs, 'usageDeclaration') and gs.usageDeclaration():
+            ud = gs.usageDeclaration()
+            if hasattr(ud, 'identification') and ud.identification():
+                ident = ud.identification()
+                if hasattr(ident, 'name') and ident.name():
+                    declared_name = ident.name()[-1].getText()
+
         # Extract target name from transitionSuccessionMember
         if hasattr(gs, 'transitionSuccessionMember') and gs.transitionSuccessionMember():
             tsm = gs.transitionSuccessionMember()
             if hasattr(tsm, 'transitionSuccession') and tsm.transitionSuccession():
                 ts = tsm.transitionSuccession()
                 if hasattr(ts, 'connectorEndMember') and ts.connectorEndMember():
-                    cem = ts.connectorEndMember()
-                    if hasattr(cem, 'connectorEnd') and cem.connectorEnd():
-                        ce = cem.connectorEnd()
-                        if hasattr(ce, 'name') and ce.name():
-                            target_name = ce.name().getText()
-    
+                    target_name = _extract_connector_end_name(ts.connectorEndMember())
+
+        # Whether the trailing usageBody carries its own ";"
+        ub = gs.usageBody() if hasattr(gs, 'usageBody') else None
+        if ub is not None:
+            db = ub.definitionBody() if hasattr(ub, 'definitionBody') else None
+            if db is not None and hasattr(db, 'SEMI') and db.SEMI():
+                has_semi = True
+
     return {
         "name": "GuardedSuccessionMember",
         "prefix": prefix,
         "ownedRelatedElement": {
             "name": "GuardedSuccession",
-            "keyword": "succession",
+            "keyword": keyword,
+            "declaredName": declared_name,
             "sourceName": source_name,
             "condition": condition,
             "targetName": target_name,
+            "hasSemi": has_semi,
             "ownedRelationship": []
         }
     }
@@ -2627,9 +2721,10 @@ def _visit_control_node(ctx):
         "name": "ControlNode",
         "prefix": None,
         "keyword": None,
+        "declaredName": None,
         "body": None
     }
-    
+
     sub = None
     if hasattr(ctx, 'mergeNode') and ctx.mergeNode():
         sub = ctx.mergeNode()
@@ -2643,13 +2738,20 @@ def _visit_control_node(ctx):
     elif hasattr(ctx, 'forkNode') and ctx.forkNode():
         sub = ctx.forkNode()
         result["keyword"] = "fork"
-    
+
     if sub is not None:
         if hasattr(sub, 'controlNodePrefix') and sub.controlNodePrefix():
             result["prefix"] = _get_occurrence_usage_prefix(sub.controlNodePrefix())
+        if hasattr(sub, 'usageDeclaration') and sub.usageDeclaration():
+            ud = sub.usageDeclaration()
+            if hasattr(ud, 'identification') and ud.identification():
+                ident = ud.identification()
+                if hasattr(ident, 'name') and ident.name():
+                    name_list = ident.name()
+                    result["declaredName"] = name_list[-1].getText()
         if hasattr(sub, 'actionBody') and sub.actionBody():
             result["body"] = _visit_action_body(sub.actionBody())
-    
+
     return result
 
 
@@ -2861,17 +2963,17 @@ def _visit_succession(succ_ctx):
 
 def _make_action_usage_element(ctx, member_prefix=None):
     """Create an action usage element dictionary from an actionUsage context.
-    
+
     This is used for nested action usages inside action bodies.
     """
     if ctx is None:
         return None
-    
+
+    occ_prefix = _get_occurrence_usage_prefix(ctx)
     name = None
     shortname = None
     typed_by = None
-    occ_prefix = None
-    
+
     # Get name from actionUsageDeclaration -> usageDeclaration -> identification
     if ctx.actionUsageDeclaration():
         aud = ctx.actionUsageDeclaration()
@@ -5361,13 +5463,15 @@ def _visit_trigger_feature_value(ctx):
         # Determine trigger keyword
         is_at = te.AT() is not None
         is_after = te.AFTER() is not None
+        is_when = getattr(te, 'WHEN', lambda: None)() is not None
         trigger_kind = {
             "name": "TimeTriggerKind",
             "isAt": is_at,
-            "isAfter": is_after
+            "isAfter": is_after,
+            "isWhen": is_when
         }
-        
-        # Extract expression from argumentMember
+
+        # Extract expression: (AT|AFTER) argumentMember | WHEN argumentExpressionMember
         owned_expr_member = None
         if hasattr(te, 'argumentMember') and te.argumentMember():
             am = te.argumentMember()
@@ -5378,7 +5482,16 @@ def _visit_trigger_feature_value(ctx):
                     "name": "OwnedExpressionMember",
                     "ownedRelatedElement": owned_expr
                 }
-        
+        elif hasattr(te, 'argumentExpressionMember') and te.argumentExpressionMember():
+            aem = te.argumentExpressionMember()
+            if hasattr(aem, 'ownedExpression') and aem.ownedExpression():
+                oe = aem.ownedExpression()
+                owned_expr = _visit_owned_expression(oe)
+                owned_expr_member = {
+                    "name": "OwnedExpressionMember",
+                    "ownedRelatedElement": owned_expr
+                }
+
         trigger_expr = {
             "name": "TriggerExpression",
             "kind": trigger_kind,
