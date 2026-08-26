@@ -140,3 +140,44 @@ def test_references_dump_emits_keyword():
     assert '::> MyType' in dump
     # keyword form canonicalizes to the operator form
     assert '::> OtherType' in dump
+
+
+# v0.41.0: full-specialization sweep across usage kinds — actions,
+# requirements, constraints, calculations, use cases, interfaces now
+# capture and render ``:>`` / ``:>>`` / ``::>`` at the API level.
+
+def test_action_specializations_round_trip_api_level():
+    """Action.dump() renders all four specialization kinds."""
+    model = loads("""package P {
+        action a1 :> BaseType;
+        action a2 ::> RefType;
+        action a3 :>> RedefType;
+        action a4 : Real;
+    }""")
+    def find_actions(node):
+        out = []
+        if type(node).__name__ == 'Action':
+            out.append(node)
+        for c in getattr(node, 'children', []):
+            out.extend(find_actions(c))
+        return out
+    dumps = {a.name: a.dump() for a in find_actions(model)}
+    assert dumps['a1'] == 'action a1 :> BaseType;'
+    assert dumps['a2'] == 'action a2 ::> RefType;'
+    assert dumps['a3'] == 'action a3 :>> RedefType;'
+    assert dumps['a4'] == 'action a4 : Real;'
+
+
+def test_action_redefined_name_helper():
+    """``redefined_name`` works on Action usages too."""
+    model = loads("package P { action a :>> baseAction; }")
+    def find_actions(node):
+        out = []
+        if type(node).__name__ == 'Action':
+            out.append(node)
+        for c in getattr(node, 'children', []):
+            out.extend(find_actions(c))
+        return out
+    acts = find_actions(model)
+    assert len(acts) == 1
+    assert acts[0].redefined_name == 'baseAction'

@@ -1432,7 +1432,11 @@ def _make_use_case_usage_dict(ctx, prefix=None):
     if typed_by is None:
         typed_by = _get_action_usage_subsetted_by(ctx)
     
-    specialization = _build_specialization(typed_by) if typed_by else None
+    spec_full = _full_specialization_for_ctx(ctx)
+    if spec_full is not None:
+        specialization = spec_full
+    else:
+        specialization = _build_specialization(typed_by) if typed_by else None
     occ_prefix = _get_occurrence_usage_prefix(ctx) if ctx else None
     
     # Get case body items
@@ -3000,8 +3004,13 @@ def _make_action_usage_element(ctx, member_prefix=None):
     # Get body items
     action_items = _visit_action_body_items(ctx)
     
-    # Build specialization if typed_by is present
-    specialization = _build_specialization(typed_by) if typed_by else None
+    # Full specialization (Typings + Subsettings + Redefinitions +
+    # References); typed-by fallback for odd contexts.
+    spec_full = _full_specialization_for_ctx(ctx)
+    if spec_full is not None:
+        specialization = spec_full
+    else:
+        specialization = _build_specialization(typed_by) if typed_by else None
     
     return {
         "name": "BehaviorUsageMember",
@@ -6143,7 +6152,11 @@ def _make_calculation_usage_dict(ctx, prefix=None):
         if typed_by is None:
             typed_by = _get_action_usage_subsetted_by(ctx)
     
-    specialization = _build_specialization(typed_by) if typed_by else None
+    spec_full = _full_specialization_for_ctx(ctx)
+    if spec_full is not None:
+        specialization = spec_full
+    else:
+        specialization = _build_specialization(typed_by) if typed_by else None
     body_parts = _visit_calculation_body_items(ctx)
     occ_prefix = _get_occurrence_usage_prefix(ctx) if ctx else None
     
@@ -6253,7 +6266,11 @@ def _make_constraint_usage_dict(ctx, prefix=None):
         if typed_by is None:
             typed_by = _get_action_usage_subsetted_by(ctx)
     
-    specialization = _build_specialization(typed_by) if typed_by else None
+    spec_full = _full_specialization_for_ctx(ctx)
+    if spec_full is not None:
+        specialization = spec_full
+    else:
+        specialization = _build_specialization(typed_by) if typed_by else None
     body_parts = _visit_calculation_body_items(ctx)
     occ_prefix = _get_occurrence_usage_prefix(ctx) if ctx else None
     
@@ -6336,7 +6353,11 @@ def _make_requirement_usage_dict(ctx, prefix=None):
     if typed_by is None:
         typed_by = _get_action_usage_subsetted_by(ctx)
     
-    specialization = _build_specialization(typed_by) if typed_by else None
+    spec_full = _full_specialization_for_ctx(ctx)
+    if spec_full is not None:
+        specialization = spec_full
+    else:
+        specialization = _build_specialization(typed_by) if typed_by else None
     occ_prefix = _get_occurrence_usage_prefix(ctx) if ctx else None
     
     # Get requirement body items
@@ -6505,7 +6526,11 @@ def _make_interface_usage_dict(ctx, prefix=None):
                 if item_dict:
                     body_items.append(item_dict)
     
-    specialization = _build_specialization(typed_by) if typed_by else None
+    spec_full = _full_specialization_for_ctx(ctx)
+    if spec_full is not None:
+        specialization = spec_full
+    else:
+        specialization = _build_specialization(typed_by) if typed_by else None
     
     interface_end_members = []
     if interface_part:
@@ -9705,7 +9730,11 @@ def _visit_nested_occurrence_usage(occ_elem):
             typed_by = _get_action_usage_typed_by(ctx)
             if typed_by is None:
                 typed_by = _get_action_usage_subsetted_by(ctx)
-            specialization = _build_specialization(typed_by) if typed_by else None
+            spec_full = _full_specialization_for_ctx(ctx)
+            if spec_full is not None:
+                specialization = spec_full
+            else:
+                specialization = _build_specialization(typed_by) if typed_by else None
             
             occ_prefix = _get_occurrence_usage_prefix(ctx)
             
@@ -11225,8 +11254,13 @@ def _visit_usage_element_dict(usage_elem_ctx, prefix=None):
                 # Get body items
                 action_items = _visit_action_body_items(ctx)
                 
-                # Build specialization if typed_by is present
-                specialization = _build_specialization(typed_by) if typed_by else None
+                # Full specialization (Typings + Subsettings + Redefinitions +
+                # References); typed-by fallback for odd contexts.
+                spec_full = _full_specialization_for_ctx(ctx)
+                if spec_full is not None:
+                    specialization = spec_full
+                else:
+                    specialization = _build_specialization(typed_by) if typed_by else None
                 
                 return {
                     "name": "PackageMember",
@@ -11524,6 +11558,75 @@ def _get_action_usage_subsetted_by(ctx):
                             text = text[2:].strip()
                         return text
     
+    return None
+
+
+def _full_specialization_for_ctx(ctx):
+    """Best-effort full specialization for any usage-like context.
+
+    Tries, in order:
+      1. ctx.usage().usageDeclaration().featureSpecializationPart()
+         (whole-usage contexts: attributeUsage, partUsage, …)
+      2. ctx.usageDeclaration().featureSpecializationPart()
+      3. ctx.<x>UsageDeclaration().usageDeclaration().featureSpecializationPart()
+         for any ``*UsageDeclaration`` accessor on ctx
+         (actionUsageDeclaration, constraintUsageDeclaration, …)
+
+    Returns None when no path yields a featureSpecializationPart. Callers
+    that previously did ``_build_specialization(typed_by)`` can call this
+    instead to also capture Redefinitions / Subsettings / References.
+    """
+    if ctx is None:
+        return None
+
+    def _fsp_from_ud(ud):
+        if ud is None:
+            return None
+        if isinstance(ud, list):
+            ud = ud[0] if ud else None
+        if ud is None:
+            return None
+        fsp_getter = getattr(ud, "featureSpecializationPart", None)
+        if callable(fsp_getter) and fsp_getter():
+            return _build_full_specialization_from_fsp(fsp_getter())
+        return None
+
+    # 1) whole-usage context
+    usage = getattr(ctx, "usage", None)
+    if callable(usage):
+        u = usage()
+        if u is not None and hasattr(u, "usageDeclaration"):
+            spec = _fsp_from_ud(u.usageDeclaration())
+            if spec is not None:
+                return spec
+
+    # 2) direct usageDeclaration on ctx
+    ud_getter = getattr(ctx, "usageDeclaration", None)
+    if callable(ud_getter):
+        spec = _fsp_from_ud(ud_getter())
+        if spec is not None:
+            return spec
+
+    # 3) any *UsageDeclaration holder (actionUsageDeclaration, …)
+    for attr in sorted(dir(ctx)):
+        if not attr.endswith("UsageDeclaration") or attr == "usageDeclaration":
+            continue
+        getter = getattr(ctx, attr, None)
+        if callable(getter):
+            try:
+                holder = getter()
+            except Exception:
+                continue
+            if holder is None:
+                continue
+            if callable(getattr(holder, "usageDeclaration", None)):
+                spec = _fsp_from_ud(holder.usageDeclaration())
+                if spec is not None:
+                    return spec
+            spec = _fsp_from_ud(holder)
+            if spec is not None:
+                return spec
+
     return None
 
 

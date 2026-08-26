@@ -1,5 +1,51 @@
 # CHANGELOG
 
+## v0.41.0 (2026-08-26)
+
+### :sparkles: Improvements
+
+- **Full-specialization capture across usage kinds.** v0.40.0 fixed
+  `attributeUsage` only; every other usage maker still used the
+  typed-by-only `_build_specialization(typed_by)` helper, dropping
+  `:>`, `:>>`, and `::>` specializations for actions, calculations,
+  constraints, requirements, use cases, interfaces, and nested
+  occurrences.
+
+  New `_full_specialization_for_ctx(ctx)` helper walks any usage-like
+  ANTLR context (`ctx.usage()…`, `ctx.usageDeclaration()…`, or any
+  `<x>UsageDeclaration()` holder) to its featureSpecializationPart and
+  builds the full dict via `_build_full_specialization_from_fsp`.
+  Twelve visitor sites now prefer it with the typed-by path kept as a
+  defensive fallback: use-case, calculation, constraint, requirement,
+  interface, analysis-case, assert/satisfy, objective-member,
+  constraint-declaration, nested-occurrence, action-element, and the
+  top-level usage-element dispatch.
+
+- **API-level rendering.** `Action.load_from_grammar` now captures all
+  four specialization kinds into `_typed_by_name` / `_specializes_names`
+  / `_redefined_refs` / `_referenced_refs`, and the hand-rolled
+  `dump()` methods on `Action`, `Interface`, `UseCase`, and
+  `Requirement` render them:
+
+      action a1 :> BaseType;
+      action a2 ::> RefType;
+      action a3 :>> RedefType;
+
+  The `references` keyword form canonicalizes to the `::>` operator
+  form (matching grammar-side dump behavior).
+
+- **`Usage.redefined_name`** now walks deeper declaration nestings
+  (e.g. ActionUsageDeclaration -> UsageDeclaration -> FeatureDeclaration)
+  so it works on Action usages, not just Attribute.
+
+### :white_check_mark: Verification
+
+- ``tests/redefined_name_test.py``: 10 / 10 passing — adds API-level
+  round-trip cases for actions covering all four kinds plus the
+  ``redefined_name`` helper on Action.
+- Fast suite (partial + redefined-name + grammar + class + main +
+  navigate + repr + semantic + import): 410 passing, zero regressions.
+
 ## v0.40.0 (2026-08-26)
 
 ### :bug: Bug Fixes

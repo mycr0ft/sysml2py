@@ -352,7 +352,16 @@ class Usage(Searchable):
         else:
             d = getattr(g, 'declaration', None)
             if d is not None:
-                spec = getattr(d, 'specialization', None)
+                # Walk to the FeatureDeclaration: some grammars nest
+                # declaration -> declaration -> declaration (e.g.
+                # ActionUsageDeclaration -> UsageDeclaration ->
+                # FeatureDeclaration).
+                node = d
+                for _ in range(3):
+                    if node is None or hasattr(node, 'specialization'):
+                        break
+                    node = getattr(node, 'declaration', None)
+                spec = getattr(node, 'specialization', None) if node is not None else None
         resolved = _resolve_name_from_specialization(spec)
         return resolved or ""
 
@@ -1732,11 +1741,16 @@ class Interface(Usage):
         keyword = getattr(self, 'keyword', 'interface')
 
         # Build type/specialization suffix
-        type_suffix = ""
-        if hasattr(self, '_typed_by_name') and self._typed_by_name:
-            type_suffix = f" : {self._typed_by_name}"
-        elif hasattr(self, '_specializes_names') and self._specializes_names:
-            type_suffix = " :> " + ", ".join(self._specializes_names)
+        suffix_parts = []
+        if getattr(self, '_typed_by_name', None):
+            suffix_parts.append(f" : {self._typed_by_name}")
+        if getattr(self, '_specializes_names', None):
+            suffix_parts.append(" :> " + ", ".join(self._specializes_names))
+        if getattr(self, '_redefined_refs', None):
+            suffix_parts.append(" :>> " + ", ".join(self._redefined_refs))
+        if getattr(self, '_referenced_refs', None):
+            suffix_parts.append(" ::> " + ", ".join(self._referenced_refs))
+        type_suffix = "".join(suffix_parts)
 
         body_items = []
 
@@ -1846,6 +1860,11 @@ class Action(Usage):
         self._succession_targets = []
         self._succession_condition = None
         self._control_flow_nodes = []
+        # Re-declaration chains captured from grammar (v0.41.0)
+        self._typed_by_name = None
+        self._specializes_names = []
+        self._redefined_refs = []
+        self._referenced_refs = []
         
         if definition:
             self.keyword = "action def"
@@ -1969,7 +1988,76 @@ class Action(Usage):
                             self._extract_action_target_succession(child)
                         elif child_name == "GuardedSuccessionMember":
                             self._extract_guarded_succession(child)
-        
+
+        self._extract_specialization_info(grammar)
+
+        return self
+
+    def _extract_specialization_info(self, grammar):
+        """Capture Typings / Subsettings / Redefinitions / References names
+        from the grammar's feature specialization so ``dump()`` can render
+        them (v0.41.0)."""
+        fd = None
+        if getattr(grammar, 'declaration', None) is not None:
+            ud = getattr(grammar.declaration, 'declaration', None)
+            if ud is not None:
+                fd = getattr(ud, 'declaration', None)
+        spec = getattr(fd, 'specialization', None) if fd is not None else None
+        if spec is None:
+            return
+        for fs in getattr(spec, 'specializations', None) or []:
+            rel = getattr(fs, 'relationship', None)
+            kind = rel.__class__.__name__ if rel is not None else None
+            if kind == 'Typings':
+                tb = getattr(rel, 'typing', None)
+                for ft in getattr(tb, 'relationships', []) or []:
+                    rel2 = getattr(ft, 'relationship', None)
+                    ftype = getattr(rel2, 'type', None)
+                    qn = getattr(ftype, 'type', None)
+                    names = getattr(qn, 'names', None)
+                    if names:
+                        self._typed_by_name = '::'.join(names)
+                        break
+                    elements = getattr(ftype, 'elements', None) or []
+                    seg_names = []
+                    for el in elements:
+                        if hasattr(el, 'names') and el.names:
+                            seg_names.extend(el.names)
+                        elif hasattr(el, 'feature'):
+                            for seg in getattr(el.feature, 'children', []) or []:
+                                cf = getattr(seg, 'chainingFeature', None)
+                                if cf is not None and getattr(cf, 'names', None):
+                                    seg_names.extend(cf.names)
+                    if seg_names:
+                        self._typed_by_name = '.'.join(seg_names)
+                        break
+            elif kind in ('Subsettings', 'Redefinitions', 'References'):
+                target = (
+                    self._specializes_names if kind == 'Subsettings'
+                    else self._redefined_refs if kind == 'Redefinitions'
+                    else self._referenced_refs
+                )
+                for child in getattr(rel, 'children', None) or []:
+                    qn = (
+                        getattr(child, 'redefinedFeature', None)
+                        or getattr(child, 'referencedFeature', None)
+                    )
+                    if qn is not None and getattr(qn, 'names', None):
+                        target.append('::'.join(qn.names))
+                        continue
+                    elements = getattr(child, 'elements', None) or []
+                    seg_names = []
+                    for el in elements:
+                        if hasattr(el, 'names') and el.names:
+                            seg_names.extend(el.names)
+                        elif hasattr(el, 'feature'):
+                            for seg in getattr(el.feature, 'children', []) or []:
+                                cf = getattr(seg, 'chainingFeature', None)
+                                if cf is not None and getattr(cf, 'names', None):
+                                    seg_names.extend(cf.names)
+                    if seg_names:
+                        target.append('.'.join(seg_names))
+
         return self
     
     def _extract_initial_node(self, node):
@@ -2341,11 +2429,16 @@ class Action(Usage):
                 params.append(f"out {out_name}")
         
         # Build type/specialization suffix
-        type_suffix = ""
-        if hasattr(self, '_typed_by_name') and self._typed_by_name:
-            type_suffix = f" : {self._typed_by_name}"
-        elif hasattr(self, '_specializes_names') and self._specializes_names:
-            type_suffix = " :> " + ", ".join(self._specializes_names)
+        suffix_parts = []
+        if getattr(self, '_typed_by_name', None):
+            suffix_parts.append(f" : {self._typed_by_name}")
+        if getattr(self, '_specializes_names', None):
+            suffix_parts.append(" :> " + ", ".join(self._specializes_names))
+        if getattr(self, '_redefined_refs', None):
+            suffix_parts.append(" :>> " + ", ".join(self._redefined_refs))
+        if getattr(self, '_referenced_refs', None):
+            suffix_parts.append(" ::> " + ", ".join(self._referenced_refs))
+        type_suffix = "".join(suffix_parts)
         
         if params:
             return f"{keyword} {name_str}{type_suffix} {{ " + "; ".join(params) + "; }"
@@ -2497,11 +2590,16 @@ class UseCase(Usage):
         keyword = getattr(self, 'keyword', 'use case')
         
         # Build type/specialization suffix
-        type_suffix = ""
-        if hasattr(self, '_typed_by_name') and self._typed_by_name:
-            type_suffix = f" : {self._typed_by_name}"
-        elif hasattr(self, '_specializes_names') and self._specializes_names:
-            type_suffix = " :> " + ", ".join(self._specializes_names)
+        suffix_parts = []
+        if getattr(self, '_typed_by_name', None):
+            suffix_parts.append(f" : {self._typed_by_name}")
+        if getattr(self, '_specializes_names', None):
+            suffix_parts.append(" :> " + ", ".join(self._specializes_names))
+        if getattr(self, '_redefined_refs', None):
+            suffix_parts.append(" :>> " + ", ".join(self._redefined_refs))
+        if getattr(self, '_referenced_refs', None):
+            suffix_parts.append(" ::> " + ", ".join(self._referenced_refs))
+        type_suffix = "".join(suffix_parts)
         
         # Build body members
         body_items = []
@@ -2718,11 +2816,16 @@ class Requirement(Usage):
             shortname_str = f" <{self.req_shortname}>"
 
         # Build type/specialization suffix
-        type_suffix = ""
-        if hasattr(self, '_typed_by_name') and self._typed_by_name:
-            type_suffix = f" : {self._typed_by_name}"
-        elif hasattr(self, '_specializes_names') and self._specializes_names:
-            type_suffix = " :> " + ", ".join(self._specializes_names)
+        suffix_parts = []
+        if getattr(self, '_typed_by_name', None):
+            suffix_parts.append(f" : {self._typed_by_name}")
+        if getattr(self, '_specializes_names', None):
+            suffix_parts.append(" :> " + ", ".join(self._specializes_names))
+        if getattr(self, '_redefined_refs', None):
+            suffix_parts.append(" :>> " + ", ".join(self._redefined_refs))
+        if getattr(self, '_referenced_refs', None):
+            suffix_parts.append(" ::> " + ", ".join(self._referenced_refs))
+        type_suffix = "".join(suffix_parts)
 
         # Build body members
         body_items = []
