@@ -826,6 +826,12 @@ def _visit_definition_element_dict(def_elem_ctx, prefix=None):
         # the round-trip dict preserves the `standard library` keywords.
         ctx = def_elem_ctx.libraryPackage()
         return _make_nested_package_dict(ctx, prefix, is_standard_library=True)
+    elif hasattr(def_elem_ctx, 'dependency') and def_elem_ctx.dependency():
+        # Issue #4: dependency statements were silently dropped. The grammar
+        # class Dependency is fully implemented but no visitor dispatch
+        # constructed it.
+        ctx = def_elem_ctx.dependency()
+        return _make_dependency_dict(ctx, prefix)
     elif hasattr(def_elem_ctx, 'itemDefinition') and def_elem_ctx.itemDefinition():
         ctx = def_elem_ctx.itemDefinition()
         return _make_item_definition_dict(ctx, prefix)
@@ -8115,6 +8121,134 @@ def _make_individual_usage_dict(ctx, prefix=None):
             }
         }
     }
+
+
+def _make_dependency_dict(ctx, member_prefix=None):
+    """Create a Dependency dictionary.
+
+    Grammar (SysML v2):
+      dependency
+        : (prefixMetadataAnnotation)* DEPENDENCY (identification? FROM)?
+            qualifiedName (COMMA qualifiedName)* TO qualifiedName
+            (COMMA qualifiedName)* relationshipBody
+        | (prefixMetadataAnnotation)* DEPENDENCY dependencyDeclaration
+            relationshipBody
+        ;
+
+    Wrapped in PackageMember + DefinitionElement so the loader places it in
+    the enclosing package / namespace body.
+    """
+    if ctx is None:
+        return None
+
+    identification = None
+    clients = []
+    suppliers = []
+    body = {"name": "RelationshipBody", "ownedRelationship": []}
+
+    if hasattr(ctx, 'dependencyDeclaration') and ctx.dependencyDeclaration():
+        # Alternative 2: dependencyDeclaration carries identification / FROM /
+        # client-list / supplier-list / TO. relationshipBody is the next
+        # sibling on the dependency context.
+        dep_decl = ctx.dependencyDeclaration()
+        if hasattr(dep_decl, 'identification') and dep_decl.identification():
+            identification = _build_identification_dict(dep_decl.identification())
+        qn_list = dep_decl.qualifiedName()
+        if not isinstance(qn_list, list):
+            qn_list = [qn_list] if qn_list is not None else []
+        # Split on TO: first batch is clients, second batch is suppliers.
+        to_token = dep_decl.TO()
+        if to_token is not None:
+            # ANTLR TerminalNodeImpl doesn't expose `.start` directly; use
+            # `.symbol.start` (the underlying token's char position).
+            to_start = to_token.symbol.start
+            split_idx = len(qn_list)
+            for i, qn in enumerate(qn_list):
+                if qn.start.start > to_start:
+                    split_idx = i
+                    break
+            clients = qn_list[:split_idx]
+            suppliers = qn_list[split_idx:]
+        else:
+            clients = qn_list
+        # relationshipBody sits on the parent dependency context
+        if hasattr(ctx, 'relationshipBody') and ctx.relationshipBody():
+            body = _visit_dependency_relationship_body_dict(ctx.relationshipBody())
+    else:
+        # Alternative 1: bare `dependency [ident]? [from]? qn , qn , ... to qn , qn , ... {body}`
+        if hasattr(ctx, 'identification') and ctx.identification():
+            identification = _build_identification_dict(ctx.identification())
+        qn_list = ctx.qualifiedName()
+        if not isinstance(qn_list, list):
+            qn_list = [qn_list] if qn_list is not None else []
+        to_token = ctx.TO()
+        if to_token is not None:
+            to_start = to_token.symbol.start
+            split_idx = len(qn_list)
+            for i, qn in enumerate(qn_list):
+                if qn.start.start > to_start:
+                    split_idx = i
+                    break
+            clients = qn_list[:split_idx]
+            suppliers = qn_list[split_idx:]
+        else:
+            clients = qn_list
+        if hasattr(ctx, 'relationshipBody') and ctx.relationshipBody():
+            body = _visit_dependency_relationship_body_dict(ctx.relationshipBody())
+
+    return {
+        "name": "PackageMember",
+        "prefix": member_prefix,
+        "ownedRelatedElement": {
+            "name": "DefinitionElement",
+            "ownedRelatedElement": {
+                "name": "Dependency",
+                "identification": identification,
+                "clients": [
+                    {"name": "QualifiedName", "names": qn.getText().split("::")}
+                    for qn in clients if qn is not None
+                ],
+                "suppliers": [
+                    {"name": "QualifiedName", "names": qn.getText().split("::")}
+                    for qn in suppliers if qn is not None
+                ],
+                "body": body,
+            }
+        }
+    }
+
+
+def _visit_dependency_relationship_body_dict(rb_ctx):
+    """Capture a dependency's relationshipBody.
+
+    Mirrors the aliasMember pattern: walk the body for any
+    OwnedAnnotation / CommentSysML so doc comments survive the round-trip.
+    For the `;` form (empty body), returns the empty shape.
+    """
+    if rb_ctx is None:
+        return {"name": "RelationshipBody", "ownedRelationship": []}
+    owned = []
+    for child in rb_ctx.children:
+        if type(child).__name__ == 'RelationshipOwnedElementContext':
+            for c2 in child.children:
+                if type(c2).__name__ == 'OwnedAnnotationContext':
+                    for c3 in c2.children:
+                        if type(c3).__name__ == 'AnnotatingElementContext':
+                            owned.append({
+                                "name": "OwnedAnnotation",
+                                "ownedRelatedElement": [
+                                    {
+                                        "name": "AnnotatingElement",
+                                        "ownedRelatedElement": {
+                                            "name": "CommentSysML",
+                                            "body": c3.getText(),
+                                            "identification": None,
+                                            "ownedRelationship": []
+                                        }
+                                    }
+                                ]
+                            })
+    return {"name": "RelationshipBody", "ownedRelationship": owned}
 
 
 def _make_enumeration_definition_dict(ctx, member_prefix=None):

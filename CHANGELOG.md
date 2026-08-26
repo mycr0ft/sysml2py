@@ -1,5 +1,38 @@
 # CHANGELOG
 
+## v0.46.0 (2026-08-26)
+
+### :bug: Bug Fixes
+
+- **Visitor drops dependency statements entirely
+  ([issue #4](https://github.com/mycr0ft/sysmlpy/issues/4)).**
+  `dependency b to A;` (and every other dependency form) was silently
+  dropped at parse time. The `Dependency` grammar class was fully
+  implemented in `grammar/classes.py:9758` but no visitor dispatch
+  constructed it, and `DefinitionElement.__init__` had no branch for
+  it. Fix:
+  - `_make_dependency_dict` (`antlr_visitor.py`) emits a Dependency
+    dict from the `dependency` ANTLR context, handling both grammar
+    alternatives (bare `qn to qn` and `dependencyDeclaration`).
+  - `DefinitionElement.__init__` (`grammar/classes.py`) now dispatches
+    `Dependency` (also `LibraryPackage`, which was a follow-on gap
+    from v0.45.0).
+  - `Package.load_from_grammar` (`definition.py`) now constructs a
+    public-API `Dependency` instance.
+  - `Dependency.dump` (`grammar/classes.py`) emits `from` between an
+    identification and its clients; the bare form
+    `dependency name a to X;` is unparseable due to ANTLR grammar
+    ambiguity (`(identification? FROM)?` can't decide whether `name`
+    is identification or the first qualified name without `from`).
+  - `Dependency` public-API class added to `usage.py` (and re-exported
+    from `__init__.py`).
+
+  Regression tests: `test_dependency_statement_bare_regression_gh4`,
+  `test_dependency_named_with_from_regression_gh4`,
+  `test_dependency_anonymous_with_from_regression_gh4`,
+  `test_dependency_multi_client_supplier_regression_gh4`,
+  `test_dependency_definition_element_dispatch_regression_gh4`.
+
 ## v0.45.0 (2026-08-26)
 
 ### :bug: Bug Fixes

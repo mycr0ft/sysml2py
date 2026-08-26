@@ -4285,3 +4285,70 @@ class DefaultReference(Usage):
     #             )
 
     #     return package
+
+
+class Dependency(Usage):
+    """SysML v2 Dependency usage.
+
+    Represents a UML-style dependency between model elements.
+    Usage:
+        Dependency()                                  # dependency ;
+        Dependency(name='D')                         # dependency D from x to y;
+    """
+    sysml_type = 'dependency'
+
+    def __init__(self, name=None, clients=None, suppliers=None, shortname=None):
+        Usage.__init__(self)
+        self.grammar = None
+        self.clients = clients or []
+        self.suppliers = suppliers or []
+        # Usage.__init__ assigns a UUID-based name; override to None when
+        # the dependency is anonymous (the common case for
+        # `dependency b to A;`).
+        self.name = name
+        if shortname is not None:
+            self._set_name(shortname, short=True)
+
+    def dump(self):
+        # Issue #4: dependencies are emitted from the grammar tree; this
+        # method exists for compatibility with the Usage API.
+        if self.grammar is not None and hasattr(self.grammar, 'dump'):
+            return self.grammar.dump()
+        return "dependency"
+
+    def _get_definition(self, child=None):
+        """Build a PackageMember-wrapped Dependency dict for the model tree.
+
+        The Dependency grammar class returns the bare inner shape
+        (`{"name": "Dependency", "identification": ..., "clients": ...,
+        "suppliers": ..., "body": ...}`). For inclusion in a package body
+        we wrap it the same way other definitions are wrapped:
+        `PackageMember -> DefinitionElement -> Dependency`.
+        """
+        if self.grammar is not None and hasattr(self.grammar, 'get_definition'):
+            grammar_def = self.grammar.get_definition()
+        else:
+            grammar_def = {
+                "name": "Dependency",
+                "identification": None,
+                "clients": [],
+                "suppliers": [],
+                "body": None,
+            }
+        # Sync identification name
+        if self.name is not None and grammar_def.get("identification"):
+            grammar_def["identification"]["declaredName"] = self.name
+        elif self.name is not None:
+            grammar_def["identification"] = {
+                "name": "Identification",
+                "declaredName": self.name,
+                "declaredShortName": None,
+            }
+        return {
+            "name": "PackageMember",
+            "prefix": None,
+            "ownedRelatedElement": {
+                "name": "DefinitionElement",
+                "ownedRelatedElement": grammar_def,
+            },
+        }

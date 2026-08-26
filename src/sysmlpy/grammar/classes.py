@@ -226,6 +226,17 @@ class DefinitionElement:
                 self.children.append(
                     InterfaceUsage(definition["ownedRelatedElement"])
                 )
+            elif de == "Dependency":
+                # Issue #4: dependency statements were silently dropped
+                # because no visitor dispatch produced a Dependency dict and
+                # no DefinitionElement branch constructed it.
+                self.children.append(Dependency(definition["ownedRelatedElement"]))
+            elif de == "LibraryPackage":
+                # `standard library package Foo { ... }` shares the same
+                # {identification, body} shape as `package Foo { ... }` plus
+                # an isStandardLibrary flag. Reuse Package; the flag is read
+                # from the dict in Package.__init__.
+                self.children.append(Package(definition["ownedRelatedElement"]))
             else:
                 print(f"Unknown DefinitionElement type: {de}")  # pragma: no cover
 
@@ -9778,6 +9789,12 @@ class Dependency:
         output = [self.keyword]
         if self.identification is not None:
             output.append(self.identification.dump())
+            # Issue #4: the ANTLR grammar ambiguity means an unnamed-form
+            # `dependency name a to X;` is unparseable — `name` is taken as
+            # the identification and `a` then has nowhere to go. To round-trip
+            # safely we always emit `from` between the identification and the
+            # client list.
+            output.append("from")
         output.append(", ".join([c.dump() for c in self.clients]))
         output.append("to")
         output.append(", ".join([s.dump() for s in self.suppliers]))

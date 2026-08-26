@@ -20,7 +20,7 @@ from sysmlpy.grammar.classes import (
 )
 from sysmlpy.grammar.classes import Package as PackageGrammar
 
-from sysmlpy import Part, Item, Port, Requirement, UseCase, Attribute, Action, Case, AnalysisCase, VerificationCase, Interface, Message
+from sysmlpy import Part, Item, Port, Requirement, UseCase, Attribute, Action, Case, AnalysisCase, VerificationCase, Interface, Message, Dependency
 from sysmlpy.usage import (
     State, Constraint, Connection, Flow, Calculation, Enumeration,
     Allocation, Metadata, Rendering, Individual, FlowDef,
@@ -1299,6 +1299,16 @@ class Package(Searchable):
                             r.name = feat_decl.identification.declaredName
                 r.parent = self
                 self.children.append(r)
+            elif inner_class == "Dependency":
+                # Issue #4: dependency statements were silently dropped
+                # because no visitor dispatch produced a Dependency dict and
+                # Package.load_from_grammar had no branch for it.
+                d = Dependency()
+                d.grammar = inner_element
+                if hasattr(inner_element, 'identification') and inner_element.identification:
+                    d.name = inner_element.identification.declaredName
+                d.parent = self
+                self.children.append(d)
             else:
                 print(f"[Package.load_from_grammar] Unknown class: {inner_class} - skipping")  # pragma: no cover
         

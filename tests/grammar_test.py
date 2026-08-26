@@ -2593,3 +2593,108 @@ def test_attribute_ref_references_operator_roundtrip():
     assert "::> RefTypeTwo;" in dump  # keyword form canonicalizes to operator
     assert "attribute :>SubsetType;" in dump
     assert "attribute :>> RedefType;" in dump
+
+
+def test_dependency_statement_bare_regression_gh4():
+    """Regression for GitHub issue #4: bare `dependency b to A;`
+    statements were silently dropped at visit time (no visitor dispatch
+    produced a Dependency dict and DefinitionElement had no Dependency
+    branch)."""
+    text = """package P {
+        part b;
+        requirement A;
+        dependency b to A;
+    }"""
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "dependency" in dumped
+    assert "b to A" in dumped
+    # And the raw visitor dict now contains a Dependency entry
+    from sysmlpy import load_grammar_antlr
+    raw = load_grammar_antlr(text)
+    import json
+    assert "Dependency" in json.dumps(raw)
+    # Round-trip
+    b = loads(dumped)
+    assert "dependency" in classtree(b).dump()
+
+
+def test_dependency_named_with_from_regression_gh4():
+    """Regression for issue #4: named form `dependency D from a to X;`
+    with the FROM keyword. Round-trips correctly."""
+    text = """package P {
+        part a;
+        part b;
+        requirement X;
+        requirement Y;
+        dependency D from a, b to X, Y;
+    }"""
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "dependency" in dumped
+    assert "from a" in dumped or "from a," in dumped
+    assert "to X" in dumped or "to X," in dumped
+    # Round-trip
+    b = loads(dumped)
+    rt = classtree(b).dump()
+    assert "dependency" in rt
+
+
+def test_dependency_anonymous_with_from_regression_gh4():
+    """Regression for issue #4: anonymous with FROM (no name)."""
+    text = """package P {
+        part a;
+        requirement X;
+        dependency from a to X;
+    }"""
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "dependency" in dumped
+    assert "a to X" in dumped or "a, to X" in dumped
+    # Round-trip
+    loads(dumped)
+
+
+def test_dependency_multi_client_supplier_regression_gh4():
+    """Regression for issue #4: multiple clients and suppliers, comma-separated."""
+    text = """package P {
+        part a;
+        part b;
+        part c;
+        requirement X;
+        dependency a, b to X;
+    }"""
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "a, b to X" in dumped
+    # Round-trip
+    loads(dumped)
+
+
+def test_dependency_definition_element_dispatch_regression_gh4():
+    """Structural test: DefinitionElement must dispatch Dependency (issue #4)."""
+    import json
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        part b;
+        requirement A;
+        dependency b to A;
+    }"""
+    raw = load_grammar_antlr(text)
+    # Walk the dict to confirm a Dependency node exists and is reachable
+    def find(node, target):
+        if isinstance(node, dict):
+            if node.get("name") == target:
+                return node
+            for v in node.values():
+                r = find(v, target) if isinstance(v, (dict, list)) else None
+                if r: return r
+        elif isinstance(node, list):
+            for it in node:
+                r = find(it, target) if isinstance(it, (dict, list)) else None
+                if r: return r
+        return None
+    dep = find(raw, "Dependency")
+    assert dep is not None, "Dependency dict missing from visitor output"
+    assert "clients" in dep
+    assert "suppliers" in dep
