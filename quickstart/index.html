@@ -563,6 +563,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#redeclared-feature-names-v0390" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Redeclared Feature Names (v0.39.0+)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#partial-parse-recovery-v0380" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Partial Parse Recovery (v0.38.0+)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -859,6 +881,28 @@
     <span class="md-ellipsis">
       
         Stylistic Checks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#redeclared-feature-names-v0390" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Redeclared Feature Names (v0.39.0+)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#partial-parse-recovery-v0380" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Partial Parse Recovery (v0.38.0+)
       
     </span>
   </a>
@@ -1250,7 +1294,55 @@ issues = analyze(model, style_checks=False)
 <li><strong>Ports</strong>: camelCase (<code>intakePort</code>)</li>
 </ul>
 <p>All stylistic issues have severity <code>"warning"</code> rather than <code>"error"</code>,
-so they don't block validation but still highlight potential issues.</p>
+so they don't block validation but still highlight potential issues.
+Specialization Keywords on Usages (v0.40.0+)</p>
+<hr />
+<p>All four SysML v2 specialization kinds round-trip on any usage — attributes,
+parts, actions, requirements, and more::</p>
+<div class="highlight"><pre><span></span><code>from sysmlpy import loads
+
+model = loads("""package P {
+    action a1 :&gt; BaseType;
+    action a2 ::&gt; RefType;
+    action a3 references OtherType;   # keyword form
+    action a4 :&gt;&gt; RedefType;
+}""")
+
+print(model.dump())
+# action a1:&gt;BaseType ;
+# action a2::&gt; R ;
+# ... (keyword form canonicalizes to the operator form)
+</code></pre></div>
+<h2 id="redeclared-feature-names-v0390">Redeclared Feature Names (v0.39.0+)<a class="headerlink" href="#redeclared-feature-names-v0390" title="Permanent link">&para;</a></h2>
+<p>When a usage re-declares a feature without its own identification, the
+user-visible name lives in the specialization chain. Two helpers surface it::</p>
+<div class="highlight"><pre><span></span><code>from sysmlpy import loads
+
+model = loads("""package P {
+    view def V :&gt; Base {
+        attribute :&gt;&gt; exampleAttribute = "Example Value";
+    }
+}""")
+attr = model.get_child("P.V").attributes[0]
+
+print(attr.redefined_name)   # → exampleAttribute
+print(attr.display_name)     # → exampleAttribute (UUID-aware)
+print(attr.get_value())      # → Example Value
+</code></pre></div>
+<p><code>self.name</code> stays the auto-generated UUID sentinel for backward
+compatibility; <code>display_name</code> suppresses it for UI / log output.</p>
+<h2 id="partial-parse-recovery-v0380">Partial Parse Recovery (v0.38.0+)<a class="headerlink" href="#partial-parse-recovery-v0380" title="Permanent link">&para;</a></h2>
+<p>Keep whatever <em>did</em> parse when the input has syntax errors::</p>
+<div class="highlight"><pre><span></span><code>from sysmlpy import load_partial, PartialParseError
+from sysmlpy.formatting import classtree
+
+try:
+    model = load_partial(text)
+except PartialParseError as e:
+    print(e.errors)              # collected ANTLR errors
+    print(classtree(e.partial).dump())  # valid part of the input
+</code></pre></div>
+<p>The strict <code>loads</code> / <code>load</code> are unchanged.</p>
 
 
 

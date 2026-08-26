@@ -365,6 +365,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#redeclared-features-partial-parse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Redeclared Features &amp; Partial Parse
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#storage-backends" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -644,6 +655,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#redeclared-features-partial-parse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Redeclared Features &amp; Partial Parse
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#storage-backends" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -733,7 +755,7 @@
 <p>A pure Python implementation for parsing SysML v2.0 models.
 Uses the ANTLR4 parser for full SysML v2 grammar support.</p>
 <h2 id="version">Version<a class="headerlink" href="#version" title="Permanent link">&para;</a></h2>
-<p><strong>v0.36.0</strong> — Optional boxes-backed state-machine visualizer (<code>as_state_transition_view_boxes()</code>, <code>render_state_transition_view[_svg]()</code>) with native UML state shapes, initial pseudostate, final-state bullseye, guard labels, composite + parallel state support. Also fixes the INCOSE flashlight parse crash in <code>grammar/classes.py</code>. 19 new tests.</p>
+<p><strong>v0.41.0</strong> — Full-specialization capture across all usage kinds: <code>:&gt;</code>, <code>:&gt;&gt;</code>, and <code>::&gt;</code> (including the <code>references</code> keyword) now round-trip on actions, calculations, constraints, requirements, use cases, interfaces, and nested occurrences — not just attributes. API-level <code>dump()</code> on Action / Interface / UseCase / Requirement renders them. New helpers: <code>Usage.redefined_name</code> and <code>Usage.display_name</code> surface user-visible names on re-declared features; <code>loads_partial</code> / <code>load_partial</code> recover partial models from malformed input via <code>PartialParseError</code>. See <a href="CHANGELOG/">CHANGELOG</a> for v0.37.0–v0.40.0 details (corpus-load fixes, succession grammar classes, <code>References</code> end-to-end).</p>
 <h2 id="quick-links">Quick Links<a class="headerlink" href="#quick-links" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="TUTORIAL/">Tutorial</a> — comprehensive guide with class mapping tables</li>
@@ -771,6 +793,30 @@ Uses the ANTLR4 parser for full SysML v2 grammar support.</p>
 <a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="n">p</span> <span class="o">=</span> <span class="n">Part</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">'Stage1'</span><span class="p">)</span>
 <a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="n">p</span><span class="o">.</span><span class="n">add_child</span><span class="p">(</span><span class="n">Attribute</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">'mass'</span><span class="p">))</span>
 <a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="nb">print</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">dump</span><span class="p">())</span>
+</code></pre></div>
+<h2 id="redeclared-features-partial-parse">Redeclared Features &amp; Partial Parse<a class="headerlink" href="#redeclared-features-partial-parse" title="Permanent link">&para;</a></h2>
+<p>Working with re-declared features (<code>:&gt;&gt;</code>, <code>:&gt;</code>, <code>::&gt;</code>) and malformed input:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">loads</span><span class="p">,</span> <span class="n">load_partial</span><span class="p">,</span> <span class="n">PartialParseError</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># The user-visible name of a re-declared feature lives in the</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># specialization chain — use the helpers to reach it:</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">model</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="s2">"""package P {</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="s2">    view def V :&gt; Base {</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="s2">        attribute :&gt;&gt; exampleAttribute = "Example Value";</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="s2">    }</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="s2">}"""</span><span class="p">)</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="n">attr</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_child</span><span class="p">(</span><span class="s2">"P.V"</span><span class="p">)</span><span class="o">.</span><span class="n">attributes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="nb">print</span><span class="p">(</span><span class="n">attr</span><span class="o">.</span><span class="n">redefined_name</span><span class="p">)</span>   <span class="c1"># → exampleAttribute</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="nb">print</span><span class="p">(</span><span class="n">attr</span><span class="o">.</span><span class="n">display_name</span><span class="p">)</span>     <span class="c1"># → exampleAttribute (UUID-aware)</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="nb">print</span><span class="p">(</span><span class="n">attr</span><span class="o">.</span><span class="n">get_value</span><span class="p">())</span>      <span class="c1"># → Example Value</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="c1"># Malformed input: keep whatever did parse instead of crashing</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>    <span class="n">model</span> <span class="o">=</span> <span class="n">load_partial</span><span class="p">(</span><span class="n">broken_text</span><span class="p">)</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="k">except</span> <span class="n">PartialParseError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">errors</span><span class="p">)</span>          <span class="c1"># collected syntax errors</span>
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>    <span class="c1"># e.partial holds the visitor dict for the valid part —</span>
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>    <span class="c1"># round-trippable via classtree(e.partial).dump()</span>
 </code></pre></div>
 <h2 id="storage-backends">Storage Backends<a class="headerlink" href="#storage-backends" title="Permanent link">&para;</a></h2>
 <p>sysmlpy provides a unified <code>Store</code> protocol with four backend implementations:</p>
@@ -810,24 +856,24 @@ Uses the ANTLR4 parser for full SysML v2 grammar support.</p>
 </tr>
 </tbody>
 </table>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_store</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">store</span> <span class="o">=</span> <span class="n">create_store</span><span class="p">(</span><span class="s2">"memory"</span><span class="p">)</span>       <span class="c1"># In-memory dict</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">store</span> <span class="o">=</span> <span class="n">create_store</span><span class="p">(</span><span class="s2">"networkx"</span><span class="p">)</span>     <span class="c1"># NetworkX graph</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">store</span> <span class="o">=</span> <span class="n">create_store</span><span class="p">(</span><span class="s2">"kuzu"</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="s2">"/tmp/model.db"</span><span class="p">)</span>  <span class="c1"># Embedded DB</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">store</span> <span class="o">=</span> <span class="n">create_store</span><span class="p">(</span><span class="s2">"cayley"</span><span class="p">)</span>       <span class="c1"># Remote Cayley server</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_store</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">store</span> <span class="o">=</span> <span class="n">create_store</span><span class="p">(</span><span class="s2">"memory"</span><span class="p">)</span>       <span class="c1"># In-memory dict</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">store</span> <span class="o">=</span> <span class="n">create_store</span><span class="p">(</span><span class="s2">"networkx"</span><span class="p">)</span>     <span class="c1"># NetworkX graph</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">store</span> <span class="o">=</span> <span class="n">create_store</span><span class="p">(</span><span class="s2">"kuzu"</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="s2">"/tmp/model.db"</span><span class="p">)</span>  <span class="c1"># Embedded DB</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">store</span> <span class="o">=</span> <span class="n">create_store</span><span class="p">(</span><span class="s2">"cayley"</span><span class="p">)</span>       <span class="c1"># Remote Cayley server</span>
 </code></pre></div>
 <p>All backends share the same API: <code>put</code>, <code>get</code>, <code>delete</code>, <code>children</code>, <code>parents</code>, <code>relationships</code>, <code>query</code>, <code>has</code>, <code>ids</code>, <code>clear</code>, plus graph traversal (<code>descendants</code>, <code>ancestors</code>, <code>path</code>).</p>
 <h2 id="conformance">Conformance<a class="headerlink" href="#conformance" title="Permanent link">&para;</a></h2>
 <p><strong>100% of 123 OMG XPect conformance tests pass</strong> (123/123).</p>
 <h2 id="semantic-analysis">Semantic Analysis<a class="headerlink" href="#semantic-analysis" title="Permanent link">&para;</a></h2>
 <p>Run <code>analyze(model)</code> to validate a parsed model against SysML v2 well-formedness rules:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">loads</span><span class="p">,</span> <span class="n">analyze</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">model</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="s2">"package P { part x : MissingType; }"</span><span class="p">)</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">issues</span> <span class="o">=</span> <span class="n">analyze</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="k">for</span> <span class="n">issue</span> <span class="ow">in</span> <span class="n">issues</span><span class="p">:</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">issue</span><span class="o">.</span><span class="n">severity</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">issue</span><span class="o">.</span><span class="n">code</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">issue</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">loads</span><span class="p">,</span> <span class="n">analyze</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">model</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="s2">"package P { part x : MissingType; }"</span><span class="p">)</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">issues</span> <span class="o">=</span> <span class="n">analyze</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="k">for</span> <span class="n">issue</span> <span class="ow">in</span> <span class="n">issues</span><span class="p">:</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">issue</span><span class="o">.</span><span class="n">severity</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">issue</span><span class="o">.</span><span class="n">code</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">issue</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </code></pre></div>
 <p>The analyzer checks:</p>
 <table>
@@ -883,29 +929,29 @@ Uses the ANTLR4 parser for full SysML v2 grammar support.</p>
 <p>Import visibility is enforced: <code>private</code> (default) limits symbols to the importing scope, <code>public</code> re-exports to siblings and children, and <code>protected</code> is visible to children only.</p>
 <h2 id="multi-file-projects">Multi-File Projects<a class="headerlink" href="#multi-file-projects" title="Permanent link">&para;</a></h2>
 <p>sysmlpy supports loading multiple SysML files with automatic cross-file import resolution:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_files</span><span class="p">,</span> <span class="n">load_project</span><span class="p">,</span> <span class="n">load_with_dependencies</span><span class="p">,</span> <span class="n">analyze</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># Load specific files (packages with same name are merged)</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">model</span> <span class="o">=</span> <span class="n">load_files</span><span class="p">([</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="s1">'models/Shared/Types.sysml'</span><span class="p">,</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="s1">'models/SystemGateway/SystemGatewayMain.sysml'</span><span class="p">,</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="p">])</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="c1"># Load entire project directory</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="n">model</span> <span class="o">=</span> <span class="n">load_project</span><span class="p">(</span><span class="s1">'models/'</span><span class="p">)</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="c1"># Load with automatic dependency resolution</span>
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="n">model</span> <span class="o">=</span> <span class="n">load_with_dependencies</span><span class="p">(</span>
-<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>    <span class="s1">'models/main.sysml'</span><span class="p">,</span>
-<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>    <span class="n">search_paths</span><span class="o">=</span><span class="p">[</span><span class="s1">'models/SystemGateway'</span><span class="p">,</span> <span class="s1">'models/Shared'</span><span class="p">],</span>
-<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="p">)</span>
-<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>
-<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="c1"># Validate - cross-file references resolve correctly</span>
-<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="n">issues</span> <span class="o">=</span> <span class="n">analyze</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_files</span><span class="p">,</span> <span class="n">load_project</span><span class="p">,</span> <span class="n">load_with_dependencies</span><span class="p">,</span> <span class="n">analyze</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1"># Load specific files (packages with same name are merged)</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">model</span> <span class="o">=</span> <span class="n">load_files</span><span class="p">([</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="s1">'models/Shared/Types.sysml'</span><span class="p">,</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="s1">'models/SystemGateway/SystemGatewayMain.sysml'</span><span class="p">,</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">])</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="c1"># Load entire project directory</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="n">model</span> <span class="o">=</span> <span class="n">load_project</span><span class="p">(</span><span class="s1">'models/'</span><span class="p">)</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="c1"># Load with automatic dependency resolution</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="n">model</span> <span class="o">=</span> <span class="n">load_with_dependencies</span><span class="p">(</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>    <span class="s1">'models/main.sysml'</span><span class="p">,</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>    <span class="n">search_paths</span><span class="o">=</span><span class="p">[</span><span class="s1">'models/SystemGateway'</span><span class="p">,</span> <span class="s1">'models/Shared'</span><span class="p">],</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="p">)</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="c1"># Validate - cross-file references resolve correctly</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="n">issues</span> <span class="o">=</span> <span class="n">analyze</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
 </code></pre></div>
 <p>Standard library imports (<code>ScalarValues</code>, <code>ISQ</code>, etc.) are validated when a library path is provided:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">sysmlpy</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">model</span> <span class="o">=</span> <span class="n">load_files</span><span class="p">([</span><span class="s1">'main.sysml'</span><span class="p">],</span> <span class="n">library</span><span class="o">=</span><span class="n">sysmlpy</span><span class="o">.</span><span class="n">__path__</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">'/library'</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">sysmlpy</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">model</span> <span class="o">=</span> <span class="n">load_files</span><span class="p">([</span><span class="s1">'main.sysml'</span><span class="p">],</span> <span class="n">library</span><span class="o">=</span><span class="n">sysmlpy</span><span class="o">.</span><span class="n">__path__</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">'/library'</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="author">Author<a class="headerlink" href="#author" title="Permanent link">&para;</a></h2>
 <p>Authored by <a href="https://github.com/mycr0ft">Jon Fox</a></p>
