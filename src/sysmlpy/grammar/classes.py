@@ -8161,7 +8161,7 @@ class FeatureSpecialization:
             elif definition["ownedRelationship"]["name"] == "Subsettings":
                 self.relationship = Subsettings(definition["ownedRelationship"])
             elif definition["ownedRelationship"]["name"] == "References":
-                print("FeatureSpecialization: References not yet implemented")  # pragma: no cover
+                self.relationship = References(definition["ownedRelationship"])
             elif definition["ownedRelationship"]["name"] == "Redefinitions":
                 self.relationship = Redefinitions(definition["ownedRelationship"])
             else:
@@ -8188,6 +8188,42 @@ class Redefinitions:
             self.children = []
             for relationship in definition["ownedRelationship"]:
                 self.children.append(OwnedRedefinition(relationship))
+
+    def dump(self):
+        output = [child.dump() for child in self.children]
+        output.insert(0, self.keyword)
+        return " ".join(output)
+
+    def get_definition(self):
+        output = {
+            "name": self.__class__.__name__,
+            "ownedRelationship": [],
+        }
+        for child in self.children:
+            output["ownedRelationship"].append(child.get_definition())
+        return output
+
+
+class References:
+    """``references`` / ``::>`` type-only reference.
+
+    A Reference points at a type without inheriting its features (no
+    redefinition semantics, no subsetting). The source form is::
+
+        attribute ::> Type;        # operator
+        attribute references Type; # keyword
+
+    Both produce the same parse tree and the same dump shape.
+    """
+
+    KEYWORD = "::>"
+
+    def __init__(self, definition):
+        if valid_definition(definition, self.__class__.__name__):
+            self.keyword = self.KEYWORD
+            self.children = []
+            for relationship in definition.get("ownedRelationship", []):
+                self.children.append(OwnedReferenceSubsetting(relationship))
 
     def dump(self):
         output = [child.dump() for child in self.children]

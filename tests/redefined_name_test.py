@@ -102,3 +102,41 @@ def test_dump_still_emits_redefined_form():
     attr = view.attributes[0]
     assert "attribute :>> exampleAttribute=" in attr.dump()
     assert '"Example Value"' in attr.dump()
+
+# References (v0.40.0+): ``ref attribute ::> X`` / ``ref attribute references X``
+# is a type-only reference (no redefinition). The name surfaces via
+# ``redefined_name`` because the grammar emits an ``OwnedReferenceSubsetting``
+# with a ``referencedFeature`` QualifiedName — same shape as
+# ``Redefinitions`` for name purposes.
+
+REFERENCES_USAGE = """package P {
+    ref attribute ::> MyType;
+    ref attribute references OtherType;
+}"""
+
+
+def test_references_operator_resolves_via_redefined_name():
+    model = loads(REFERENCES_USAGE)
+    # ``ref attribute ::> X`` wraps the attribute in the ReferenceUsage;
+    # use ``attributes`` (not ``find`` by name — ``name`` is a UUID sentinel
+    # because no identification was given on the feature).
+    def find_attrs(node):
+        out = []
+        if hasattr(node, 'attributes'):
+            out.extend(node.attributes)
+        for c in getattr(node, 'children', []):
+            out.extend(find_attrs(c))
+        return out
+    attrs = find_attrs(model)
+    names = sorted(a.redefined_name for a in attrs)
+    assert names == ['MyType', 'OtherType']
+    for a in attrs:
+        assert a.display_name == a.redefined_name
+
+
+def test_references_dump_emits_keyword():
+    model = loads(REFERENCES_USAGE)
+    dump = model.dump()
+    assert '::> MyType' in dump
+    # keyword form canonicalizes to the operator form
+    assert '::> OtherType' in dump

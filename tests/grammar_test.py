@@ -2481,3 +2481,22 @@ def test_view_usage_with_attribute_roundtrip():
     b = classtree(a)
     assert strip_ws(text) == strip_ws(b.dump())
 
+
+def test_attribute_ref_references_operator_roundtrip():
+    """``ref attribute ::> X;`` and ``ref attribute references X;``
+    must round-trip with the operator form. Regression: the grammar-side
+    ``FeatureSpecialization`` ignored ``References`` (silent stub) and
+    the visitor never emitted dicts for it.
+    """
+    text = """package Refs {
+        ref attribute ::> RefTypeOne;
+        ref attribute references RefTypeTwo;
+        attribute :> SubsetType;
+        attribute :>> RedefType;
+    }"""
+    a = loads(text)
+    dump = classtree(a).dump()
+    assert "::> RefTypeOne;" in dump
+    assert "::> RefTypeTwo;" in dump  # keyword form canonicalizes to operator
+    assert "attribute :>SubsetType;" in dump
+    assert "attribute :>> RedefType;" in dump

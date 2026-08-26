@@ -11269,13 +11269,14 @@ def _visit_usage_element_dict(usage_elem_ctx, prefix=None):
     # Fall back to checking non-occurrence usage types
     if hasattr(usage_elem_ctx, 'nonOccurrenceUsageElement') and usage_elem_ctx.nonOccurrenceUsageElement():
         non_occ = usage_elem_ctx.nonOccurrenceUsageElement()
-        
+
         if hasattr(non_occ, 'attributeUsage') and non_occ.attributeUsage():
             ctx = non_occ.attributeUsage()
             name, shortname = _get_usage_identification(ctx)
             body_items = _get_usage_body_items(ctx)
-            typed_by = _get_usage_typed_by(ctx)
-            specialization = _build_specialization(typed_by)
+            # Use the full specialization builder so re-declarations
+            # (`:>`, `:>>`, `::>` / `references`) round-trip alongside typings.
+            specialization = _build_full_specialization_from_ctx(ctx)
             valuepart = _get_usage_value_part(ctx)
             return {
                 "name": "PackageMember",
@@ -11819,7 +11820,43 @@ def _build_full_specialization_from_ctx(ctx):
                         "ownedRelationship": owned
                     }
                 })
-    
+
+        # References: '::> name' or 'references name'
+        elif hasattr(spec, 'references') and spec.references():
+            ref_ctx = spec.references()
+            if not isinstance(ref_ctx, list):
+                ref_ctx = [ref_ctx]
+            ref_names = []
+            for rc in ref_ctx:
+                for child in rc.children:
+                    child_name = type(child).__name__
+                    if child_name == 'OwnedReferenceSubsettingContext':
+                        for c2 in child.children:
+                            if type(c2).__name__ == 'QualifiedNameContext':
+                                ref_names.append(c2.getText())
+                    elif child_name == 'ReferencesContext':
+                        for c2 in child.children:
+                            if type(c2).__name__ == 'OwnedReferenceSubsettingContext':
+                                for c3 in c2.children:
+                                    if type(c3).__name__ == 'QualifiedNameContext':
+                                        ref_names.append(c3.getText())
+            if ref_names:
+                owned = [
+                    {
+                        "name": "OwnedReferenceSubsetting",
+                        "referencedFeature": {"name": "QualifiedName", "names": n.split("::")},
+                        "ownedRelatedElement": []
+                    }
+                    for n in ref_names
+                ]
+                specialization_list.append({
+                    "name": "FeatureSpecialization",
+                    "ownedRelationship": {
+                        "name": "References",
+                        "ownedRelationship": owned
+                    }
+                })
+
     return {
         "name": "FeatureSpecializationPart",
         "specialization": specialization_list,
@@ -12174,10 +12211,46 @@ def _build_full_specialization_from_fsp(fsp):
                         "ownedRelationship": owned
                     }
                 })
-    
+
+        # References: '::> name' or 'references name'
+        elif hasattr(spec, 'references') and spec.references():
+            ref_ctx = spec.references()
+            if not isinstance(ref_ctx, list):
+                ref_ctx = [ref_ctx]
+            ref_names = []
+            for rc in ref_ctx:
+                for child in rc.children:
+                    child_name = type(child).__name__
+                    if child_name == 'OwnedReferenceSubsettingContext':
+                        for c2 in child.children:
+                            if type(c2).__name__ == 'QualifiedNameContext':
+                                ref_names.append(c2.getText())
+                    elif child_name == 'ReferencesContext':
+                        for c2 in child.children:
+                            if type(c2).__name__ == 'OwnedReferenceSubsettingContext':
+                                for c3 in c2.children:
+                                    if type(c3).__name__ == 'QualifiedNameContext':
+                                        ref_names.append(c3.getText())
+            if ref_names:
+                owned = [
+                    {
+                        "name": "OwnedReferenceSubsetting",
+                        "referencedFeature": {"name": "QualifiedName", "names": n.split("::")},
+                        "ownedRelatedElement": []
+                    }
+                    for n in ref_names
+                ]
+                specialization_list.append({
+                    "name": "FeatureSpecialization",
+                    "ownedRelationship": {
+                        "name": "References",
+                        "ownedRelationship": owned
+                    }
+                })
+
     if not specialization_list:
         return None
-    
+
     return {
         "name": "FeatureSpecializationPart",
         "specialization": specialization_list,

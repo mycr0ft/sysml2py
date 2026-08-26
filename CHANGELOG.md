@@ -1,5 +1,55 @@
 # CHANGELOG
 
+## v0.40.0 (2026-08-26)
+
+### :bug: Bug Fixes
+
+- **`References` (``:>`` / `references` keyword) implemented in the grammar
+  side.** Previously the `FeatureSpecialization` dispatch in
+  `grammar/classes.py` had a silent ``print("References not yet
+  implemented")`` stub for ``References`` relationship items, so any
+  ``ref attribute ::> X;`` / ``ref attribute references X;`` form lost
+  its specialization on round-trip (dump emitted ``attribute ;`` with
+  no `::>` / `references` keyword). The visitor never emitted dicts
+  for ``References`` either.
+
+  Fix:
+  - `grammar/classes.py`: new ``References`` class (mirrors
+    ``Redefinitions`` but with ``::>`` / ``references`` keyword and
+    ``OwnedReferenceSubsetting`` children). The
+    ``FeatureSpecialization`` dispatch now routes ``References`` to it
+    instead of printing.
+  - `antlr_visitor.py`: ``References`` branch in both
+    ``_build_full_specialization_from_ctx`` and
+    ``_build_full_specialization_from_fsp`` (operator + keyword
+    forms). The top-level ``attributeUsage`` path in
+    ``_visit_usage_element_dict`` was the only one still using the
+    typed-by-only ``_build_specialization`` helper; it now uses
+    ``_build_full_specialization_from_ctx`` so the full specialization
+    list (Typings + Subsettings + Redefinitions + References) is
+    captured.
+
+  ``redefined_name`` and ``display_name`` already handled
+  ``References`` (via the ``referencedFeature`` fallback added in
+  v0.39.0), so this release brings the loader in sync with the
+  helpers — `ref attribute ::> MyType;` now round-trips and
+  `attribute.redefined_name == "MyType"`.
+
+### :white_check_mark: Verification
+
+- ``tests/redefined_name_test.py``: 8 / 8 passing — adds two new
+  cases for the operator and keyword forms of `References`.
+- ``tests/grammar_test.py``: 97 / 97 passing (was 96) — adds
+  ``test_attribute_ref_references_operator_roundtrip`` which
+  exercises all four kinds (Typings, Subsettings, Redefinitions,
+  References) in one model.
+- partial + grammar + class + main + navigate + repr + semantic +
+  import: 397 / 397 passing (zero regressions on the fast suite).
+- Conformance: 118 / 123 — identical failure set to v0.39.0 (no
+  regressions; the 5 pre-existing failures, including
+  ``Import_Visibility_Valid`` whose XPECT expects a syntax error,
+  are unchanged).
+
 ## v0.39.0 (2026-08-26)
 
 ### :bug: Bug Fixes
