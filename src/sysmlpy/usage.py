@@ -798,23 +798,23 @@ class Usage(Searchable):
         self.__init__()
         self.grammar = grammar
         children = []
-        
+
         # Check if this is a definition or usage
         # Some definition types use 'definition' (PartDefinition, AttributeDefinition)
         # Others use 'declaration' directly (RequirementDefinition, UseCaseDefinition)
         # PartDefinition: has .definition which is a Definition object
         # Usage: has .declaration directly
-        
+
         # First check if grammar has 'definition' (for definitions like PartDefinition)
         defn = getattr(grammar, 'definition', None)
         if defn:
             # This type uses 'definition' (PartDefinition, etc.)
             # Get name from definition.declaration.identification.declaredName
             u_name = defn.declaration.identification.declaredName
-            
+
             # Get body from definition.body
             body = defn.body if hasattr(defn, 'body') else None
-            
+
             # body is DefinitionBody with .children
             if body and hasattr(body, 'children') and body.children:
                 children_list = []
@@ -847,7 +847,7 @@ class Usage(Searchable):
                     u_name = None
             else:
                 u_name = None
-            
+
             # Extract children from usage body: grammar.usage.completion.body.body.children
             # This mirrors the PartDefinition path: grammar.definition.body.children
             try:
@@ -874,7 +874,7 @@ class Usage(Searchable):
             # This type uses 'declaration' directly (RequirementDefinition, UseCaseDefinition, some usages)
             decl = grammar.declaration
             u_name = None
-            
+
             # Check nested declaration for Usage (UsageDeclaration -> FeatureDeclaration)
             nested_decl = getattr(decl, 'declaration', None)
             if nested_decl and hasattr(nested_decl, 'identification') and nested_decl.identification:
@@ -922,10 +922,10 @@ class Usage(Searchable):
                 sc = child.children if hasattr(child, 'children') else child
             else:
                 continue
-                
+
             # Process the child
             class_name = sc.__class__.__name__ if not hasattr(sc, '__class__') else sc.__class__.__name__
-            
+
             if class_name == "PartDefinition":
                 c = Part(definition=True).load_from_grammar(sc)
                 c.parent = self
@@ -977,10 +977,37 @@ class Usage(Searchable):
                         c = Flow().load_from_grammar(inner)
                         c.parent = self
                         self.children.append(c)
+                    elif inner.__class__.__name__ == "AllocationUsage":
+                        # Phase 0: allocation usages inside a definition
+                        # body live in StructureUsageElement -> AllocationUsage.
+                        a = Allocation()
+                        a.grammar = inner
+                        a.parent = self
+                        self.children.append(a)
                     elif inner.__class__.__name__ == "PortionUsage":
                         c = Part().load_from_grammar(inner)
                         c.parent = self
                         self.children.append(c)
+            elif class_name == "BehaviorUsageElement":
+                # Phase 0 of docs/v0.46.0_expression_capture_plan.md:
+                # assert / constraint / calc / state / action / requirement /
+                # satisfy / allocation usages live inside a BehaviorUsageElement
+                # when they appear in a definition body. The previous
+                # dispatch dropped the entire BehaviorUsageElement.
+                if hasattr(sc, 'children'):
+                    inner = sc.children
+                    inner_name = inner.__class__.__name__
+                    c = _load_behavior_child(self, inner, inner_name)
+                    if c is not None:
+                        c.parent = self
+                        self.children.append(c)
+            elif class_name == "InterfaceUsage":
+                # Same phase 0: interface usages are wrapped as
+                # OccurrenceUsageElement -> InterfaceUsage directly (not
+                # through StructureUsageElement).
+                c = Interface().load_from_grammar(sc)
+                c.parent = self
+                self.children.append(c)
             elif class_name == "StructureDefinitionElement":
                 if hasattr(sc, 'children'):
                     inner = sc.children
@@ -1037,6 +1064,113 @@ class Usage(Searchable):
     #         pass
     #     else:
     #         raise AttributeError("Invalid Feature Name or Chain")
+
+
+def _load_behavior_child(parent, inner, inner_name):
+    """Construct a public-API element for a usage that lives inside a
+    ``BehaviorUsageElement`` when it appears in a definition body.
+
+    Phase 0 of docs/v0.46.0_expression_capture_plan.md: this helper
+    closes the gap that caused ``assert constraint``, ``constraint``,
+    ``calc``, ``state``, ``action``, ``requirement``, ``satisfy``, and
+    ``allocate`` usages to be silently dropped when they appeared inside
+    a ``part def``, ``item def``, etc. body.
+
+    Parameters
+    ----------
+    parent : Usage
+        The Part / Item / / etc. that owns the new child (for ``.parent``).
+    inner : object
+        The inner grammar element (e.g. ``AssertConstraintUsage``,
+        ``ConstraintUsage``, ``CalculationUsage`` ...). Used for
+        ``.grammar`` so the existing round-trip machinery keeps working.
+    inner_name : str
+        Class name of ``inner`` — selects which public-API class to
+        instantiate.
+
+    Returns
+    -------
+    Usage or None
+        A fresh public-API element (e.g. ``Constraint``, ``Calculation``,
+        ``State``, ``Action``, ``Requirement``, ``Allocation``) with
+        ``.grammar`` wired up and ``.parent`` set. Returns ``None`` if
+        the inner kind is unknown to this helper — the caller treats that
+        as a no-op.
+    """
+    def _name_from_declaration(elem):
+        """Extract a human-readable name from an element's declaration,
+        mirroring the pattern at definition.py:1269-1290."""
+        if not hasattr(elem, "declaration") or elem.declaration is None:
+            return None
+        decl = elem.declaration
+        # AssertConstraintUsage has a different layout: declaration may
+        # be wrapped under .usageDeclaration.
+        if hasattr(decl, "usageDeclaration") and decl.usageDeclaration():
+            inner_decl = decl.usageDeclaration()
+            if hasattr(inner_decl, "identification") and inner_decl.identification:
+                ident = inner_decl.identification
+                if hasattr(ident, "declaredName"):
+                    return ident.declaredName
+                if hasattr(ident, "name"):
+                    name_obj = ident.name()
+                    if name_obj:
+                        if isinstance(name_obj, list):
+                            return name_obj[-1].getText()
+                        return name_obj.getText()
+        if hasattr(decl, "declaration") and decl.declaration:
+            feat_decl = decl.declaration
+            if hasattr(feat_decl, "identification") and feat_decl.identification:
+                ident = feat_decl.identification
+                if hasattr(ident, "declaredName"):
+                    return ident.declaredName
+                if hasattr(ident, "name"):
+                    name_obj = ident.name()
+                    if name_obj:
+                        if isinstance(name_obj, list):
+                            return name_obj[-1].getText()
+                        return name_obj.getText()
+        return None
+
+    if inner_name == "AssertConstraintUsage":
+        c = Constraint()
+        c.grammar = inner
+        c.name = _name_from_declaration(inner)
+        return c
+    if inner_name == "ConstraintUsage":
+        c = Constraint()
+        c.grammar = inner
+        c.name = _name_from_declaration(inner)
+        return c
+    if inner_name == "CalculationUsage":
+        c = Calculation()
+        c.grammar = inner
+        c.name = _name_from_declaration(inner)
+        return c
+    if inner_name == "StateUsage":
+        c = State()
+        c.grammar = inner
+        c.name = _name_from_declaration(inner)
+        return c
+    if inner_name == "ActionUsage":
+        c = Action(grammar=inner).load_from_grammar(inner)
+        return c
+    if inner_name == "RequirementUsage":
+        c = Requirement()
+        c.grammar = inner
+        c.name = _name_from_declaration(inner)
+        return c
+    if inner_name == "SatisfyRequirementUsage":
+        c = Requirement()
+        c.grammar = inner
+        c.name = _name_from_declaration(inner)
+        return c
+    if inner_name == "AllocationUsage":
+        c = Allocation()
+        c.grammar = inner
+        c.name = _name_from_declaration(inner)
+        return c
+    return None
+
 
 
 class Attribute(Usage):

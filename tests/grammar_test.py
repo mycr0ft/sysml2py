@@ -9,7 +9,7 @@ Created on Mon Jul 24 22:52:46 2023
 import pytest
 
 from sysmlpy.grammar.classes import RootNamespace
-from sysmlpy import load_grammar as loads
+from sysmlpy import load_grammar as loads, loads as model_loads
 from sysmlpy.formatting import classtree
 
 from .functions import strip_ws
@@ -2798,3 +2798,158 @@ def test_allocation_dict_has_connector_part_gh5():
         f"AllocationUsage has no connectorPart; got keys: {list(alloc.keys())}"
     )
     assert alloc["connectorPart"]["part"]["name"] == "BinaryConnectorPart"
+
+
+# ---------------------------------------------------------------------------
+# Phase 0 of docs/v0.46.0_expression_capture_plan.md:
+# Usage kinds inside a `part def` body (or `item def` body) must survive
+# `Part.load_from_grammar` (and its siblings) into the public-API tree.
+# Before this fix, BehaviorUsageElement / InterfaceUsage / AllocationUsage
+# inside a definition body were silently dropped — only the grammar tree
+# retained them, so `model.dump()` emitted an empty body.
+# ---------------------------------------------------------------------------
+
+
+def _find_part_child(model, part_name):
+    """Locate a Part (or Item) by name in the public-API Model tree and
+    return its children list. Uses Model API (loads from sysmlpy) rather
+    than the lower-level load_grammar so the public-API tree is exercised."""
+    pkg = model.children[0]
+    for c in pkg.children:
+        if hasattr(c, 'name') and c.name == part_name and type(c).__name__ in ('Part', 'Item'):
+            return c.children
+    return []
+
+
+def test_assert_constraint_survives_part_def_load_v046_phase0():
+    """Phase 0 regression: assert constraint inside part def body must
+    populate the public-API children list."""
+    text = """package P {
+        part def Wheel {
+            attribute radius : Real;
+            assert constraint { radius > 0 }
+        }
+    }"""
+    a = model_loads(text)
+    cs = _find_part_child(a, "Wheel")
+    types = [type(c).__name__ for c in cs]
+    assert "Constraint" in types, (
+        f"Constraint not in public API children; got {types}"
+    )
+
+
+def test_constraint_usage_survives_part_def_load_v046_phase0():
+    """Phase 0: named `constraint c { ... }` inside part def body."""
+    text = """package P {
+        part def Wheel {
+            constraint invMass { self.mass > 0 }
+        }
+    }"""
+    a = model_loads(text)
+    cs = _find_part_child(a, "Wheel")
+    assert any(type(c).__name__ == 'Constraint' for c in cs)
+
+
+def test_calculation_usage_survives_part_def_load_v046_phase0():
+    """Phase 0: `calc mass { ... }` inside part def body."""
+    text = """package P {
+        part def Vehicle {
+            calc totalMass { sum(parts.mass) }
+        }
+    }"""
+    a = model_loads(text)
+    cs = _find_part_child(a, "Vehicle")
+    assert any(type(c).__name__ == 'Calculation' for c in cs)
+
+
+def test_state_usage_survives_part_def_load_v046_phase0():
+    """Phase 0: `state s { ... }` inside part def body."""
+    text = """package P {
+        part def Pump {
+            state idle { entry; then running; }
+        }
+    }"""
+    a = model_loads(text)
+    cs = _find_part_child(a, "Pump")
+    assert any(type(c).__name__ == 'State' for c in cs)
+
+
+def test_action_usage_survives_part_def_load_v046_phase0():
+    """Phase 0: `action a { ... }` inside part def body."""
+    text = """package P {
+        part def Controller {
+            action start { in trigger; }
+        }
+    }"""
+    a = model_loads(text)
+    cs = _find_part_child(a, "Controller")
+    assert any(type(c).__name__ == 'Action' for c in cs)
+
+
+def test_requirement_usage_survives_part_def_load_v046_phase0():
+    """Phase 0: `requirement r { ... }` inside part def body."""
+    text = """package P {
+        part def Spec {
+            requirement maxMass { doc /* x */ }
+        }
+    }"""
+    a = model_loads(text)
+    cs = _find_part_child(a, "Spec")
+    assert any(type(c).__name__ == 'Requirement' for c in cs)
+
+
+def test_satisfy_requirement_survives_part_def_load_v046_phase0():
+    """Phase 0: `satisfy requirement r by p;` inside part def body."""
+    text = """package P {
+        part def Verifier {
+            requirement R { doc /* x */ }
+            part p;
+            satisfy requirement R by p;
+        }
+    }"""
+    a = model_loads(text)
+    cs = _find_part_child(a, "Verifier")
+    assert any(type(c).__name__ == 'Requirement' for c in cs)
+
+
+def test_allocation_survives_part_def_load_v046_phase0():
+    """Phase 0: `allocate A to b;` inside part def body — the same gap
+    as issue #5 but for the part-def body case."""
+    text = """package P {
+        part def Container {
+            part a;
+            part b;
+            allocate a to b;
+        }
+    }"""
+    a = model_loads(text)
+    cs = _find_part_child(a, "Container")
+    assert any(type(c).__name__ == 'Allocation' for c in cs)
+
+
+def test_interface_usage_survives_part_def_load_v046_phase0():
+    """Phase 0: `interface : L` inside part def body."""
+    text = """package P {
+        interface def L;
+        part def Bus {
+            interface : L;
+        }
+    }"""
+    a = model_loads(text)
+    cs = _find_part_child(a, "Bus")
+    assert any(type(c).__name__ == 'Interface' for c in cs)
+
+
+def test_assert_constraint_survives_item_def_load_v046_phase0():
+    """Phase 0: same fix should apply when the parent is `item def`."""
+    text = """package P {
+        item def Box {
+            attribute size : Real;
+            assert constraint { size > 0 }
+        }
+    }"""
+    a = model_loads(text)
+    cs = _find_part_child(a, "Box")
+    assert cs, "Box Item missing from public API"
+    types = [type(c).__name__ for c in cs]
+    assert "Constraint" in types

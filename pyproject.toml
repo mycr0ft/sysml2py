@@ -6,7 +6,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "sysmlpy"
-version = "0.47.0"
+version = "0.48.0"
 description = ""
 authors = [{ name = "Jon R. Fox (mycr0ft)", email = "jon.fox@drfox.com" }]
 readme = "README.md"

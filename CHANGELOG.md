@@ -1,5 +1,51 @@
 # CHANGELOG
 
+## v0.48.0 (2026-08-26)
+
+### :bug: Bug Fixes
+
+- **Phase 0 of
+  [docs/v0.46.0_expression_capture_plan.md](docs/v0.46.0_expression_capture_plan.md)**:
+  usage kinds inside a `part def` / `item def` body now survive
+  `Part.load_from_grammar` into the public-API tree. Before this fix,
+  `assert constraint`, `constraint`, `calc`, `state`, `action`,
+  `requirement`, `satisfy requirement`, and `allocate` usages
+  *inside a definition body* were silently dropped — only the
+  grammar tree retained them, so `model.dump()` emitted an empty
+  body. Same root cause as issue #3 finding 4 (constraint body name
+  resolution is impossible without the expression reaching the model
+  tree first). Fix:
+  - `_visit_nested_occurrence_usage` (`antlr_visitor.py`) now
+    dispatches `stateUsage` and `allocationUsage` inside a
+    `BehaviorUsageElement`; `allocationUsage` inside a
+    `StructureUsageElement` is also dispatched. Both unwrap the
+    `PackageMember` outer wrapper so the body builder sees the
+    expected `OccurrenceUsageElement`.
+  - `Usage.load_from_grammar` (`usage.py`) now handles the missing
+    `BehaviorUsageElement`, `InterfaceUsage`, and `AllocationUsage`
+    branches in its children dispatch (the new `BehaviorUsageElement`
+    branch delegates to a new module-level helper
+    `_load_behavior_child`).
+  - The orphan `add_directed_feature` method (pushed out of `Usage`
+    during the edit) was restored as the last method of `Usage`,
+    re-fixing the four `test_port_directed_*` regressions that
+    appeared mid-edit.
+
+  Regression tests in `tests/grammar_test.py::*v046_phase0*`:
+  - `test_assert_constraint_survives_part_def_load_v046_phase0`
+  - `test_constraint_usage_survives_part_def_load_v046_phase0`
+  - `test_calculation_usage_survives_part_def_load_v046_phase0`
+  - `test_state_usage_survives_part_def_load_v046_phase0`
+  - `test_action_usage_survives_part_def_load_v046_phase0`
+  - `test_requirement_usage_survives_part_def_load_v046_phase0`
+  - `test_satisfy_requirement_survives_part_def_load_v046_phase0`
+  - `test_allocation_survives_part_def_load_v046_phase0`
+  - `test_interface_usage_survives_part_def_load_v046_phase0`
+  - `test_assert_constraint_survives_item_def_load_v046_phase0`
+
+  Tests: 432/432 fast pass; 118/123 conformance (same 5 pre-existing
+  failures byte-identical to baseline).
+
 ## v0.47.0 (2026-08-26)
 
 ### :bug: Bug Fixes

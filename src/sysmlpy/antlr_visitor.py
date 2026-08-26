@@ -9802,6 +9802,16 @@ def _visit_nested_occurrence_usage(occ_elem):
         elif hasattr(struct_elem, 'connectionUsage') and struct_elem.connectionUsage():
             ctx = struct_elem.connectionUsage()
             return _make_nested_connection_usage_dict(ctx, None)
+        elif hasattr(struct_elem, 'allocationUsage') and struct_elem.allocationUsage():
+            # Phase 0: allocation usages inside a definition body.
+            ctx = struct_elem.allocationUsage()
+            result = _make_allocation_usage_dict(ctx, None)
+            if result and result.get("name") == "PackageMember":
+                # Unwrap the PackageMember -> UsageElement chain so the
+                # body builder sees an OccurrenceUsageElement at the
+                # expected position.
+                return result.get("ownedRelatedElement")
+            return result
         elif hasattr(struct_elem, 'portionUsage') and struct_elem.portionUsage():
             ctx = struct_elem.portionUsage()
             name, shortname = _get_usage_identification(ctx)
@@ -10019,6 +10029,24 @@ def _visit_nested_occurrence_usage(occ_elem):
             ctx = behav_elem.useCaseUsage()
             result = _make_use_case_usage_dict(ctx, None)
             if result and result.get("name") == "PackageMember":
+                return result.get("ownedRelatedElement")
+            return result
+        elif hasattr(behav_elem, 'stateUsage') and behav_elem.stateUsage():
+            # Phase 0: state usages live in a BehaviorUsageElement too.
+            ctx = behav_elem.stateUsage()
+            result = _make_state_usage_dict(ctx, None)
+            if result and result.get("name") == "PackageMember":
+                inner = result.get("ownedRelatedElement", {})
+                return inner
+            return result
+        elif hasattr(behav_elem, 'allocationUsage') and behav_elem.allocationUsage():
+            # Phase 0: allocation usages inside a definition body.
+            ctx = behav_elem.allocationUsage()
+            result = _make_allocation_usage_dict(ctx, None)
+            if result and result.get("name") == "PackageMember":
+                # Unwrap the PackageMember -> UsageElement chain so the
+                # body builder sees an OccurrenceUsageElement at the
+                # expected position.
                 return result.get("ownedRelatedElement")
             return result
     
