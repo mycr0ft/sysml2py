@@ -298,6 +298,11 @@ qualifiedName
     : (DOLLAR COLON_COLON)? (name COLON_COLON)* name
     ;
 
+// Import visibility is required at the syntax level, matching the official
+// KerML/SysML 2026-05 BNF ("Import = visibility = VisibilityIndicator 'import' ...",
+// KerML §8.2.3.4.2 / SysML-textual-bnf.kebnf). daltskin's translation makes it
+// optional; this local deviation keeps the official shape (a bare 'import' is a
+// syntax error, as the official XPECT fixture Import_Visibility_Valid expects).
 importRule
     : visibilityIndicator IMPORT (ALL)? importDeclaration relationshipBody
     ;
@@ -316,9 +321,10 @@ namespaceImport
     | filterPackage
     ;
 
+// OMG 2026-05 KeBNF added a real FilterPackageImport production; the previous
+// TODO stub (filterPackageImport : IDENTIFIER) is no longer needed.
 filterPackage
     : filterPackageImportDeclaration (filterPackageMember)+
-    | filterPackageImport ( filterPackageMember)+
     ;
 
 filterPackageMember
@@ -965,11 +971,15 @@ payloadFeatureMember
     : payloadFeature
     ;
 
+// OMG 2026-05 BNF sync (daltskin/sysml-v2-grammar v2026.05.0, commits #8/#9):
+// identification is required in the typed alternatives and the ownedFeatureTyping /
+// ownedMultiplicity pair is normalized.
 payloadFeature
-    : identification? valuePart
-    | identification? payloadFeatureSpecializationPart valuePart?
+    : identification payloadFeatureSpecializationPart valuePart?
+    | identification valuePart
     | ownedFeatureTyping ( ownedMultiplicity)?
-    | ownedMultiplicity ( ownedFeatureTyping)?
+    | ownedMultiplicity ownedFeatureTyping
+    | identification? payloadFeatureSpecializationPart valuePart?
     ;
 
 payloadFeatureSpecializationPart
@@ -1110,8 +1120,10 @@ dependencyDeclaration
     )*
     ;
 
+// SYSML21-319 (SysML 2.1 RTF Ballot 1, Pilot PR #775): an annotating member of an
+// enumeration definition may now have an explicit visibility indicator.
 annotatingMember
-    : annotatingElement
+    : memberPrefix annotatingElement
     ;
 
 packageBodyElement
@@ -2171,8 +2183,11 @@ framedConcernMember
     ;
 
 framedConcernUsage
-    : ownedReferenceSubsetting featureSpecializationPart? calculationBody
-    | (usageExtensionKeyword* CONCERN | usageExtensionKeyword+) calculationUsageDeclaration calculationBody
+    // SYSML21-366 (SysML 2.1 RTF Ballot 1, Pilot PR #775): the second alternative of a
+    // framed concern usage has a requirement body (and a constraint usage declaration),
+    // not a calculation body.
+    : ownedReferenceSubsetting featureSpecializationPart? requirementBody
+    | (usageExtensionKeyword* CONCERN | usageExtensionKeyword+) constraintUsageDeclaration requirementBody
     ;
 
 actorMember
@@ -2451,10 +2466,6 @@ namespaceImportDirect
 // These rules are referenced in the spec but not fully defined.
 // They need manual review and completion.
 
-calculationUsageDeclaration
-    : usageDeclaration? valuePart?
-    ;
-
 emptyActionUsage_
     : /* epsilon */
     ;
@@ -2469,10 +2480,6 @@ emptyMultiplicity_
 
 emptyUsage_
     : /* epsilon */
-    ;
-
-filterPackageImport
-    : IDENTIFIER /* TODO: stub for filterPackageImport */
     ;
 
 nonFeatureChainPrimaryExpression

@@ -4490,15 +4490,6 @@ class SysMLv2ParserListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by SysMLv2Parser#calculationUsageDeclaration.
-    def enterCalculationUsageDeclaration(self, ctx:SysMLv2Parser.CalculationUsageDeclarationContext):
-        pass
-
-    # Exit a parse tree produced by SysMLv2Parser#calculationUsageDeclaration.
-    def exitCalculationUsageDeclaration(self, ctx:SysMLv2Parser.CalculationUsageDeclarationContext):
-        pass
-
-
     # Enter a parse tree produced by SysMLv2Parser#emptyActionUsage_.
     def enterEmptyActionUsage_(self, ctx:SysMLv2Parser.EmptyActionUsage_Context):
         pass
@@ -4532,15 +4523,6 @@ class SysMLv2ParserListener(ParseTreeListener):
 
     # Exit a parse tree produced by SysMLv2Parser#emptyUsage_.
     def exitEmptyUsage_(self, ctx:SysMLv2Parser.EmptyUsage_Context):
-        pass
-
-
-    # Enter a parse tree produced by SysMLv2Parser#filterPackageImport.
-    def enterFilterPackageImport(self, ctx:SysMLv2Parser.FilterPackageImportContext):
-        pass
-
-    # Exit a parse tree produced by SysMLv2Parser#filterPackageImport.
-    def exitFilterPackageImport(self, ctx:SysMLv2Parser.FilterPackageImportContext):
         pass
 
 
