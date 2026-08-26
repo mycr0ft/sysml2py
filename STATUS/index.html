@@ -1210,7 +1210,7 @@
 
 
 <h1 id="sysmlpy-project-status">sysmlpy — Project Status<a class="headerlink" href="#sysmlpy-project-status" title="Permanent link">&para;</a></h1>
-<p>Current version: <strong>v0.39.0</strong> (2026-08-26)</p>
+<p>Current version: <strong>v0.40.0</strong> (2026-08-26)</p>
 <hr />
 <h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
 <h3 id="public-api-classes">Public API Classes<a class="headerlink" href="#public-api-classes" title="Permanent link">&para;</a></h3>
@@ -1409,7 +1409,7 @@
 <li>Non-raising <code>parse(text)</code> variant: returns <code>(Model, [])</code> on success, <code>(None, [errors])</code> on syntax error</li>
 </ul>
 <h3 id="grammar-round-trip-coverage-parse-dump">Grammar Round-Trip Coverage (parse → dump)<a class="headerlink" href="#grammar-round-trip-coverage-parse-dump" title="Permanent link">&para;</a></h3>
-<p><strong>96 / 96 tests passing (100%)</strong> as of v0.39.0.</p>
+<p><strong>97 / 97 tests passing (100%)</strong> as of v0.40.0.</p>
 <p>The suite grew from 79 to 96 cases (full-model round-trips drawn from the
 OMG spec corpus, including ActionTest / ControlNodeTest / DecisionTest
 action-body successions). v0.37.0 additionally fixed corpus-level load
@@ -1803,12 +1803,12 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 <tbody>
 <tr>
 <td><code>tests/grammar_test.py</code></td>
-<td>96</td>
+<td>97</td>
 <td>✅ All pass (100%)</td>
 </tr>
 <tr>
 <td><code>tests/redefined_name_test.py</code></td>
-<td>6</td>
+<td>8</td>
 <td>✅ All pass (100%)</td>
 </tr>
 <tr>
@@ -1917,7 +1917,7 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </ul>
 <h3 id="grammar-round-trip-v0310">Grammar Round-Trip (v0.31.0)<a class="headerlink" href="#grammar-round-trip-v0310" title="Permanent link">&para;</a></h3>
 <ul>
-<li>All 96 grammar tests pass (100%) — control flow, successions, lifecycle metadata complete. New tests/redefined_name_test.py (6 tests) for re-declaration name resolution.</li>
+<li>All 97 grammar tests pass (100%) — control flow, successions, lifecycle metadata complete. New tests/redefined_name_test.py (8 tests) for re-declaration name resolution and <code>References</code> (<code>:&gt;</code>, <code>references</code>) handling.</li>
 <li>No deferred tests remaining</li>
 </ul>
 <hr />
@@ -2098,8 +2098,9 @@ Test files: <strong>123 <code>.sysml</code> files</strong> under <code>tests/sys
 | Grammar classes with <code>get_definition()</code> | ~260+ of 319 |
 | Grammar classes with graceful fallback | All 319 (no more NotImplementedError crashes) |
 | Unit + grammar + integration tests | 635 passing |
-| Grammar round-trip tests passing | <strong>96 / 96 (100%)</strong> |
-| Helper-property tests | 6 / 6 |
+| Grammar round-trip tests passing | <strong>97 / 97 (100%)</strong> |
+| Helper-property tests | 8 / 8 |
+| Grammar-side References dispatch | ✅ | | |
 | PlantUML rendering tests | <strong>108 passing</strong> |
 | Conformance tests (2026-03 XPect suite) | <strong>123 / 123 (100%)</strong> |
 | Semantic analysis tests | <strong>118 passing</strong> |
