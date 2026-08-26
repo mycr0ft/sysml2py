@@ -2698,3 +2698,103 @@ def test_dependency_definition_element_dispatch_regression_gh4():
     assert dep is not None, "Dependency dict missing from visitor output"
     assert "clients" in dep
     assert "suppliers" in dep
+
+
+def test_allocation_endpoints_bare_regression_gh5():
+    """Regression for GitHub issue #5: `allocate X to Y;` lost its connector
+    endpoints in the visitor dict. The endpoints must survive."""
+    text = """package P {
+        part b;
+        requirement A;
+        allocate A to b;
+    }"""
+    a = loads(text)
+    dumped = classtree(a).dump()
+    # The dumped output must contain both endpoints
+    assert "allocate" in dumped
+    assert "A" in dumped and "b" in dumped
+    # And the raw visitor dict must carry ConnectorPart / BinaryConnectorPart
+    import json
+    from sysmlpy import load_grammar_antlr
+    raw = load_grammar_antlr(text)
+    raw_str = json.dumps(raw)
+    assert "ConnectorPart" in raw_str
+    assert "BinaryConnectorPart" in raw_str
+    # Round-trip parses cleanly
+    loads(dumped)
+
+
+def test_allocation_endpoints_named_regression_gh5():
+    """Regression for issue #5: named `allocation myAlloc allocate X to Y;`."""
+    text = """package P {
+        part b;
+        requirement A;
+        allocation myAlloc allocate A to b;
+    }"""
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "myAlloc" in dumped
+    assert "A" in dumped and "b" in dumped
+    loads(dumped)
+
+
+def test_allocation_nary_regression_gh5():
+    """Regression for issue #5: n-ary `allocate (X, Y, Z);` form."""
+    text = """package P {
+        part a;
+        part b;
+        part c;
+        allocate (a, b, c);
+    }"""
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "allocate" in dumped
+    assert "(a, b, c)" in dumped or "( a, b, c )" in dumped
+    loads(dumped)
+
+
+def test_allocation_bare_no_connector_still_works_gh5():
+    """Regression for issue #5: `allocation;` (no connector part) must
+    still round-trip without the visitor injecting spurious endpoints."""
+    text = """package P {
+        part b;
+        allocation;
+    }"""
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "allocation" in dumped
+    assert "allocate" not in dumped
+    loads(dumped)
+
+
+def test_allocation_dict_has_connector_part_gh5():
+    """Structural test (issue #5): AllocationUsage dict must carry a
+    `connectorPart` key with the endpoints, not just identification."""
+    import json
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        part b;
+        requirement A;
+        allocate A to b;
+    }"""
+    raw = load_grammar_antlr(text)
+
+    def find(node, target):
+        if isinstance(node, dict):
+            if node.get("name") == target:
+                return node
+            for v in node.values():
+                r = find(v, target) if isinstance(v, (dict, list)) else None
+                if r: return r
+        elif isinstance(node, list):
+            for it in node:
+                r = find(it, target) if isinstance(it, (dict, list)) else None
+                if r: return r
+        return None
+
+    alloc = find(raw, "AllocationUsage")
+    assert alloc is not None, "AllocationUsage missing from visitor output"
+    assert "connectorPart" in alloc, (
+        f"AllocationUsage has no connectorPart; got keys: {list(alloc.keys())}"
+    )
+    assert alloc["connectorPart"]["part"]["name"] == "BinaryConnectorPart"

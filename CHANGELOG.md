@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## v0.47.0 (2026-08-26)
+
+### :bug: Bug Fixes
+
+- **`allocate A to b;` lost its connector endpoints
+  ([issue #5](https://github.com/mycr0ft/sysmlpy/issues/5)).**
+  `_make_allocation_usage_dict` (`antlr_visitor.py:7925`) built the
+  `AllocationUsage` dict carrying only identification — the
+  `connectorPart` from `allocationUsageDeclaration` was silently
+  dropped before the dict existed, breaking downstream traceability
+  for `allocate X to Y` statements. The same gap affected the n-ary
+  `allocate (X, Y, Z);` form (no path at all in
+  `_build_connector_part_dict`). Mirrors the `SatisfyRequirementUsage`
+  pattern (`ors/ssm`) for connector endpoints. Fix:
+  - `_make_allocation_usage_dict` now walks `aud.connectorPart()` and
+    emits a `ConnectorPart` dict (binary or nary).
+  - `_build_connector_part_dict` now also handles `naryConnectorPart`
+    and emits a `NaryConnectorPart` dict.
+  - `AllocationUsage` (`grammar/classes.py`) now extends
+    `_PrefixedUsageBase` with an optional `connectorPart` field;
+    `dump()` renders the connector as `allocate X to Y` (binary) or
+    `allocate (X, Y, Z)` (nary) after the optional declaration.
+  - New `NaryConnectorPart` grammar class
+    (`grammar/classes.py`) and dispatch from `ConnectorPart`.
+
+  Regression tests: `test_allocation_endpoints_bare_regression_gh5`,
+  `test_allocation_endpoints_named_regression_gh5`,
+  `test_allocation_nary_regression_gh5`,
+  `test_allocation_bare_no_connector_still_works_gh5`,
+  `test_allocation_dict_has_connector_part_gh5`.
+
 ## v0.46.0 (2026-08-26)
 
 ### :bug: Bug Fixes

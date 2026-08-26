@@ -7476,14 +7476,15 @@ def _make_nested_connection_usage_dict(ctx, prefix=None):
 
 def _build_connector_part_dict(ctx):
     """Build a ConnectorPart dictionary from a connectorPart context.
-    
+
     Grammar:
       connectorPart : binaryConnectorPart | naryConnectorPart ;
       binaryConnectorPart : connectorEndMember TO connectorEndMember ;
+      naryConnectorPart : LPAREN connectorEndMember (COMMA connectorEndMember)* RPAREN ;
     """
     if ctx is None:
         return None
-    
+
     if hasattr(ctx, 'binaryConnectorPart') and ctx.binaryConnectorPart():
         bcp = ctx.binaryConnectorPart()
         owned_rel = []
@@ -7495,7 +7496,7 @@ def _build_connector_part_dict(ctx):
                 end_dict = _visit_connector_end_member(end)
                 if end_dict:
                     owned_rel.append(end_dict)
-        
+
         return {
             "name": "ConnectorPart",
             "part": {
@@ -7503,7 +7504,27 @@ def _build_connector_part_dict(ctx):
                 "ownedRelationship": owned_rel
             }
         }
-    
+
+    if hasattr(ctx, 'naryConnectorPart') and ctx.naryConnectorPart():
+        ncp = ctx.naryConnectorPart()
+        owned_rel = []
+        if hasattr(ncp, 'connectorEndMember') and ncp.connectorEndMember():
+            ends = ncp.connectorEndMember()
+            if not isinstance(ends, list):
+                ends = [ends]
+            for end in ends:
+                end_dict = _visit_connector_end_member(end)
+                if end_dict:
+                    owned_rel.append(end_dict)
+
+        return {
+            "name": "ConnectorPart",
+            "part": {
+                "name": "NaryConnectorPart",
+                "ownedRelationship": owned_rel
+            }
+        }
+
     return None
 
 
@@ -7924,20 +7945,30 @@ def _make_concern_usage_dict(ctx, prefix=None):
 
 def _make_allocation_usage_dict(ctx, prefix=None):
     """Create an AllocationUsage dictionary.
-    
+
     allocationUsage: occurrenceUsagePrefix allocationUsageDeclaration usageBody
+    allocationUsageDeclaration
+        : ALLOCATION usageDeclaration? (ALLOCATE connectorPart)?
+        | ALLOCATE connectorPart
+        ;
+
+    Issue #5: the connector endpoints (`allocate X to Y`) were silently
+    dropped before reaching the dict. Mirror the InterfaceUsage pattern:
+    walk `aud.connectorPart()` (when present) and emit a ConnectorPart
+    dict with binary or nary ends.
     """
     name = None
     shortname = None
+    connector_part = None
     if ctx is not None:
         aud = None
         if hasattr(ctx, 'allocationUsageDeclaration') and ctx.allocationUsageDeclaration():
             aud = ctx.allocationUsageDeclaration()
-        
+
         ud = None
         if aud and hasattr(aud, 'usageDeclaration') and aud.usageDeclaration():
             ud = aud.usageDeclaration()
-        
+
         if ud and hasattr(ud, 'identification') and ud.identification():
             ident = ud.identification()
             if hasattr(ident, 'name'):
@@ -7949,7 +7980,13 @@ def _make_allocation_usage_dict(ctx, prefix=None):
                     elif len(name_list) == 1:
                         name_text = name_list[0].getText()
                         name, shortname = _extract_name_shortname(name_text)
-    
+
+        # Issue #5: capture the `allocate X to Y` (or `allocate X, Y to Z`)
+        # connector part. Either standalone or appended after the
+        # allocation keyword + optional usageDeclaration.
+        if aud and hasattr(aud, 'connectorPart') and aud.connectorPart():
+            connector_part = _build_connector_part_dict(aud.connectorPart())
+
     return {
         "name": "PackageMember",
         "prefix": None,
@@ -7974,6 +8011,7 @@ def _make_allocation_usage_dict(ctx, prefix=None):
                                 "specialization": None
                             }
                         },
+                        "connectorPart": connector_part,
                         "body": {
                             "name": "UsageBody",
                             "body": {

@@ -7386,6 +7386,8 @@ class ConnectorPart:
         if valid_definition(definition, self.__class__.__name__):
             if definition["part"]["name"] == "BinaryConnectorPart":
                 self.part = BinaryConnectorPart(definition["part"])
+            elif definition["part"]["name"] == "NaryConnectorPart":
+                self.part = NaryConnectorPart(definition["part"])
             else:
                 print(f"ConnectorPart: unhandled {definition['part']['name']}")  # pragma: no cover
                 self.part = None  # pragma: no cover
@@ -7409,6 +7411,23 @@ class BinaryConnectorPart:
 
     def dump(self):
         return " to ".join([child.dump() for child in self.children])
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": [c.get_definition() for c in self.children],
+        }
+
+
+class NaryConnectorPart:
+    def __init__(self, definition):
+        if valid_definition(definition, self.__class__.__name__):
+            self.children = []
+            for relationship in definition["ownedRelationship"]:
+                self.children.append(ConnectorEndMember(relationship))
+
+    def dump(self):
+        return "(" + ", ".join([child.dump() for child in self.children]) + ")"
 
     def get_definition(self):
         return {
@@ -9862,7 +9881,38 @@ class _PrefixedUsageBase:
 
 class AllocationUsage(_PrefixedUsageBase):
     # allocationUsage : occurrenceUsagePrefix ALLOCATION usageDeclaration? usageBody
+    # allocationUsageDeclaration : ALLOCATION usageDeclaration? (ALLOCATE connectorPart)?
+    #                          | ALLOCATE connectorPart
     keyword = "allocation"
+
+    def __init__(self, definition=None):
+        super().__init__(definition)
+        self.connectorPart = None
+        if definition is not None and valid_definition(definition, self.__class__.__name__):
+            if definition.get("connectorPart") is not None:
+                self.connectorPart = ConnectorPart(definition["connectorPart"])
+
+    def dump(self):
+        parts = []
+        if self.prefix is not None:
+            parts.append(self.prefix.dump())
+        # Render as `allocation [name] [allocate X to Y]`
+        parts.append(self.keyword)
+        if self.declaration is not None:
+            decl_dump = self.declaration.dump()
+            if decl_dump:
+                parts.append(decl_dump)
+        if self.connectorPart is not None:
+            parts.append("allocate")
+            parts.append(self.connectorPart.dump())
+        if self.body is not None:
+            parts.append(self.body.dump())
+        return " ".join(parts)
+
+    def get_definition(self):
+        output = super().get_definition()
+        output["connectorPart"] = self.connectorPart.get_definition() if self.connectorPart else None
+        return output
 
 
 class RenderingUsage(_PrefixedUsageBase):
