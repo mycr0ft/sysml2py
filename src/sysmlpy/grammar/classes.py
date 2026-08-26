@@ -8634,6 +8634,7 @@ class MemberPrefix:
 
 class Package:
     def __init__(self, definition=None):
+        self.is_standard_library = False
         if definition is not None:
             if valid_definition(definition, self.__class__.__name__):
                 # Elements inside of a package
@@ -8645,13 +8646,15 @@ class Package:
                     self.relationships.append(json.dumps(rel))
                 self.declaration = PackageDeclaration(definition["declaration"])
                 self.body = PackageBody(definition["body"])
+                self.is_standard_library = bool(definition.get("isStandardLibrary", False))
         else:
             self.relationships = []
             self.declaration = PackageDeclaration()
             self.body = PackageBody()
 
     def dump(self):
-        return "".join([self.declaration.dump(), self.body.dump()])
+        prefix = "standard library " if self.is_standard_library else ""
+        return prefix + "".join([self.declaration.dump(), self.body.dump()])
 
     def get_definition(self):
         output = {"name": self.__class__.__name__, "ownedRelationship": []}
@@ -8659,6 +8662,7 @@ class Package:
             output["ownedRelationship"] = rel.get_definition()
         output["declaration"] = self.declaration.get_definition()
         output["body"] = self.body.get_definition()
+        output["isStandardLibrary"] = self.is_standard_library
 
         return output
 

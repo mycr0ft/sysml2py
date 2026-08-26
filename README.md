@@ -79,6 +79,12 @@ Multiple installation methods are supported by sysmlpy, including:
 
 Documentation can be found [here.](https://mycr0ft.github.io/sysmlpy/)
 
+> **Scope reminder** — a green parse result means the file **parsed
+> syntactically**. Names inside constraint bodies and other OCL-style
+> expressions are not yet resolved by the semantic analyzer, so a
+> document that names an undefined symbol inside an `assert constraint
+> { ... }` will still parse cleanly. See [STATUS.md §Known Issues](STATUS.md#known-issues).
+
 ### Basic Usage
 
 Build models programmatically using the public API:

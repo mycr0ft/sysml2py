@@ -621,6 +621,69 @@ def test_interface_body_get_definition_roundtrip():
     assert roundtripped.items == []
 
 
+def test_metadata_application_braced_body_regression_gh3():
+    """Regression for GitHub issue #3 (finding 1b): a metadata
+    application with a braced body (e.g. `@Safety { isMandatory = false; }`)
+    used to silently drop every field assignment inside the body. The
+    visitor only captured `;` as the body text; anything between
+    `{ ... }` was discarded before the object model ever saw it."""
+    text = """package P {
+        part driverAirBag {
+            @Safety { isMandatory = false; }
+        }
+    }"""
+    a = loads(text)
+    dumped = classtree(a).dump()
+    # Round-trip preserves the body content.
+    assert "isMandatory" in dumped, f"metadata body was lost; got: {dumped!r}"
+    assert "{isMandatory" in dumped or "{ isMandatory" in dumped
+
+
+def test_metadata_application_semicolon_body_still_works_gh3():
+    """Regression for GitHub issue #3: the empty `;` body form
+    must keep working (this was the only path the visitor handled
+    before the fix)."""
+    text = """package P {
+        part p { @Safety; }
+    }"""
+    a = loads(text)
+    dumped = classtree(a).dump()
+    # The semicolon-form body is preserved (whitespace may vary).
+    assert "Safety" in dumped and ";" in dumped
+
+
+def test_standard_library_package_loads_regression_gh3():
+    """Regression for GitHub issue #3 (finding 2): files that open
+    with `standard library package` (the OMG standard library, e.g.
+    ISQBase.sysml) used to raise
+    'ValueError: Base Model must be encapsulated by a package.'
+    because the visitor had no dispatch for the `libraryPackage`
+    grammar rule."""
+    text = """standard library package Foo {
+        doc /* hello */
+        part def Bar;
+    }"""
+    a = loads(text)
+    dumped = classtree(a).dump()
+    # Round-trip must preserve the `standard library` keywords.
+    assert "standard library" in dumped
+    loads(dumped)  # and re-parse cleanly
+
+
+def test_standard_library_isqbase_regression_gh3():
+    """Issue #3 finding 2 reproducer: an actual OMG standard library
+    file (ISQBase.sysml) must now load without raising."""
+    import os
+    from pathlib import Path
+    path = Path("src/sysmlpy/library/domain/Quantities and Units/ISQBase.sysml")
+    if not path.exists():
+        pytest.skip(f"ISQBase.sysml not present at {path}")
+    text = path.read_text()
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "standard library package ISQBase" in dumped
+
+
 def test_Training_Binding_Connectors_Example_1():
     text = """package 'Binding Connectors Example-1' {
     	private import 'Port Example'::*;

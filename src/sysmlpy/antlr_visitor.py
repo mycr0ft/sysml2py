@@ -314,8 +314,15 @@ def _visit_metadata_feature_dict(ctx):
                 })
     
     body = ""
-    if ctx.metadataBody() and ctx.metadataBody().SEMI():
-        body = ";"
+    if ctx.metadataBody():
+        if ctx.metadataBody().SEMI():
+            body = ";"
+        else:
+            # Braced body: preserve the raw text so the body content
+            # (field assignments, nested usage members, etc.) survives
+            # the round-trip. Without this, every `key = value;` inside
+            # a metadata application is silently dropped at visit time.
+            body = ctx.metadataBody().getText()
     
     return {
         "name": "MetadataFeature",
@@ -813,6 +820,12 @@ def _visit_definition_element_dict(def_elem_ctx, prefix=None):
     if hasattr(def_elem_ctx, 'package') and def_elem_ctx.package():
         ctx = def_elem_ctx.package()
         return _make_nested_package_dict(ctx, prefix)
+    elif hasattr(def_elem_ctx, 'libraryPackage') and def_elem_ctx.libraryPackage():
+        # `standard library package Foo { ... }` shares the declaration/body
+        # structure of `package Foo { ... }`. Pass is_standard_library=True so
+        # the round-trip dict preserves the `standard library` keywords.
+        ctx = def_elem_ctx.libraryPackage()
+        return _make_nested_package_dict(ctx, prefix, is_standard_library=True)
     elif hasattr(def_elem_ctx, 'itemDefinition') and def_elem_ctx.itemDefinition():
         ctx = def_elem_ctx.itemDefinition()
         return _make_item_definition_dict(ctx, prefix)
@@ -948,10 +961,14 @@ def _make_item_definition_dict(ctx, member_prefix=None):
     }
 
 
-def _make_nested_package_dict(ctx, prefix=None):
+def _make_nested_package_dict(ctx, prefix=None, is_standard_library=False):
     """Create a Package dictionary for a nested package.
     
     Similar to _visit_package_dict but returns a PackageMember wrapped result.
+    
+    ``is_standard_library`` is True when the source was a
+    ``standard library package`` declaration; in that case the
+    ``standard library`` keyword is preserved through the round-trip.
     """
     pkg_name = None
     pkg_shortname = None
@@ -981,6 +998,7 @@ def _make_nested_package_dict(ctx, prefix=None):
             "ownedRelatedElement": {
                 "name": "Package",
                 "ownedRelationship": [],
+                "isStandardLibrary": is_standard_library,
                 "declaration": {
                     "name": "PackageDeclaration",
                     "identification": {

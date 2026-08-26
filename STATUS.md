@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.44.0** (2026-08-26)
+Current version: **v0.45.0** (2026-08-26)
 
 ---
 
@@ -277,6 +277,7 @@ All private underscore-prefixed mutation methods given public aliases:
 | `antlr_visitor.py` ~line 9558 | Top-level attribute multiplicity not captured (nested attributes work) |
 | `definition.py` | Dead code — duplicate `elif inner_class == "ActionUsage"` block |
 | `usage.py` | Type relationships (`: TypeName`) not preserved in `load_from_grammar()` |
+| `semantic.py` | Names inside constraint bodies (`assert constraint { ... }`) and other expressions are not resolved. A parse-clean result means *parsed*, not *checked* ([issue #3](https://github.com/mycr0ft/sysmlpy/issues/3), finding 4). |
 
 ---
 

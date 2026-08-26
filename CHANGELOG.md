@@ -1,5 +1,50 @@
 # CHANGELOG
 
+## v0.45.0 (2026-08-26)
+
+### :bug: Bug Fixes
+
+- **Metadata applications with braced bodies no longer silently drop
+  their contents ([issue #3](https://github.com/mycr0ft/sysmlpy/issues/3),
+  findings 1a/1b).** `@Safety { isMandatory = false; }` previously
+  round-tripped as `@ : Safety` because the visitor only captured
+  `;` as the body text and discarded every braced body at visit time.
+  `_visit_metadata_feature_dict` now preserves the raw body text
+  (`getText()`) when the body is `{ ... }`. The `;` form is unchanged.
+  Regression tests: `test_metadata_application_braced_body_regression_gh3`,
+  `test_metadata_application_semicolon_body_still_works_gh3`.
+
+- **Files that open with `standard library package` now load
+  ([issue #3](https://github.com/mycr0ft/sysmlpy/issues/3), finding 2).**
+  OMG standard library files (ISQBase.sysml, SI.sysml,
+  ISQThermodynamics.sysml, …) raised
+  `ValueError: Base Model must be encapsulated by a package.` because
+  `_visit_definition_element_dict` had no branch for the
+  `libraryPackage` grammar rule (it only matched `package`). A
+  `libraryPackage` branch was added that reuses
+  `_make_nested_package_dict(..., is_standard_library=True)`. The
+  `Package` grammar class now tracks `isStandardLibrary` from the dict
+  and emits the `standard library ` prefix in `dump()` so the
+  round-trip preserves the original keyword. Regression tests:
+  `test_standard_library_package_loads_regression_gh3`,
+  `test_standard_library_isqbase_regression_gh3`.
+
+### :memo: Documentation
+
+- Added README scope reminder that a green parse means the file
+  *parsed*, not that anything inside a constraint body was checked
+  ([issue #3](https://github.com/mycr0ft/sysmlpy/issues/3), reporter's
+  suggestion).
+- Added a `semantic.py` constraint-body-resolution entry to STATUS.md
+  §Known Issues.
+
+### Known issues NOT fixed in this release
+
+- Constraint body names are not resolved
+  ([issue #3](https://github.com/mycr0ft/sysmlpy/issues/3), finding 4).
+  This is a significant semantic-analyzer feature, not a one-line fix;
+  deferred to a follow-up release. Documented in STATUS.md and README.
+
 ## v0.44.0 (2026-08-26)
 
 ### :bug: Bug Fixes
