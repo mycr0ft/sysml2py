@@ -32,6 +32,80 @@ def _is_uuid(s: str) -> bool:
         for p, n in zip(parts, lengths)
     )
 
+
+def _qn_last_name(qn):
+    """Return the last identifier segment of a QualifiedName, or None."""
+    if qn is None:
+        return None
+    names = getattr(qn, "names", None)
+    if names:
+        return names[-1]
+    return None
+
+
+def _feature_chain_last_name(chain):
+    """Walk a chain of OwnedFeatureChain segments; return the last identifier
+    segment of the final segment, or None."""
+    if chain is None:
+        return None
+    feature = getattr(chain, "feature", None)
+    children = getattr(feature, "children", None) or []
+    last_seg = None
+    for seg in children:
+        last_seg = _qn_last_name(getattr(seg, "chainingFeature", None))
+    return last_seg
+
+
+def _resolve_name_from_specialization(specialization):
+    """Find the most user-visible identifier in a ``FeatureSpecializationPart``.
+
+    Walks ``Redefinitions`` / ``Subsettings`` / ``References`` and returns
+    the last identifier segment of the first chain. Used by
+    ``Usage.load_from_grammar`` as a fallback when no identification was
+    given on the feature declaration (e.g. ``attribute :>> ea;`` instead
+    of ``attribute ea :>> Base;``).
+
+    Returns ``None`` if nothing usable is found; callers should treat that
+    as "no resolved name" and keep their existing default (typically a
+    UUID sentinel).
+    """
+    if specialization is None:
+        return None
+    for fs in getattr(specialization, "specializations", None) or []:
+        rel = getattr(fs, "relationship", None)
+        if rel is None:
+            continue
+        for child in getattr(rel, "children", None) or []:
+            # OwnedRedefinition / OwnedReferenceSubsetting: prefer the
+            # direct referenced feature, fall back to a chained path.
+            qn = _qn_last_name(
+                getattr(child, "redefinedFeature", None)
+            ) or _qn_last_name(
+                getattr(child, "referencedFeature", None)
+            )
+            if qn:
+                return qn
+            # Chained path on either of the above (OwnedFeatureChain[])
+            elements = getattr(child, "elements", None)
+            if elements:
+                head = elements[0]
+                if isinstance(head, _qn_owner()):
+                    name = _qn_last_name(head)
+                else:
+                    name = _feature_chain_last_name(head)
+                if name:
+                    return name
+        # First chain resolved; stop looking further.
+        return None
+    return None
+
+
+def _qn_owner():
+    """Return the QualifiedName class without importing it at module
+    load time (avoids a cycle with the visitor package)."""
+    from sysmlpy.grammar.classes import QualifiedName
+    return QualifiedName
+
 # Load custom US Customary unit definitions
 _us_customary_path = os.path.join(os.path.dirname(__file__), "us_customary_units.txt")
 if os.path.exists(_us_customary_path):
@@ -260,6 +334,44 @@ class Usage(Searchable):
             }
 
         return package
+
+    @property
+    def redefined_name(self):
+        """The last identifier segment of the first re-declaration chain.
+
+        Returns ``""`` (not None) when no redefinition / subset / reference
+        is present so callers can use the property as a plain string.
+        """
+        spec = None
+        g = getattr(self, 'grammar', None)
+        if g is None:
+            return ""
+        ud = getattr(g, 'usage', None)
+        if ud is not None and hasattr(ud, 'declaration') and ud.declaration is not None:
+            spec = getattr(ud.declaration, 'specialization', None) if not hasattr(ud.declaration, 'declaration') else getattr(ud.declaration.declaration, 'specialization', None)
+        else:
+            d = getattr(g, 'declaration', None)
+            if d is not None:
+                spec = getattr(d, 'specialization', None)
+        resolved = _resolve_name_from_specialization(spec)
+        return resolved or ""
+
+    @property
+    def display_name(self):
+        """User-meaningful name for this element.
+
+        Identical to ``self.name`` when that field holds a real identifier;
+        suppresses the auto-generated UUID sentinel so UI / log output
+        stays clean. The original sentinel is still reachable via
+        ``self.name``.
+        """
+        n = getattr(self, 'name', None)
+        if n and not _is_uuid(n):
+            return n
+        rn = self.redefined_name
+        if rn:
+            return rn
+        return ""
 
     def _get_definition(self, child=None):
         """Build the grammar tree dict for this element.

@@ -1,5 +1,56 @@
 # CHANGELOG
 
+## v0.39.0 (2026-08-26)
+
+### :bug: Bug Fixes
+
+- **Redefined / subset / referenced Usage name now reachable from Python.**
+  For ``attribute :>> exampleAttribute = "Example Value";`` and similar
+  ``:>`` / ``::>`` re-declarations, the user-visible identifier lives
+  only in the grammar's re-declaration chain — not on the feature
+  ``identification``. ``Usage.load_from_grammar`` previously returned a
+  UUID sentinel in that case (``attribute.name == "d68f2dc6-..."``
+  while ``dump()`` correctly emitted ``exampleAttribute``). Two new
+  helpers expose the resolved name without touching the historical
+  ``self.name`` semantics:
+
+  - ``Usage.redefined_name`` (property) — the last identifier segment
+    of the first ``Redefinitions`` / ``Subsettings`` / ``References``
+    chain in the feature specialization. Returns ``""`` when no
+    re-declaration is present.
+  - ``Usage.display_name`` (property) — user-meaningful name for the
+    element. Identical to ``self.name`` when that field holds a real
+    identifier; suppresses the auto-generated UUID sentinel so UI / log
+    output stays clean.
+
+  ``self.name`` is unchanged (still the UUID sentinel when no
+  identification was given) so the symbol table, dump, navigation and
+  semantic analyzer behavior is preserved.
+
+  Motivating case (reported by a user):
+
+      attribute :>> exampleAttribute = "Example Value";
+
+  Before: ``attribute.name == "d68f2dc6-fa82-4828-8516-239b4aab1980"``.
+  After: ``attribute.redefined_name == "exampleAttribute"`` (and
+  ``attribute.display_name == "exampleAttribute"``).
+
+### :white_check_mark: Verification
+
+- ``tests/redefined_name_test.py``: 6 / 6 new tests passing — covers
+  the original two-package model, subset/redefinition/display helpers,
+  ``get_value()`` still works, dump still emits the right text.
+- ``tests/partial_test.py`` + ``tests/grammar_test.py`` +
+  ``tests/class_test.py`` + ``tests/main_test.py`` +
+  ``tests/navigate_test.py`` + ``tests/semantic_test.py`` +
+  ``tests/repr_test.py`` + ``tests/import_test.py``: 397 / 397 passing
+  (zero regressions, including ``TestBasicUndefinedDetection::
+  test_undefined_redefinition`` which exercises the same
+  re-declaration-from-bare-name path).
+- Conformance: 118 / 123 — identical failure set to v0.38.0 (no
+  regressions; the 5 failures, including ``Import_Visibility_Valid``
+  whose XPECT expects a syntax error, were pre-existing).
+
 ## v0.38.0 (2026-08-25)
 
 ### :sparkles: New Features
