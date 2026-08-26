@@ -948,20 +948,23 @@ class ReferenceCollector:
         self, sub: Any, element: Any, results: list[tuple[str, Any, list[str]]], scope_path: list[str]
     ) -> None:
         for child in getattr(sub, "children", []):
-            for el in getattr(child, "elements", []):
-                names = getattr(el, "names", [])
-                if names:
-                    results.append(("::".join(names), element, scope_path))
+            segments = _chain_segments(child)
+            if segments:
+                # Namespace qualification joins with '::', feature chains
+                # with '.' (e.g. base.x).
+                # Namespace qualification stays inside a segment ('A::B');
+                # feature-chain segments join with '.'.
+                results.append((".".join(segments), element, scope_path))
 
     def _collect_redefinitions(
         self, red: Any, element: Any, results: list[tuple[str, Any, list[str]]], scope_path: list[str]
     ) -> None:
         for child in getattr(red, "children", []):
-            rf = getattr(child, "redefinedFeature", None)
-            if rf is not None:
-                names = getattr(rf, "names", [])
-                if names:
-                    results.append(("::".join(names), element, scope_path))
+            segments = _chain_segments(child)
+            if segments:
+                # Namespace qualification stays inside a segment ('A::B');
+                # feature-chain segments join with '.'.
+                results.append((".".join(segments), element, scope_path))
 
     def _collect_subclassification(
         self, sc: Any, element: Any, results: list[tuple[str, Any, list[str]]], scope_path: list[str]
@@ -971,6 +974,36 @@ class ReferenceCollector:
                 names = getattr(el, "names", [])
                 if names:
                     results.append(("::".join(names), element, scope_path))
+
+
+
+def _chain_segments(child: Any) -> list[str]:
+    """Reference segments of an Owned*Subsetting/Redefinition child, in order.
+
+    Each returned string is one feature-chain segment: a QualifiedName keeps
+    its internal ``::`` namespace qualification (``A::B``), while dotted
+    chain steps become separate segments (``:> base.x`` -> ``['base','x']``).
+    """
+    segments: list[str] = []
+    qn = getattr(child, "redefinedFeature", None) or getattr(
+        child, "referencedFeature", None
+    ) or getattr(child, "subsettedFeature", None)
+    if qn is not None:
+        names = getattr(qn, "names", [])
+        if names:
+            segments.append("::".join(names))
+    for el in getattr(child, "elements", []) or []:
+        if hasattr(el, "names") and getattr(el, "names", []):
+            # Bare QualifiedName element (OwnedSubsetting single form)
+            segments.append("::".join(el.names))
+        elif hasattr(el, "feature"):
+            for seg in getattr(el.feature, "children", []) or []:
+                cf = getattr(seg, "chainingFeature", None)
+                if cf is not None:
+                    names = getattr(cf, "names", [])
+                    if names:
+                        segments.append("::".join(names))
+    return segments
 
 
 # ---------------------------------------------------------------------------

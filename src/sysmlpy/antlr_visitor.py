@@ -2212,7 +2212,7 @@ def _make_assert_constraint_usage_dict(acu_ctx, prefix=None):
         
         if hasattr(acu_ctx, 'featureSpecializationPart') and acu_ctx.featureSpecializationPart():
             fsp_ctx = acu_ctx.featureSpecializationPart()
-            fsp = _build_feature_specialization_part(fsp_ctx)
+            fsp = _build_full_specialization_from_fsp(fsp_ctx)
     
     declaration = None
     if hasattr(acu_ctx, 'constraintUsageDeclaration') and acu_ctx.constraintUsageDeclaration():
@@ -2315,7 +2315,7 @@ def _make_satisfy_requirement_usage_dict(sru_ctx, prefix=None):
         
         if hasattr(sru_ctx, 'featureSpecializationPart') and sru_ctx.featureSpecializationPart():
             fsp_ctx = sru_ctx.featureSpecializationPart()
-            fsp = _build_feature_specialization_part(fsp_ctx)
+            fsp = _build_full_specialization_from_fsp(fsp_ctx)
     elif hasattr(sru_ctx, 'REQUIREMENT') and sru_ctx.REQUIREMENT():
         if hasattr(sru_ctx, 'usageDeclaration') and sru_ctx.usageDeclaration():
             ud = sru_ctx.usageDeclaration()
@@ -9111,7 +9111,7 @@ def _visit_requirement_constraint_usage(rcu_ctx):
         fs = []
         if hasattr(rcu_ctx, 'featureSpecializationPart') and rcu_ctx.featureSpecializationPart():
             fsp_ctx = rcu_ctx.featureSpecializationPart()
-            fsp = _build_feature_specialization_part(fsp_ctx)
+            fsp = _build_full_specialization_from_fsp(fsp_ctx)
             if fsp and "specialization" in fsp:
                 fs = fsp["specialization"]
         
@@ -11561,6 +11561,68 @@ def _get_action_usage_subsetted_by(ctx):
     return None
 
 
+def _dotted_segments(owned_ctx):
+    """Segments of an ownedSubsetting / ownedRedefinition /
+    ownedReferenceSubsetting context.
+
+    Grammar: qualifiedName (DOT qualifiedName)* — e.g. ``base.x`` yields
+    ``['base', 'x']``. Each segment may itself be '::'-qualified.
+    """
+    segs = []
+    if owned_ctx is None:
+        return segs
+    for c2 in owned_ctx.children:
+        if type(c2).__name__ == 'QualifiedNameContext':
+            segs.append(c2.getText())
+    return segs
+
+
+def _emit_owned_chain(dict_name, feature_key, segs):
+    """Build an Owned{Subsetting,Redefinition,ReferenceSubsetting} dict
+    from dotted segments: first segment becomes the direct feature, the
+    remainder become an OwnedFeatureChain so chained forms like
+    ``:> base.x`` survive round-trip."""
+    head = {
+        "name": "QualifiedName",
+        "names": segs[0].split("::"),
+    }
+    owned_related = []
+    if len(segs) > 1:
+        chain_elements = [
+            {
+                "name": "OwnedFeatureChaining",
+                "chainingFeature": {"name": "QualifiedName", "names": s.split("::")},
+            }
+            for s in segs[1:]
+        ]
+        owned_related.append({
+            "name": "OwnedFeatureChain",
+            "feature": {
+                "name": "FeatureChain",
+                "ownedRelationship": chain_elements,
+            },
+        })
+    return {
+        "name": dict_name,
+        feature_key: head,
+        "ownedRelatedElement": owned_related,
+    }
+
+
+def _collect_owned_contexts(wrapper_children, direct_type, wrapper_types):
+    """Yield each Owned*Context found under a Subsettings/Redefinitions/
+    References rule context. Handles both direct children and one of the
+    keyword-wrapper contexts (SubsetsContext, RedefinesContext, …)."""
+    for child in wrapper_children:
+        child_name = type(child).__name__
+        if child_name == direct_type:
+            yield child
+        elif child_name in wrapper_types:
+            for c3 in child.children:
+                if type(c3).__name__ == direct_type:
+                    yield c3
+
+
 def _full_specialization_for_ctx(ctx):
     """Best-effort full specialization for any usage-like context.
 
@@ -11848,30 +11910,19 @@ def _build_full_specialization_from_ctx(ctx):
             # redef_ctx can be a single RedefinitionsContext or a list
             if not isinstance(redef_ctx, list):
                 redef_ctx = [redef_ctx]
-            redef_names = []
+            owned = []
             for rc in redef_ctx:
-                # RedefinitionsContext → [RedefinesContext, ...] → [OwnedRedefinitionContext, ...] → QualifiedNameContext
-                for child in rc.children:
-                    child_name = type(child).__name__
-                    if child_name == 'OwnedRedefinitionContext':
-                        for c2 in child.children:
-                            if type(c2).__name__ == 'QualifiedNameContext':
-                                redef_names.append(c2.getText())
-                    elif child_name == 'RedefinesContext':
-                        for c2 in child.children:
-                            if type(c2).__name__ == 'OwnedRedefinitionContext':
-                                for c3 in c2.children:
-                                    if type(c3).__name__ == 'QualifiedNameContext':
-                                        redef_names.append(c3.getText())
-            if redef_names:
-                owned = [
-                    {
-                        "name": "OwnedRedefinition",
-                        "redefinedFeature": {"name": "QualifiedName", "names": n.split("::")},
-                        "ownedRelatedElement": []
-                    }
-                    for n in redef_names
-                ]
+                # OwnedRedefinitionContext may be a dotted chain
+                # (qualifiedName (DOT qualifiedName)*).
+                for or_ctx in _collect_owned_contexts(
+                    rc.children, 'OwnedRedefinitionContext',
+                    ('RedefinesContext',),
+                ):
+                    segs = _dotted_segments(or_ctx)
+                    if segs:
+                        owned.append(_emit_owned_chain(
+                            'OwnedRedefinition', 'redefinedFeature', segs))
+            if owned:
                 specialization_list.append({
                     "name": "FeatureSpecialization",
                     "ownedRelationship": {
@@ -11886,36 +11937,19 @@ def _build_full_specialization_from_ctx(ctx):
             # sub_ctx can be a single SubsettingsContext or a list
             if not isinstance(sub_ctx, list):
                 sub_ctx = [sub_ctx]
-            sub_names = []
+            owned = []
             for sc in sub_ctx:
-                # SubsettingsContext → [SubsetsContext, ...] → [OwnedSubsettingContext] → QualifiedNameContext
-                for child in sc.children:
-                    child_name = type(child).__name__
-                    if child_name == 'OwnedSubsettingContext':
-                        for c2 in child.children:
-                            if type(c2).__name__ == 'QualifiedNameContext':
-                                sub_names.append(c2.getText())
-                    elif child_name == 'SubsetsContext':
-                        for c2 in child.children:
-                            if type(c2).__name__ == 'OwnedSubsettingContext':
-                                for c3 in c2.children:
-                                    if type(c3).__name__ == 'QualifiedNameContext':
-                                        sub_names.append(c3.getText())
-                    elif child_name == 'SpecializesContext':
-                        for c2 in child.children:
-                            if type(c2).__name__ == 'OwnedSubsettingContext':
-                                for c3 in c2.children:
-                                    if type(c3).__name__ == 'QualifiedNameContext':
-                                        sub_names.append(c3.getText())
-            if sub_names:
-                owned = [
-                    {
-                        "name": "OwnedSubsetting",
-                        "subsettedFeature": {"name": "QualifiedName", "names": n.split("::")},
-                        "ownedRelatedElement": []
-                    }
-                    for n in sub_names
-                ]
+                # Each Owned*Context may be a dotted chain
+                # (qualifiedName (DOT qualifiedName)*).
+                for os_ctx in _collect_owned_contexts(
+                    sc.children, 'OwnedSubsettingContext',
+                    ('SubsetsContext', 'SpecializesContext'),
+                ):
+                    segs = _dotted_segments(os_ctx)
+                    if segs:
+                        owned.append(_emit_owned_chain(
+                            'OwnedSubsetting', 'subsettedFeature', segs))
+            if owned:
                 specialization_list.append({
                     "name": "FeatureSpecialization",
                     "ownedRelationship": {
@@ -11929,29 +11963,18 @@ def _build_full_specialization_from_ctx(ctx):
             ref_ctx = spec.references()
             if not isinstance(ref_ctx, list):
                 ref_ctx = [ref_ctx]
-            ref_names = []
+            owned = []
             for rc in ref_ctx:
-                for child in rc.children:
-                    child_name = type(child).__name__
-                    if child_name == 'OwnedReferenceSubsettingContext':
-                        for c2 in child.children:
-                            if type(c2).__name__ == 'QualifiedNameContext':
-                                ref_names.append(c2.getText())
-                    elif child_name == 'ReferencesContext':
-                        for c2 in child.children:
-                            if type(c2).__name__ == 'OwnedReferenceSubsettingContext':
-                                for c3 in c2.children:
-                                    if type(c3).__name__ == 'QualifiedNameContext':
-                                        ref_names.append(c3.getText())
-            if ref_names:
-                owned = [
-                    {
-                        "name": "OwnedReferenceSubsetting",
-                        "referencedFeature": {"name": "QualifiedName", "names": n.split("::")},
-                        "ownedRelatedElement": []
-                    }
-                    for n in ref_names
-                ]
+                # OwnedReferenceSubsettingContext may be a dotted chain.
+                for ors_ctx in _collect_owned_contexts(
+                    rc.children, 'OwnedReferenceSubsettingContext',
+                    ('ReferencesContext',),
+                ):
+                    segs = _dotted_segments(ors_ctx)
+                    if segs:
+                        owned.append(_emit_owned_chain(
+                            'OwnedReferenceSubsetting', 'referencedFeature', segs))
+            if owned:
                 specialization_list.append({
                     "name": "FeatureSpecialization",
                     "ownedRelationship": {
@@ -12242,29 +12265,19 @@ def _build_full_specialization_from_fsp(fsp):
             redef_ctx = spec.redefinitions()
             if not isinstance(redef_ctx, list):
                 redef_ctx = [redef_ctx]
-            redef_names = []
+            owned = []
             for rc in redef_ctx:
-                for child in rc.children:
-                    child_name = type(child).__name__
-                    if child_name == 'OwnedRedefinitionContext':
-                        for c2 in child.children:
-                            if type(c2).__name__ == 'QualifiedNameContext':
-                                redef_names.append(c2.getText())
-                    elif child_name == 'RedefinesContext':
-                        for c2 in child.children:
-                            if type(c2).__name__ == 'OwnedRedefinitionContext':
-                                for c3 in c2.children:
-                                    if type(c3).__name__ == 'QualifiedNameContext':
-                                        redef_names.append(c3.getText())
-            if redef_names:
-                owned = [
-                    {
-                        "name": "OwnedRedefinition",
-                        "redefinedFeature": {"name": "QualifiedName", "names": n.split("::")},
-                        "ownedRelatedElement": []
-                    }
-                    for n in redef_names
-                ]
+                # OwnedRedefinitionContext may be a dotted chain
+                # (qualifiedName (DOT qualifiedName)*).
+                for or_ctx in _collect_owned_contexts(
+                    rc.children, 'OwnedRedefinitionContext',
+                    ('RedefinesContext',),
+                ):
+                    segs = _dotted_segments(or_ctx)
+                    if segs:
+                        owned.append(_emit_owned_chain(
+                            'OwnedRedefinition', 'redefinedFeature', segs))
+            if owned:
                 specialization_list.append({
                     "name": "FeatureSpecialization",
                     "ownedRelationship": {
@@ -12278,35 +12291,19 @@ def _build_full_specialization_from_fsp(fsp):
             sub_ctx = spec.subsettings()
             if not isinstance(sub_ctx, list):
                 sub_ctx = [sub_ctx]
-            sub_names = []
+            owned = []
             for sc in sub_ctx:
-                for child in sc.children:
-                    child_name = type(child).__name__
-                    if child_name == 'OwnedSubsettingContext':
-                        for c2 in child.children:
-                            if type(c2).__name__ == 'QualifiedNameContext':
-                                sub_names.append(c2.getText())
-                    elif child_name == 'SubsetsContext':
-                        for c2 in child.children:
-                            if type(c2).__name__ == 'OwnedSubsettingContext':
-                                for c3 in c2.children:
-                                    if type(c3).__name__ == 'QualifiedNameContext':
-                                        sub_names.append(c3.getText())
-                    elif child_name == 'SpecializesContext':
-                        for c2 in child.children:
-                            if type(c2).__name__ == 'OwnedSubsettingContext':
-                                for c3 in c2.children:
-                                    if type(c3).__name__ == 'QualifiedNameContext':
-                                        sub_names.append(c3.getText())
-            if sub_names:
-                owned = [
-                    {
-                        "name": "OwnedSubsetting",
-                        "subsettedFeature": {"name": "QualifiedName", "names": n.split("::")},
-                        "ownedRelatedElement": []
-                    }
-                    for n in sub_names
-                ]
+                # Each Owned*Context may be a dotted chain
+                # (qualifiedName (DOT qualifiedName)*).
+                for os_ctx in _collect_owned_contexts(
+                    sc.children, 'OwnedSubsettingContext',
+                    ('SubsetsContext', 'SpecializesContext'),
+                ):
+                    segs = _dotted_segments(os_ctx)
+                    if segs:
+                        owned.append(_emit_owned_chain(
+                            'OwnedSubsetting', 'subsettedFeature', segs))
+            if owned:
                 specialization_list.append({
                     "name": "FeatureSpecialization",
                     "ownedRelationship": {
@@ -12320,29 +12317,18 @@ def _build_full_specialization_from_fsp(fsp):
             ref_ctx = spec.references()
             if not isinstance(ref_ctx, list):
                 ref_ctx = [ref_ctx]
-            ref_names = []
+            owned = []
             for rc in ref_ctx:
-                for child in rc.children:
-                    child_name = type(child).__name__
-                    if child_name == 'OwnedReferenceSubsettingContext':
-                        for c2 in child.children:
-                            if type(c2).__name__ == 'QualifiedNameContext':
-                                ref_names.append(c2.getText())
-                    elif child_name == 'ReferencesContext':
-                        for c2 in child.children:
-                            if type(c2).__name__ == 'OwnedReferenceSubsettingContext':
-                                for c3 in c2.children:
-                                    if type(c3).__name__ == 'QualifiedNameContext':
-                                        ref_names.append(c3.getText())
-            if ref_names:
-                owned = [
-                    {
-                        "name": "OwnedReferenceSubsetting",
-                        "referencedFeature": {"name": "QualifiedName", "names": n.split("::")},
-                        "ownedRelatedElement": []
-                    }
-                    for n in ref_names
-                ]
+                # OwnedReferenceSubsettingContext may be a dotted chain.
+                for ors_ctx in _collect_owned_contexts(
+                    rc.children, 'OwnedReferenceSubsettingContext',
+                    ('ReferencesContext',),
+                ):
+                    segs = _dotted_segments(ors_ctx)
+                    if segs:
+                        owned.append(_emit_owned_chain(
+                            'OwnedReferenceSubsetting', 'referencedFeature', segs))
+            if owned:
                 specialization_list.append({
                     "name": "FeatureSpecialization",
                     "ownedRelationship": {

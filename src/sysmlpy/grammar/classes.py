@@ -8243,33 +8243,40 @@ class References:
 class OwnedRedefinition:
     def __init__(self, definition):
         if valid_definition(definition, "OwnedRedefinition"):
+            # A dotted chain (:>> base.x) carries BOTH the head
+            # qualifiedName and one OwnedFeatureChain per remaining
+            # segment. Keep both so chained forms survive round-trip.
+            self.redefinedFeature = None
             if definition["redefinedFeature"] is not None:
                 self.redefinedFeature = QualifiedName(definition["redefinedFeature"])
-            else:
-                self.redefinedFeature = None
-                self.elements = []
-                for element in definition["ownedRelatedElement"]:
-                    self.elements.append(OwnedFeatureChain(element))
+            self.elements = []
+            for element in definition.get("ownedRelatedElement", []) or []:
+                self.elements.append(OwnedFeatureChain(element))
 
     def dump(self):
+        parts = []
         if self.redefinedFeature is not None:
-            return self.redefinedFeature.dump()
-        else:
-            return ".".join([e.dump() for e in self.elements])
+            parts.append(self.redefinedFeature.dump())
+        parts.extend([e.dump() for e in self.elements])
+        return ".".join(parts) if parts else ""
 
     def get_definition(self):
-        if self.redefinedFeature is not None:
+        if self.redefinedFeature is not None and not self.elements:
             return {
                 "name": self.__class__.__name__,
                 "redefinedFeature": self.redefinedFeature.get_definition(),
                 "ownedRelatedElement": [],
             }
         else:
-            return {
+            output = {
                 "name": self.__class__.__name__,
-                "redefinedFeature": None,
+                "redefinedFeature": self.redefinedFeature.get_definition() if self.redefinedFeature is not None else None,
                 "ownedRelatedElement": [e.get_definition() for e in self.elements],
             }
+            if self.redefinedFeature is None and not self.elements:
+                # Fully empty: keep legacy shape
+                pass
+            return output
 
 
 class Subsettings:
@@ -8298,15 +8305,17 @@ class OwnedSubsetting:
     def __init__(self, definition):
         if valid_definition(definition, "OwnedSubsetting"):
             # subsettedFeature = QualifiedName | ownedRelatedElement += OwnedFeatureChain
+            # A dotted chain (:> base.x) carries BOTH: the head qualifiedName
+            # plus one OwnedFeatureChain per remaining segment. Keep both so
+            # chained forms survive round-trip (v0.42.0).
+            self.elements = []
             if definition["subsettedFeature"] is not None:
-                self.elements = [QualifiedName(definition["subsettedFeature"])]
-            else:
-                self.elements = []
-                for element in definition["ownedRelatedElement"]:
-                    self.elements.append(OwnedFeatureChain(element))
+                self.elements.append(QualifiedName(definition["subsettedFeature"]))
+            for element in definition.get("ownedRelatedElement", []) or []:
+                self.elements.append(OwnedFeatureChain(element))
 
     def dump(self):
-        return " ".join([child.dump() for child in self.elements])
+        return ".".join([child.dump() for child in self.elements])
 
     def get_definition(self):
         output = {

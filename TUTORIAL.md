@@ -196,6 +196,46 @@ print(r3.dump())
 # → ref :>> payload : Person;
 ```
 
+#### Specialization keywords on usages (v0.40.0+)
+
+SysML v2 has four specialization kinds, and all of them round-trip on any
+usage — attributes, parts, actions, requirements, and more:
+
+| Source form | Meaning | Grammar relationship |
+|---|---|---|
+| `: TypeName` | typing | `Typings` |
+| `:> Base` / `subsets Base` | subsetting | `Subsettings` |
+| `:>> Base` / `redefines Base` | redefinition | `Redefinitions` |
+| `::> T` / `references T` | type-only reference | `References` |
+
+```python
+from sysmlpy import loads
+
+model = loads("""package P {
+    action a1 :> BaseType;
+    action a2 ::> RefType;
+    action a3 references OtherType;   # keyword form
+    action a4 :>> RedefType;
+    action a5 : Real;
+}""")
+
+def find_actions(node):
+    out = []
+    if type(node).__name__ == 'Action':
+        out.append(node)
+    for c in getattr(node, 'children', []):
+        out.extend(find_actions(c))
+    return out
+
+for a in find_actions(model):
+    print(a.dump())
+# → action a1 :> BaseType;
+# → action a2 ::> RefType;
+# → action a3 ::> OtherType;   # keyword canonicalizes to operator form
+# → action a4 :>> RedefType;
+# → action a5 : Real;
+```
+
 ### Parsing and Round-Trip
 
 ```python
@@ -215,6 +255,41 @@ model = loads(text)
 tree = classtree(model)
 print(tree.dump())
 ```
+
+### Redeclared Feature Names (v0.39.0+)
+
+When a usage re-declares a feature (`:>>`, `:>`, `::>`) without its own
+identification, the user-visible name lives in the specialization chain —
+not on the feature declaration. Two helpers surface it:
+
+```python
+from sysmlpy import loads
+
+text = """package DummyUsageModel {
+    private import DummyDefinitionModel::*;
+    view def ViewUsage :> ViewDefinition {
+        attribute :>> exampleAttribute = "Example Value";
+    }
+}"""
+model = loads(text)
+view = model.get_child("DummyUsageModel.ViewUsage")
+attr = view.attributes[0]
+
+print(attr.get_value())       # → Example Value
+print(attr.dump())            # → attribute :>> exampleAttribute= "Example Value";
+print(attr.name)              # → 'd68f2dc6-...'  (UUID sentinel, unchanged)
+print(attr.redefined_name)    # → 'exampleAttribute'
+print(attr.display_name)      # → 'exampleAttribute'
+```
+
+- **`redefined_name`** — last identifier segment of the first
+  re-declaration chain; `""` when the element has none.
+- **`display_name`** — user-meaningful name: returns `self.name` when it
+  holds a real identifier, otherwise falls back to `redefined_name`,
+  suppressing the UUID sentinel. Use it for UI / log output.
+
+`self.name` deliberately stays the UUID sentinel so symbol resolution,
+dump, and navigation behavior is preserved.
 
 ### State Machines
 
@@ -418,6 +493,43 @@ path = model.path_between('engine1', 'nonexistent')
 print(path)  # → None
 ```
 
+## Partial Parse Recovery (v0.38.0+)
+
+By default `loads` / `load` raise `SysMLSyntaxError` on malformed input.
+When you want to keep whatever *did* parse — e.g. linting a file the spec
+rejects, or triaging a broken model — use the `_partial` variants:
+
+```python
+from sysmlpy import loads_partial, load_partial, PartialParseError
+
+# Canonical example: a visibility-less `import ScalarValues;`
+text = """package ImportVisibility {
+    public import ScalarValues;
+    private import ScalarValues;
+    protected import ScalarValues;
+    import ScalarValues;              # <- rejected by the grammar
+}"""
+
+try:
+    model = load_partial(text)
+except PartialParseError as e:
+    print(len(e.errors))       # → 1  ("Syntax error at 5:4: extraneous input 'import' ...")
+    print(e.partial is not None)  # → True
+
+    from sysmlpy.formatting import classtree
+    print(classtree(e.partial).dump())
+    # package ImportVisibility {
+    #    public import ScalarValues;
+    #    private import ScalarValues;
+    #    protected import ScalarValues;
+    # }
+```
+
+- `loads_partial(text)` returns the visitor **dict** (raising
+  `PartialParseError` with `.partial` on errors).
+- `load_partial(text)` returns the typed **Model** on success.
+- The strict `loads` / `load` are unchanged.
+
 ## Loading Functions
 
 | Function | Description |
@@ -425,6 +537,8 @@ print(path)  # → None
 | `loads(text)` | Parse SysML v2 text string into a `Model` |
 | `load(file)` | Parse SysML v2 file into a `Model` |
 | `parse(text)` | Parse SysML v2 text into `(Model, errors)` tuple — never raises |
+| `loads_partial(text)` | Like `loads`, but raises `PartialParseError` (carrying `.partial`) instead of aborting |
+| `load_partial(file)` | Like `load`, but raises `PartialParseError` (carrying `.partial`) instead of aborting |
 | `load_grammar(text)` | Parse into grammar dict (internal) |
 | `load_antlr(text)` | Explicit ANTLR4 parsing path |
 | `load_grammar_antlr(text)` | Parse into grammar dict via ANTLR4 |

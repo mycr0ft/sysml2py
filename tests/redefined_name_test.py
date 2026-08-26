@@ -181,3 +181,60 @@ def test_action_redefined_name_helper():
     acts = find_actions(model)
     assert len(acts) == 1
     assert acts[0].redefined_name == 'baseAction'
+
+
+# v0.42.0: assert/satisfy fsp capture + chained re-declaration segments
+
+def test_satisfy_with_typing_no_longer_crashes():
+    """``satisfy R : T by p;`` used to raise NameError
+    (_build_feature_specialization_part was called but never defined)."""
+    model = loads("""package P {
+        requirement def R;
+        part p {
+            satisfy R : SomeType by p;
+        }
+    }""")
+    dump = model.dump()
+    assert "satisfy" in dump
+    assert "SomeType" in dump
+
+
+def test_assert_constraint_with_typing_round_trips():
+    model = loads("package P { part p { assert someConstraint : CType; } }")
+    assert ": CType" in model.dump()
+
+
+def test_chained_subset_keeps_full_chain():
+    """:> base.x previously kept only 'base'; dump must render base.x and
+    redefined_name resolves to the leaf segment."""
+    model = loads("""package P {
+        part p {
+            attribute :> base.x;
+        }
+    }""")
+    def find_attrs(node):
+        out = []
+        if hasattr(node, "attributes"):
+            out.extend(node.attributes)
+        for c in getattr(node, "children", []):
+            out.extend(find_attrs(c))
+        return out
+    attrs = find_attrs(model)
+    assert len(attrs) == 1
+    assert attrs[0].redefined_name == "x"
+    assert "base.x" in attrs[0].dump()
+
+
+def test_chained_subset_visible_to_semantic_analyzer():
+    """The full dotted chain is now the reported reference."""
+    from sysmlpy import analyze
+    model = loads("""package P {
+        part p {
+            attribute :> missing.chain;
+        }
+    }""")
+    issues = analyze(model)
+    assert any(
+        i.code == "UNDEFINED_SYMBOL" and "missing.chain" in i.message
+        for i in issues
+    )

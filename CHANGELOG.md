@@ -1,5 +1,49 @@
 # CHANGELOG
 
+## v0.42.0 (2026-08-26)
+
+### :bug: Bug Fixes
+
+- **`satisfy R : T by p;` crashed with NameError.** The satisfy /
+  assert-constraint / requirement-constraint makers called
+  `_build_feature_specialization_part(fsp_ctx)` — a function that was
+  never defined. Any input with a featureSpecializationPart after the
+  ownedReferenceSubsetting (e.g. `satisfy R : SomeType by p;`,
+  `assert someConstraint : CType;`) raised `NameError` at parse time.
+  All three sites now call `_build_full_specialization_from_fsp`
+  (which handles all four specialization kinds), and the grammar-side
+  `SatisfyRequirementUsage.fsp` consumption already supported the shape.
+
+- **Chained re-declarations lost every segment after the first.**
+  `attribute :> base.x;` emitted `subsettedFeature: ['base']` and an
+  empty chain — the `.x` was dropped at both visitor and grammar layers:
+
+  - Visitor: the six specialization-collection loops (subsettings /
+    redefinitions / references x two builders) appended each
+    QualifiedNameContext separately, losing dot relationships. New
+    helpers (`_dotted_segments`, `_emit_owned_chain`,
+    `_collect_owned_contexts`) emit one Owned* dict per source chain
+    with head QualifiedName + OwnedFeatureChain for remaining segments.
+  - Grammar classes: `OwnedSubsetting` / `OwnedRedefinition` kept the
+    head *or* the chains (if/else). Both now keep both; dump joins all
+    segments with '.'.
+  - `Usage.redefined_name` resolves to the leaf segment (`x` for
+    `:> base.x`) by walking head + chain in order.
+  - Semantic analyzer: `_chain_segments` feeds reference collection so
+    chained forms now report/resolve full dotted names —
+    `attribute :> missing.chain;` yields
+    `UNDEFINED_SYMBOL ... 'missing.chain'`, and feature-chain
+    compatibility checks see `engine::name` again.
+
+### :white_check_mark: Verification
+
+- ``tests/redefined_name_test.py``: 14 / 14 passing — adds four cases:
+  satisfy-with-typing no-crash, assert-constraint typing round-trip,
+  chained-subset dump + leaf-name resolution, and chained-subset
+  visibility to the semantic analyzer.
+- Fast suite (9 files): 402 passing, zero regressions.
+- Conformance: 118 / 123 — identical failure set to v0.41.0.
+
 ## v0.41.0 (2026-08-26)
 
 ### :sparkles: Improvements

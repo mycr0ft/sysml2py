@@ -5,7 +5,7 @@ Uses the ANTLR4 parser for full SysML v2 grammar support.
 
 ## Version
 
-**v0.36.0** — Optional boxes-backed state-machine visualizer (`as_state_transition_view_boxes()`, `render_state_transition_view[_svg]()`) with native UML state shapes, initial pseudostate, final-state bullseye, guard labels, composite + parallel state support. Also fixes the INCOSE flashlight parse crash in `grammar/classes.py`. 19 new tests.
+**v0.41.0** — Full-specialization capture across all usage kinds: `:>`, `:>>`, and `::>` (including the `references` keyword) now round-trip on actions, calculations, constraints, requirements, use cases, interfaces, and nested occurrences — not just attributes. API-level `dump()` on Action / Interface / UseCase / Requirement renders them. New helpers: `Usage.redefined_name` and `Usage.display_name` surface user-visible names on re-declared features; `loads_partial` / `load_partial` recover partial models from malformed input via `PartialParseError`. See [CHANGELOG](CHANGELOG.md) for v0.37.0–v0.40.0 details (corpus-load fixes, succession grammar classes, `References` end-to-end).
 
 ## Quick Links
 
@@ -55,6 +55,34 @@ print(engine.dump())
 p = Part(name='Stage1')
 p.add_child(Attribute(name='mass'))
 print(p.dump())
+```
+
+## Redeclared Features & Partial Parse
+
+Working with re-declared features (`:>>`, `:>`, `::>`) and malformed input:
+
+```python
+from sysmlpy import loads, load_partial, PartialParseError
+
+# The user-visible name of a re-declared feature lives in the
+# specialization chain — use the helpers to reach it:
+model = loads("""package P {
+    view def V :> Base {
+        attribute :>> exampleAttribute = "Example Value";
+    }
+}""")
+attr = model.get_child("P.V").attributes[0]
+print(attr.redefined_name)   # → exampleAttribute
+print(attr.display_name)     # → exampleAttribute (UUID-aware)
+print(attr.get_value())      # → Example Value
+
+# Malformed input: keep whatever did parse instead of crashing
+try:
+    model = load_partial(broken_text)
+except PartialParseError as e:
+    print(e.errors)          # collected syntax errors
+    # e.partial holds the visitor dict for the valid part —
+    # round-trippable via classtree(e.partial).dump()
 ```
 
 ## Storage Backends

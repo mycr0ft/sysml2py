@@ -437,3 +437,60 @@ Naming conventions enforced:
 
 All stylistic issues have severity ``"warning"`` rather than ``"error"``,
 so they don't block validation but still highlight potential issues.
+Specialization Keywords on Usages (v0.40.0+)
+--------------------------------------------
+
+All four SysML v2 specialization kinds round-trip on any usage — attributes,
+parts, actions, requirements, and more::
+
+    from sysmlpy import loads
+
+    model = loads("""package P {
+        action a1 :> BaseType;
+        action a2 ::> RefType;
+        action a3 references OtherType;   # keyword form
+        action a4 :>> RedefType;
+    }""")
+
+    print(model.dump())
+    # action a1:>BaseType ;
+    # action a2::> R ;
+    # ... (keyword form canonicalizes to the operator form)
+
+Redeclared Feature Names (v0.39.0+)
+------------------------------------
+
+When a usage re-declares a feature without its own identification, the
+user-visible name lives in the specialization chain. Two helpers surface it::
+
+    from sysmlpy import loads
+
+    model = loads("""package P {
+        view def V :> Base {
+            attribute :>> exampleAttribute = "Example Value";
+        }
+    }""")
+    attr = model.get_child("P.V").attributes[0]
+
+    print(attr.redefined_name)   # → exampleAttribute
+    print(attr.display_name)     # → exampleAttribute (UUID-aware)
+    print(attr.get_value())      # → Example Value
+
+``self.name`` stays the auto-generated UUID sentinel for backward
+compatibility; ``display_name`` suppresses it for UI / log output.
+
+Partial Parse Recovery (v0.38.0+)
+----------------------------------
+
+Keep whatever *did* parse when the input has syntax errors::
+
+    from sysmlpy import load_partial, PartialParseError
+    from sysmlpy.formatting import classtree
+
+    try:
+        model = load_partial(text)
+    except PartialParseError as e:
+        print(e.errors)              # collected ANTLR errors
+        print(classtree(e.partial).dump())  # valid part of the input
+
+The strict ``loads`` / ``load`` are unchanged.

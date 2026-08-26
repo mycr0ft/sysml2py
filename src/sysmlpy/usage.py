@@ -33,29 +33,6 @@ def _is_uuid(s: str) -> bool:
     )
 
 
-def _qn_last_name(qn):
-    """Return the last identifier segment of a QualifiedName, or None."""
-    if qn is None:
-        return None
-    names = getattr(qn, "names", None)
-    if names:
-        return names[-1]
-    return None
-
-
-def _feature_chain_last_name(chain):
-    """Walk a chain of OwnedFeatureChain segments; return the last identifier
-    segment of the final segment, or None."""
-    if chain is None:
-        return None
-    feature = getattr(chain, "feature", None)
-    children = getattr(feature, "children", None) or []
-    last_seg = None
-    for seg in children:
-        last_seg = _qn_last_name(getattr(seg, "chainingFeature", None))
-    return last_seg
-
-
 def _resolve_name_from_specialization(specialization):
     """Find the most user-visible identifier in a ``FeatureSpecializationPart``.
 
@@ -76,35 +53,30 @@ def _resolve_name_from_specialization(specialization):
         if rel is None:
             continue
         for child in getattr(rel, "children", None) or []:
-            # OwnedRedefinition / OwnedReferenceSubsetting: prefer the
-            # direct referenced feature, fall back to a chained path.
-            qn = _qn_last_name(
+            # OwnedRedefinition / OwnedReferenceSubsetting / OwnedSubsetting:
+            # a dotted chain (:> base.x) keeps the head QualifiedName plus
+            # one OwnedFeatureChain per remaining segment. Collect every
+            # segment in order and resolve to the last one.
+            segments = []
+            qn = (
                 getattr(child, "redefinedFeature", None)
-            ) or _qn_last_name(
-                getattr(child, "referencedFeature", None)
+                or getattr(child, "referencedFeature", None)
             )
-            if qn:
-                return qn
-            # Chained path on either of the above (OwnedFeatureChain[])
-            elements = getattr(child, "elements", None)
-            if elements:
-                head = elements[0]
-                if isinstance(head, _qn_owner()):
-                    name = _qn_last_name(head)
-                else:
-                    name = _feature_chain_last_name(head)
-                if name:
-                    return name
+            if qn is not None and getattr(qn, "names", None):
+                segments.extend(qn.names)
+            for el in getattr(child, "elements", None) or []:
+                if hasattr(el, "names") and el.names:
+                    segments.extend(el.names)
+                elif hasattr(el, "feature"):
+                    for seg in getattr(el.feature, "children", []) or []:
+                        cf = getattr(seg, "chainingFeature", None)
+                        if cf is not None and getattr(cf, "names", None):
+                            segments.extend(cf.names)
+            if segments:
+                return segments[-1]
         # First chain resolved; stop looking further.
         return None
     return None
-
-
-def _qn_owner():
-    """Return the QualifiedName class without importing it at module
-    load time (avoids a cycle with the visitor package)."""
-    from sysmlpy.grammar.classes import QualifiedName
-    return QualifiedName
 
 # Load custom US Customary unit definitions
 _us_customary_path = os.path.join(os.path.dirname(__file__), "us_customary_units.txt")
