@@ -3977,9 +3977,9 @@ class InterfaceBody:
             return "{\n" + "\n".join([child.dump() for child in self.items]) + "\n}"
 
     def get_definition(self):
-        output = {"name": self.__class__.__name__, "ownedRelatedElement": []}
+        output = {"name": self.__class__.__name__, "item": []}
         for item in self.items:
-            output["ownedRelatedElement"].append(item.get_definition())
+            output["item"].append(item.get_definition())
         return output
 
 

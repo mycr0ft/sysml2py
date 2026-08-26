@@ -591,6 +591,36 @@ def test_Training_Interfaces_Interface_Example():
     assert strip_ws(text) == strip_ws(b.dump())
 
 
+def test_interface_connect_to_regression_gh1():
+    """Regression for GitHub issue #1: InterfaceBody.get_definition used
+    'ownedRelatedElement' but InterfaceBody.__init__ read 'item', so any
+    round-trip of an interface-usage that contained a 'connect ... to ...'
+    clause raised KeyError: 'item' on first re-parse."""
+    text = """package P {
+        part def X;
+        part def Y;
+        interface def L { end a : X; end b : Y; }
+        part x { port p : X; }
+        part y { port p : Y; }
+        interface : L connect x.p to y.p;
+    }"""
+    a = loads(text)
+    tree = classtree(a)
+    dumped = tree.dump()
+    b = loads(dumped)
+    btree = classtree(b)
+    assert strip_ws(text) == strip_ws(btree.dump())
+
+
+def test_interface_body_get_definition_roundtrip():
+    """InterfaceBody.get_definition must produce a dict that InterfaceBody
+    can re-parse; this is the exact contract issue #1 broke."""
+    from sysmlpy.grammar.classes import InterfaceBody
+    body = InterfaceBody({"name": "InterfaceBody", "item": []})
+    roundtripped = InterfaceBody(body.get_definition())
+    assert roundtripped.items == []
+
+
 def test_Training_Binding_Connectors_Example_1():
     text = """package 'Binding Connectors Example-1' {
     	private import 'Port Example'::*;

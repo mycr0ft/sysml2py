@@ -1,5 +1,62 @@
 # CHANGELOG
 
+## v0.44.0 (2026-08-26)
+
+### :bug: Bug Fixes
+
+- **`KeyError: 'item'` crash on `interface … connect … to …`
+  usages ([issue #1](https://github.com/mycr0ft/sysmlpy/issues/1)).**
+  `InterfaceBody.get_definition()` was emitting `"ownedRelatedElement"`
+  but `InterfaceBody.__init__` was reading `"item"`. The visitor emits
+  `"item"`, so fresh loads worked; the first re-parse of a model
+  containing an interface-usage that named both ends raised
+  `KeyError: 'item'`. `get_definition()` now emits `"item"` so the
+  round-trip is consistent. Regression tests:
+  `test_interface_connect_to_regression_gh1`,
+  `test_interface_body_get_definition_roundtrip`.
+
+### :arrow_up: Upstream / Grammar
+
+- **Vendored ANTLR4 grammar updated from OMG 2026-03 to OMG 2026-05
+  ([PR #2](https://github.com/mycr0ft/sysmlpy/pull/2) by
+  [@HansBug](https://github.com/HansBug)).** Grammar source aligned
+  with [daltskin/sysml-v2-grammar
+  v2026.05.0](https://github.com/daltskin/sysml-v2-grammar); generated
+  parser sources regenerated with ANTLR 4.13.2. Four production
+  changes:
+  - `annotatingMember` — now accepts an explicit `memberPrefix`
+    visibility (SYSML21-319, SysML 2.1 RTF Ballot 1).
+  - `payloadFeature` — `identification`-required alternatives and
+    `ownedFeatureTyping` / `ownedMultiplicity` pair normalized
+    (OMG 2026-05 KeBNF sync).
+  - `framedConcernUsage` — second alternative switched from
+    `calculationBody` / `calculationUsageDeclaration` to
+    `requirementBody` / `constraintUsageDeclaration` (SYSML21-366).
+  - `filterPackage` — dropped the stub alternative in favor of the
+    official `filterPackageImportDeclaration` production.
+  Local grammar patches (GUARD keyword, qualifiedIdentification,
+  metadataAccessExpression, DOT bodyExpression, view-rendering
+  keywords, required-visibility `importRule`) preserved.
+  Visitor-downstream impact: **zero** changes to `antlr_visitor.py`
+  or `grammar/classes.py`. Test results: 408/408 fast tests pass;
+  118/123 conformance (5 pre-existing failures byte-identical to
+  baseline).
+
+## v0.43.0 (2026-08-26)
+
+### :bug: Bug Fixes
+
+- **Fixed `KeyError: 'item'` crash on `interface … connect … to …`
+  usages ([issue #1](https://github.com/mycr0ft/sysmlpy/issues/1)).**
+  `InterfaceBody.get_definition()` was emitting `"ownedRelatedElement"`
+  but `InterfaceBody.__init__` was reading `"item"`. The visitor
+  emits `"item"`, so fresh loads worked; the first re-parse of a
+  model containing an interface-usage that named both ends raised
+  `KeyError: 'item'`. `get_definition()` now emits `"item"` so the
+  round-trip is consistent. Regression tests:
+  `test_interface_connect_to_regression_gh1`,
+  `test_interface_body_get_definition_roundtrip`.
+
 ## v0.42.0 (2026-08-26)
 
 ### :bug: Bug Fixes
