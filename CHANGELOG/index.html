@@ -431,6 +431,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0510-2026-08-26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.51.0 (2026-08-26)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.51.0 (2026-08-26)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-test-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Test coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0500-2026-08-26" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2335,6 +2363,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0510-2026-08-26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.51.0 (2026-08-26)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.51.0 (2026-08-26)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-test-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Test coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0500-2026-08-26" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4198,6 +4254,29 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0510-2026-08-26">v0.51.0 (2026-08-26)<a class="headerlink" href="#v0510-2026-08-26" title="Permanent link">&para;</a></h2>
+<h3 id="white_check_mark-test-coverage">:white_check_mark: Test coverage<a class="headerlink" href="#white_check_mark-test-coverage" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Added three regression tests contributed by
+  <a href="https://github.com/mycr0ft/sysmlpy/pull/7">PR #7</a> by @jman4162</strong> —
+  the underlying fix for issue #4 (dependency statements) is already
+  shipped in v0.46.0, but PR #7 brought three useful tests:</li>
+<li><code>test_dependency_qualified_endpoints_split_regression_gh4_pr7</code> —
+    dotted <code>Sub::Client</code> qualified-name endpoints reach the dict
+    as multi-element <code>names</code> lists.</li>
+<li><code>test_dependency_named_multi_client_supplier_regression_gh4_pr7</code> —
+    <code>dependency Use from Client1, Client2 to Supplier1;</code> round-trips
+    with the correct identification and split endpoint lists.</li>
+<li><code>test_dependency_bare_round_trip_regression_gh4_pr7</code> — the bare
+    <code>dependency b to A;</code> form produces a <code>clients</code> list with a single
+    entry (not collapsed into a string), matching the <code>Dependency</code>
+    grammar-class contract.</li>
+</ul>
+<p>PR #7 is closed as superseded — v0.46.0 already shipped the
+  underlying fix; this release is purely additional regression
+  coverage. (Note: PR #7 emits <code>client</code>/<code>supplier</code> singular keys
+  whereas this codebase uses plural <code>clients</code>/<code>suppliers</code> to
+  match the <code>Dependency</code> grammar class. We keep the plural form.)</p>
 <h2 id="v0500-2026-08-26">v0.50.0 (2026-08-26)<a class="headerlink" href="#v0500-2026-08-26" title="Permanent link">&para;</a></h2>
 <h3 id="bug-bug-fixes-twisted_rightwards_arrows-pr-alignment">:bug: Bug Fixes / :twisted_rightwards_arrows: PR alignment<a class="headerlink" href="#bug-bug-fixes-twisted_rightwards_arrows-pr-alignment" title="Permanent link">&para;</a></h3>
 <ul>
