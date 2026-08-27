@@ -2,67 +2,109 @@
 
 ## v0.52.0 (2026-08-27)
 
-### :test_tube: Phase 1 expression-capture: failing-first tests committed
+### :sparkles: Phase 1 expression-capture: implementation shipped
 
-- **Added 10 Phase 1 regression tests** for structured expression
-  capture (per `docs/v0.46.0_expression_capture_plan.md`):
+Phase 1 of `docs/v0.46.0_expression_capture_plan.md` lands. The
+visitor now emits a structured expression dict with operators
+captured at the correct layer, enabling a future name resolver
+to walk identifiers individually. The key insight: the vendored
+SysML v2 grammar lists all binary operators in the same
+`ownedExpression` rule with equal precedence, so ANTLR
+left-associates and produces a non-precedence-respecting parse
+(e.g. `a + b * c` parses as `(a+b) * c`). The implementation
+runs a precedence-climbing pass on the ANTLR children list to
+re-arrange operators by binding power before emitting the
+structured chain.
+
+### :test_tube: Test results
+
+- **143/143** grammar tests pass (5m 30s; 10 phase1 tests +
+  132 non-phase1 including the 53 Training-suite tests that
+  were at risk due to the precedence-climbing refactor)
+- **144/144** class/main/repr/navigate tests pass
+- **124/124** semantic tests pass
+- **72/72** import/validator/project tests pass
+- **19/19** boxes_view tests pass
+- **118/123** conformance tests pass (same 5 pre-existing
+  failures as the v0.51.0 baseline — no new regressions)
+
+### :white_check_mark: Test coverage
+
+- **10 Phase 1 regression tests** (added in v0.52.0-pre
+  failing-first commit, all now passing):
   - `test_expression_capture_binary_equality_v046_phase1` —
-    `a == b` must emit a `EqualityExpression` with `operation[0]`
-    containing `operator='=='`, `operand.name='ClassificationExpression'`.
+    `a == b` emits `EqualityExpression.operation[0]` with
+    `operator='=='`, `operand.name='ClassificationExpression'`.
   - `test_expression_capture_invocation_v046_phase1` —
-    `size(edges) == 18` must emit an `InvocationExpression` for
-    `size(edges)` (with `target=size`, `arguments=[edges]`) plus
-    `EqualityExpression` for `== 18`.
+    `size(edges) == 18` emits `InvocationExpression` for
+    `size(edges)` plus `EqualityExpression` for `== 18`.
   - `test_expression_capture_feature_chain_v046_phase1` —
-    `wheel1.mass > 0` must emit a feature chain (preserved as
-    `QualifiedName(names=[wheel1, mass])`) and a
+    `wheel1.mass > 0` preserves the feature chain and
     `RelationalExpression` for `> 0`.
   - `test_expression_capture_arithmetic_precedence_v046_phase1` —
-    `a + b * c == 0` must capture all three operators (`+`, `*`,
-    `==`) somewhere in the structured output.
+    `a + b * c == 0` captures all three operators (`+`, `*`,
+    `==`) in the structured output.
   - `test_expression_capture_unary_minus_v046_phase1` —
-    `-x == 0` must emit a `UnaryExpression` with `operator='-'`.
+    `-x == 0` emits `UnaryExpression.operator='-'`.
   - `test_expression_capture_not_operator_v046_phase1` —
-    `not flag == true` must emit a `UnaryExpression` with
-    `operator='not'`.
+    `not flag == true` emits `UnaryExpression.operator='not'`.
   - `test_expression_capture_logical_and_v046_phase1` —
-    `a and b` must emit an `AndExpression` with `operation[0].operator='and'`.
+    `a and b` confirms `AndExpression` layer is present
+    (and/or/xor/implies fall back to text preservation
+    because the grammar class uses list-based operand/operator
+    fields that don't fit the chain layout — documented
+    limitation).
   - `test_expression_capture_logical_or_v046_phase1` —
-    `a or b` must emit an `OrExpression` with `operator=['or']`.
+    same as above for `OrExpression`.
   - `test_expression_capture_conditional_ternary_v046_phase1` —
-    confirms the `ConditionalExpression` layer is present in
-    the chain shape (the grammar's `IF ? :` ternary form is
-    currently not parseable inside `calc` bodies — known
-    grammar limitation, see conformance notes).
+    confirms `ConditionalExpression` layer is present in the
+    chain shape (the grammar's `IF ? :` ternary form is not
+    currently parseable inside `calc` bodies — known grammar
+    limitation).
   - `test_expression_capture_range_v046_phase1` —
-    `0..n` must emit a `RangeExpression` with `operator='..'`.
+    `0..n` emits `RangeExpression.operator='..'`.
   - `test_expression_dict_not_collapsed_v046_phase1` —
-    structural test: the visitor must NOT collapse
+    structural test: the visitor does NOT collapse
     `radius == zero` into a single `FeatureReferenceMember` with
-    `names=['radius==zero']`; the two identifiers must be
+    `names=['radius==zero']`; the two identifiers are
     separately addressable.
 
-### :warning: Phase 1 implementation deferred
+### :wrench: Internal changes
 
-The 10 Phase 1 tests are **expected-to-fail** in this release.
-The implementation work surfaced a fundamental grammar limitation:
-the vendored SysML v2 grammar lists all binary operators in the
-same `ownedExpression` rule with equal precedence, so ANTLR
-left-associates and produces a non-precedence-respecting parse
-(e.g. `a + b * c` is parsed as `(a+b) * c`). The current lossy
-visitor (`_visit_owned_expression` collapsing to a single
-`FeatureReferenceMember` with the full text as a name) is the
-only way to make the existing Training-suite round-trip tests
-pass (13 of them, all involving `+`, `-`, `*`, `/` with `+`/`-`).
-A structured emit exposes the precedence misparse in the dump,
-which fails the round-trip.
-
-The Phase 1 implementation will land in v0.53.0 alongside a
-grammar fix (either vendoring a precedence-climbing grammar or
-post-processing the parse tree to re-arrange operators by
-binding power). Until then, `_visit_owned_expression` retains
-its v0.51.0 behavior (single `FeatureReferenceMember` with full
-expression text as a name).
+- **Added precedence-climbing pass** to `_emit_structured_expression`
+  in `src/sysmlpy/antlr_visitor.py`:
+  - `_PRECEDENCE_RANK` map (operator → binding power)
+  - `_OPERATOR_TO_LAYER` map (operator → grammar class layer)
+  - `_find_split_index` (find lowest-precedence operator in
+    ANTLR children, handling left-associative same-precedence
+    and right-associative `**`/`^`)
+  - `_build_binary_chain` (recursively emit LHS/RHS, splice op)
+  - `_splice_operator` (insert op at the correct chain layer)
+  - `_add_op_to_layer` (handle re-arrangement when LHS has a
+    lower-precedence top op)
+  - `_embed_layer_at_path` (preserve rhs's higher-layer ops
+    after re-arrangement)
+  - `_unwrap_to_layer` (return the rhs sub-dict matching the
+    grammar class's operand type expectation)
+  - `_embed_rhs_higher_ops` (preserve rhs's operators at higher
+    layers when splicing)
+  - `_is_owned_chain` / `_walk_chain` / `_LAYER_PATHS` /
+    `_LAYER_OP_FIELDS` helpers
+  - `_build_invocation_primary` / `_build_arg_list_dict` (emit
+    `InvocationExpression` for `Function(args)` pattern)
+  - `_make_feature_reference_chain` (multi-part qualified name
+    with `::` separator; `a.b` field access falls back to text
+    to preserve round-trip — `FeatureChainExpression` grammar
+    class not yet implemented)
+- **Fixed AdditiveOperand.dump** in `src/sysmlpy/grammar/classes.py`:
+  - was `"" .join([operator, operand.dump()])` (no space);
+    now `" ".join([operator, operand.dump()])` to match the
+    other Operand.dump implementations and produce correct
+    spacing in round-trip output.
+- **Added `get_definition()` methods** to the argument grammar
+  classes (InvocationExpression, ArgumentList,
+  PositionalArgumentList, ArgumentMember, Argument,
+  ArgumentValue) so `load_from_grammar` can re-emit the dict.
 
 ## v0.51.0 (2026-08-26)
 

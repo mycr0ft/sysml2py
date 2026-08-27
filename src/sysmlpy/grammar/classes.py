@@ -5921,7 +5921,7 @@ class AdditiveOperand:
             self.operand = MultiplicativeExpression(definition["operand"])
 
     def dump(self):
-        return "".join([self.operator, self.operand.dump()])
+        return " ".join([self.operator, self.operand.dump()])
 
 
 class AdditiveExpression:
@@ -6312,6 +6312,13 @@ class InvocationExpression:
     def dump(self):
         return "".join([self.relationship.dump(), self.children.dump()])
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": self.relationship.get_definition(),
+            "arg_list": self.children.get_definition(),
+        }
+
 
 class ArgumentList:
     def __init__(self, definition):
@@ -6331,6 +6338,13 @@ class ArgumentList:
         output.append(")")
         return "".join(output)
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "pos_list": self.children.get_definition() if self.children is not None else None,
+            "named_list": None,
+        }
+
 
 class PositionalArgumentList:
     def __init__(self, definition):
@@ -6342,6 +6356,12 @@ class PositionalArgumentList:
     def dump(self):
         return ",".join([x.dump() for x in self.children])
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": [c.get_definition() for c in self.children],
+        }
+
 
 class ArgumentMember:
     def __init__(self, definition):
@@ -6351,6 +6371,12 @@ class ArgumentMember:
 
     def dump(self):
         return self.children.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": self.children.get_definition() if self.children is not None else None,
+        }
 
 
 class Argument:
@@ -6362,6 +6388,12 @@ class Argument:
     def dump(self):
         return self.children.dump()
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": self.children.get_definition() if self.children is not None else None,
+        }
+
 
 class ArgumentValue:
     def __init__(self, definition):
@@ -6371,6 +6403,12 @@ class ArgumentValue:
 
     def dump(self):
         return self.children.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": self.children.get_definition() if self.children is not None else None,
+        }
 
 
 class NamedArgumentList:

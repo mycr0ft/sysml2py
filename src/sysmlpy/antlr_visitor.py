@@ -10662,6 +10662,910 @@ def _make_succession_as_usage_dict(ctx):
     }
 
 
+# Phase 1: precedence-climbing expression capture
+# -----------------------------------------------
+# The vendored SysML v2 grammar lists all binary operators in the same
+# ``ownedExpression`` rule with equal precedence, so ANTLR left-associates
+# and produces a non-precedence-respecting parse (e.g. ``a + b * c`` is
+# parsed as ``(a+b) * c``). To recover the correct precedence, we run
+# our own precedence-climbing pass on the ANTLR children list and
+# build the structured chain from the resulting tree.
+#
+# Precedence ranks: HIGHER number = binds TIGHTER. The lowest-rank
+# operator in the children list is the one that should be the top of
+# the tree. For left-associative operators at the same rank, we pick
+# the RIGHTMOST one (so ``a - b - c`` becomes ``(a-b) - c``).
+# Exponentiation (``**``/``^``) is right-associative per the grammar.
+
+_PRECEDENCE_RANK = {
+    # Logical (lowest binding)
+    "implies": 1,
+    "or": 2,
+    "xor": 3,
+    "and": 4,
+    # Equality / classification
+    "==": 5, "!=": 5, "===": 5, "!==": 5,
+    "istype": 5, "hastype": 5,
+    # Relational
+    "<": 6, ">": 6, "<=": 6, ">=": 6,
+    # Range
+    "..": 7,
+    # Additive
+    "+": 8, "-": 8,
+    # Multiplicative
+    "*": 9, "/": 9, "%": 9,
+    # Exponentiation (right-associative)
+    "**": 10, "^": 10,
+}
+
+# Operator → grammar-class layer name. The chain has parallel layers
+# for each of these; the operator populates the layer's operator/operation
+# field and the rhs is unwrapped to the next-lower layer.
+_OPERATOR_TO_LAYER = {
+    "implies": "ImpliesExpression",
+    "or": "OrExpression",
+    "xor": "XorExpression",
+    "and": "AndExpression",
+    "==": "EqualityExpression",
+    "!=": "EqualityExpression",
+    "===": "EqualityExpression",
+    "!==": "EqualityExpression",
+    "istype": "EqualityExpression",
+    "hastype": "EqualityExpression",
+    "<": "RelationalExpression",
+    ">": "RelationalExpression",
+    "<=": "RelationalExpression",
+    ">=": "RelationalExpression",
+    "..": "RangeExpression",
+    "+": "AdditiveExpression",
+    "-": "AdditiveExpression",
+    "*": "MultiplicativeExpression",
+    "/": "MultiplicativeExpression",
+    "%": "MultiplicativeExpression",
+    "**": "ExponentiationExpression",
+    "^": "ExponentiationExpression",
+}
+
+# Tokens that are field access (DOT, DOT_QUESTION, ARROW, QUESTION
+# inside an ownedExpression for member access) — NOT binary operators.
+# They belong to the base expression's qualifiedName rule.
+_FIELD_ACCESS_TOKENS = {".", "?.", "->", "?"}
+# QUESTION used for ternary IF ? : is a separator, not a binary op.
+# The ternary is handled separately in the IF/THEN/ELSE branch.
+
+# Tokens that are part of unary prefix forms: +, -, ~, not
+_UNARY_PREFIX_TOKENS = {"+", "-", "~", "not"}
+
+
+def _is_binary_operator_token(text):
+    """True if the token text is a recognized binary operator."""
+    return text in _PRECEDENCE_RANK
+
+
+def _is_unary_prefix_token(text):
+    """True if the token text is a recognized unary prefix operator."""
+    return text in _UNARY_PREFIX_TOKENS
+
+
+def _find_split_index(children, left_assoc=True):
+    """Find the index of the operator that should be the TOP of the tree.
+
+    Walks ``children`` (the ANTLR children list of an ownedExpression
+    context, alternating OwnedExpr/TerminalNode) and finds the operator
+    with the LOWEST precedence rank. For left-associative operators
+    at the same rank, returns the RIGHTMOST index (so ``a - b - c``
+    becomes ``(a - b) - c``). For right-associative (``**``/``^``),
+    returns the LEFTMOST index.
+
+    Returns (op_index, op_text) or (None, None) if no binary operator
+    is found.
+    """
+    best_idx = None
+    best_text = None
+    best_rank = None
+    for i, c in enumerate(children):
+        type_name = type(c).__name__
+        if type_name != "TerminalNodeImpl":
+            continue
+        text = c.getText().strip()
+        if text in _FIELD_ACCESS_TOKENS:
+            continue
+        if not _is_binary_operator_token(text):
+            continue
+        rank = _PRECEDENCE_RANK[text]
+        right_assoc = text in ("**", "^")
+        if best_idx is None:
+            best_idx, best_text, best_rank = i, text, rank
+            continue
+        if rank < best_rank:
+            # Lower precedence → becomes the new top
+            best_idx, best_text, best_rank = i, text, rank
+        elif rank == best_rank:
+            # Same precedence: prefer the rightmost for left-assoc,
+            # leftmost for right-assoc
+            if right_assoc:
+                if i < best_idx:
+                    best_idx, best_text = i, text
+            else:
+                if i > best_idx:
+                    best_idx, best_text = i, text
+    return best_idx, best_text
+
+
+def _build_binary_chain(op_text, lhs_owned_ctx, rhs_owned_ctx):
+    """Build a chain for ``lhs OP rhs`` by recursing on each side and
+    splicing the operator at the right layer.
+
+    The lhs and rhs are ANTLR ownedExpression contexts. We recursively
+    emit each, then splice ``op_text`` at the layer corresponding to
+    its precedence. The result is a single OwnedExpression chain
+    with the operator populated at the right layer.
+    """
+    lhs_chain = _emit_structured_expression(lhs_owned_ctx)
+    rhs_chain = _emit_structured_expression(rhs_owned_ctx)
+    return _splice_operator(lhs_chain, _OPERATOR_TO_LAYER[op_text], op_text, rhs_chain)
+
+
+def _splice_operator(lhs_chain, layer_name, op_text, rhs_chain):
+    """Splice ``op_text`` at ``layer_name`` into ``lhs_chain`` with
+    ``rhs_chain`` as the rhs operand.
+
+    The lhs_chain is the result of recursing on the LHS. The rhs_chain
+    is the result of recursing on the RHS. The lhs chain has the
+    natural chain shape; the rhs chain is unwrapped to the layer
+    BELOW the splicing layer (per the grammar-class contract — e.g.
+    EqualityOperand.operand expects a ClassificationExpression).
+
+    If the rhs chain has operators at layers ABOVE the splicing layer
+    (lower binding power), those operators are PRESERVED by embedding
+    the rhs's higher-layer data into the lhs chain at the rhs's
+    top-op layer. This handles cases like ``a * b + c`` where ANTLR
+    produces ``(a*b) + c`` (the top is ``+``) but the rhs's
+    multiplicative layer is empty.
+    """
+    if not _is_owned_chain(lhs_chain):
+        lhs_chain = _wrap_expression_layers(lhs_chain)
+    if not _is_owned_chain(rhs_chain):
+        rhs_chain = _wrap_expression_layers(rhs_chain)
+    rhs_unwrapped = _unwrap_to_layer(rhs_chain, layer_name)
+    # Embed any higher-layer operators from rhs into the lhs chain
+    _embed_rhs_higher_ops(lhs_chain, rhs_chain, layer_name)
+
+    layer_paths = {
+        "EqualityExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality"],
+        "RelationalExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational"],
+        "RangeExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range"],
+        "AdditiveExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range", "additive"],
+        "MultiplicativeExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range", "additive", "multiplicitive"],
+        "ExponentiationExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range", "additive", "multiplicitive", "exponential"],
+        "AndExpression": ["expression", "operand", 0, "implies", "or", "xor", "and"],
+        "OrExpression": ["expression", "operand", 0, "implies", "or"],
+        "XorExpression": ["expression", "operand", 0, "implies", "or", "xor"],
+        "ImpliesExpression": ["expression", "operand", 0, "implies"],
+    }
+    path = layer_paths[layer_name]
+    node = lhs_chain
+    for step in path:
+        if isinstance(step, int):
+            node = node[step]
+        else:
+            node = node[step]
+
+    if layer_name == "EqualityExpression":
+        existing = node.get("operation", [])
+        node["operation"] = existing + [
+            {"name": "EqualityOperand", "operator": op_text, "operand": rhs_unwrapped}
+        ]
+    elif layer_name == "RelationalExpression":
+        existing = node.get("operation", [])
+        node["operation"] = existing + [
+            {"name": "RelationalOperand", "operator": op_text, "operand": rhs_unwrapped}
+        ]
+    elif layer_name == "RangeExpression":
+        node["operand"] = rhs_unwrapped
+        node["operator"] = op_text
+    elif layer_name == "AdditiveExpression":
+        existing = node.get("operation", [])
+        node["operation"] = existing + [
+            {"name": "AdditiveOperand", "operator": op_text, "operand": rhs_unwrapped}
+        ]
+    elif layer_name == "MultiplicativeExpression":
+        existing = node.get("operation", [])
+        node["operation"] = existing + [
+            {"name": "MultiplicativeOperand", "operator": op_text, "operand": rhs_unwrapped}
+        ]
+    elif layer_name == "ExponentiationExpression":
+        existing = node.get("operator", [])
+        if not isinstance(existing, list):
+            existing = [existing] if existing else []
+        existing.append(op_text)
+        node["operator"] = existing
+        existing_op = node.get("operand", [])
+        if not isinstance(existing_op, list):
+            existing_op = [existing_op] if existing_op else []
+        existing_op.append(rhs_unwrapped)
+        node["operand"] = existing_op
+    elif layer_name == "AndExpression":
+        existing = node.get("operation", [])
+        node["operation"] = existing + [
+            {"name": "AndOperand", "operator": op_text, "operand": rhs_unwrapped}
+        ]
+    elif layer_name == "OrExpression":
+        existing = node.get("operator", [])
+        if not isinstance(existing, list):
+            existing = [existing] if existing else []
+        existing.append(op_text)
+        node["operator"] = existing
+        existing_op = node.get("operand", [])
+        if not isinstance(existing_op, list):
+            existing_op = [existing_op] if existing_op else []
+        existing_op.append(rhs_unwrapped)
+        node["operand"] = existing_op
+    elif layer_name == "XorExpression":
+        existing = node.get("operator", [])
+        if not isinstance(existing, list):
+            existing = [existing] if existing else []
+        existing.append(op_text)
+        node["operator"] = existing
+        existing_op = node.get("operand", [])
+        if not isinstance(existing_op, list):
+            existing_op = [existing_op] if existing_op else []
+        existing_op.append(rhs_unwrapped)
+        node["operand"] = existing_op
+    elif layer_name == "ImpliesExpression":
+        existing = node.get("operator", [])
+        if not isinstance(existing, list):
+            existing = [existing] if existing else []
+        existing.append(op_text)
+        node["operator"] = existing
+        existing_op = node.get("operand", [])
+        if not isinstance(existing_op, list):
+            existing_op = [existing_op] if existing_op else []
+        existing_op.append(rhs_unwrapped)
+        node["operand"] = existing_op
+    return lhs_chain
+
+
+def _is_owned_chain(d):
+    """True if d is a full OwnedExpression chain dict."""
+    return isinstance(d, dict) and d.get("name") == "OwnedExpression"
+
+
+def _walk_chain(root, path):
+    """Walk a chain dict following a path of keys/indices. Returns the
+    node at the end of the path, or None if the path doesn't exist."""
+    node = root
+    for step in path:
+        if node is None:
+            return None
+        if isinstance(step, int):
+            if step >= len(node):
+                return None
+            node = node[step]
+        else:
+            if not isinstance(node, dict):
+                return None
+            node = node.get(step)
+    return node
+
+
+def _rhs_top_op_layer(rhs_chain):
+    """Find the highest (lowest binding power) layer in an rhs chain
+    that has an operator populated. Returns the layer name or None.
+    """
+    if not _is_owned_chain(rhs_chain):
+        return None
+    paths = [
+        ("ConditionalExpression", ["expression"]),
+        ("NullCoalescingExpression", ["expression", "operand", 0]),
+        ("ImpliesExpression", ["expression", "operand", 0, "implies"]),
+        ("OrExpression", ["expression", "operand", 0, "implies", "or"]),
+        ("XorExpression", ["expression", "operand", 0, "implies", "or", "xor"]),
+        ("AndExpression", ["expression", "operand", 0, "implies", "or", "xor", "and"]),
+        ("EqualityExpression", ["expression", "operand", 0, "implies", "or", "xor", "and", "equality"]),
+        ("RelationalExpression", ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational"]),
+        ("RangeExpression", ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range"]),
+        ("AdditiveExpression", ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range", "additive"]),
+        ("MultiplicativeExpression", ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range", "additive", "multiplicitive"]),
+    ]
+    for layer, path in paths:
+        node = _walk_chain(rhs_chain, path)
+        if not isinstance(node, dict):
+            continue
+        # Each layer has a different operator-bearing field:
+        # - ConditionalExpression: operator (list) + operand (list of NullCoalescing)
+        # - NullCoalescingExpression: operator (list)
+        # - ImpliesExpression: operator (list)
+        # - OrExpression: operator (list)
+        # - XorExpression: operator (list)
+        # - AndExpression: operation (list)
+        # - EqualityExpression: operation (list)
+        # - RelationalExpression: operation (list)
+        # - RangeExpression: operator (str) + operand (dict or None)
+        # - AdditiveExpression: operation (list)
+        # - MultiplicativeExpression: operation (list)
+        op_field = node.get("operation")
+        if op_field:
+            return layer
+        op_str = node.get("operator")
+        if op_str and (isinstance(op_str, list) and op_str) or (isinstance(op_str, str) and op_str):
+            return layer
+    return None
+
+
+def _embed_rhs_higher_ops(lhs_chain, rhs_chain, splicing_layer):
+    """If the rhs chain has operators at a HIGHER layer (lower binding
+    power) than ``splicing_layer``, embed those operators into the
+    lhs chain so they aren't lost. This handles cases like
+    ``a + b * c`` where the parse would otherwise hide one of the
+    operators.
+    """
+    top = _rhs_top_op_layer(rhs_chain)
+    if top is None:
+        return
+    top_rank = _PRECEDENCE_RANK.get(_LAYER_TO_OPERATORS.get(top, [None])[0], 0) if _LAYER_TO_OPERATORS.get(top) else 0
+    splicing_rank = _PRECEDENCE_RANK.get(_LAYER_TO_OPERATORS.get(splicing_layer, [None])[0], 0) if _LAYER_TO_OPERATORS.get(splicing_layer) else 0
+    if top_rank >= splicing_rank:
+        return
+    # Embed: copy the rhs's top-op layer's operator/operation data into
+    # the lhs chain at the same layer.
+    paths = {
+        "ConditionalExpression": ["expression"],
+        "NullCoalescingExpression": ["expression", "operand", 0],
+        "ImpliesExpression": ["expression", "operand", 0, "implies"],
+        "OrExpression": ["expression", "operand", 0, "implies", "or"],
+        "XorExpression": ["expression", "operand", 0, "implies", "or", "xor"],
+        "AndExpression": ["expression", "operand", 0, "implies", "or", "xor", "and"],
+        "EqualityExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality"],
+        "RelationalExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational"],
+        "RangeExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range"],
+        "AdditiveExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range", "additive"],
+        "MultiplicativeExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range", "additive", "multiplicitive"],
+    }
+    path = paths.get(top)
+    if not path:
+        return
+    lhs_node = _walk_chain(lhs_chain, path)
+    rhs_node = _walk_chain(rhs_chain, path)
+    if not isinstance(lhs_node, dict) or not isinstance(rhs_node, dict):
+        return
+    # Copy operator-bearing fields only; don't overwrite sub-structure
+    for k in ("operation", "operator", "operand"):
+        if k in rhs_node:
+            lhs_node[k] = rhs_node[k]
+
+
+# Reverse map: layer name → one of its operators (for rank lookup)
+_LAYER_TO_OPERATORS = {}
+for _op, _layer in _OPERATOR_TO_LAYER.items():
+    _LAYER_TO_OPERATORS.setdefault(_layer, []).append(_op)
+
+
+def _unwrap_to_layer(rhs_chain, layer_name):
+    """Walk an rhs OwnedExpression chain down to the sub-layer that
+    matches the grammar class's operand expectation for ``layer_name``.
+    E.g. for EqualityExpression the operand should be a
+    ClassificationExpression dict; for AdditiveExpression it should
+    be a MultiplicativeExpression dict.
+    """
+    if not _is_owned_chain(rhs_chain):
+        return rhs_chain
+    paths = {
+        "EqualityExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification"],
+        "RelationalExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range"],
+        "RangeExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range", "additive"],
+        "AdditiveExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range", "additive", "multiplicitive"],
+        "MultiplicativeExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range", "additive", "multiplicitive", "exponential"],
+        "ExponentiationExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range", "additive", "multiplicitive", "exponential", "unary"],
+    }
+    path = paths.get(layer_name)
+    if path is None:
+        # For higher layers, return the chain at the layer BELOW the
+        # current one (matching the grammar-class operand expectation).
+        if layer_name in ("AndExpression",):
+            path = ["expression", "operand", 0, "implies", "or", "xor", "and", "equality"]
+        elif layer_name == "OrExpression":
+            path = ["expression", "operand", 0, "implies", "or", "xor", "and"]
+        elif layer_name == "XorExpression":
+            path = ["expression", "operand", 0, "implies", "or"]
+        elif layer_name == "ImpliesExpression":
+            path = ["expression", "operand", 0]
+            path = ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range", "additive"]
+    return _walk_chain(rhs_chain, path)
+
+
+def _emit_structured_expression(oe_ctx):
+    """Recursively emit a structured OwnedExpression dict for an ANTLR
+    ownedExpression context, using precedence-climbing to recover the
+    correct operator order.
+
+    The vendored grammar uses left-associative same-precedence for all
+    binary operators, so the ANTLR parse tree is NOT a correct precedence
+    tree. We re-arrange operators by descending into the LHS sub-expression
+    and checking if it has a lower-precedence operator at its top — if so,
+    the LHS's operator is the actual top, and the current operator moves
+    into the LHS's RHS.
+
+    Returns a full OwnedExpression chain dict.
+    """
+    if oe_ctx is None:
+        return None
+
+    children = list(oe_ctx.getChildren()) if hasattr(oe_ctx, "getChildren") else []
+    if not children:
+        return None
+
+    # Unary prefix form: first child is a terminal (op), rest is the operand
+    if len(children) >= 2:
+        first = children[0]
+        if type(first).__name__ == "TerminalNodeImpl":
+            text = first.getText().strip()
+            if _is_unary_prefix_token(text):
+                operand_chain = _emit_structured_expression(children[1])
+                return _splice_unary(operand_chain, text)
+
+    # Find the top-level operator in this OE's children
+    op_idx, op_text = _find_split_index(children)
+    if op_idx is None:
+        # No binary operator — but check for field-access dot suffix
+        # (a.b pattern: [OwnedExpr, DOT, QualifiedName])
+        if len(children) == 3 and type(children[1]).__name__ == "TerminalNodeImpl" \
+                and children[1].getText().strip() == "." \
+                and type(children[2]).__name__ == "QualifiedNameContext":
+            # Field access: emit as a single FeatureReferenceExpression
+            # with the full text. The grammar class lacks a
+            # FeatureChainExpression, so we fall back to text to
+            # preserve round-trip.
+            return _fallback_to_text(oe_ctx)
+        # No binary operator — it's a base expression
+        return _emit_base_expression(oe_ctx)
+
+    # Logical operators (and/or/xor/implies/? ?) at the top level:
+    # the grammar classes use list-based operand/operator fields which
+    # don't fit the chain layout. Fall back to text preservation.
+    if op_text in ("and", "or", "xor", "implies", "and_op"):
+        return _fallback_to_text(oe_ctx)
+
+    # Split LHS and RHS at the top-level op
+    lhs_children = children[:op_idx]
+    rhs_children = children[op_idx + 1:]
+    if len(lhs_children) != 1 or len(rhs_children) != 1:
+        return _fallback_to_text(oe_ctx)
+    lhs_ctx = lhs_children[0]
+    rhs_ctx = rhs_children[0]
+    if type(lhs_ctx).__name__ != "OwnedExpressionContext" or type(rhs_ctx).__name__ != "OwnedExpressionContext":
+        return _fallback_to_text(oe_ctx)
+
+    # Recurse on the LHS first
+    lhs_chain = _emit_structured_expression(lhs_ctx)
+    if lhs_chain is None:
+        return _fallback_to_text(oe_ctx)
+
+    # Check if the LHS chain has a top operator with LOWER precedence
+    # than the current op. If so, the LHS's top is the actual top, and
+    # the current op moves into the LHS's RHS (as an additional sub-op).
+    lhs_top_layer = _rhs_top_op_layer(lhs_chain)
+    if lhs_top_layer is not None:
+        lhs_top_rank = _layer_rank(lhs_top_layer)
+        current_rank = _PRECEDENCE_RANK.get(op_text, 0)
+        if lhs_top_rank < current_rank:
+            # Re-arrange: the LHS chain becomes the new outer, and the
+            # current op is added to the LHS's top op's RHS sub-dict.
+            lhs_top_op = _get_top_op_text(lhs_chain)
+            lhs_top_rhs = _get_top_op_rhs_chain(lhs_chain)
+            if lhs_top_rhs is not None and isinstance(lhs_top_rhs, dict):
+                # Find the layer for the current op
+                current_layer = _OPERATOR_TO_LAYER.get(op_text)
+                if current_layer is not None:
+                    # Add the current op to the LHS's top op's RHS
+                    _add_op_to_layer(lhs_top_rhs, current_layer, op_text, rhs_ctx)
+                    # Also embed any higher-layer operators from the
+                    # rhs_ctx into the lhs chain (e.g., `==` from `c==0`)
+                    rhs_chain_for_embed = _emit_structured_expression(rhs_ctx)
+                    if rhs_chain_for_embed is not None and _is_owned_chain(rhs_chain_for_embed):
+                        # Find the top op layer in the rhs and embed it
+                        rhs_top = _rhs_top_op_layer(rhs_chain_for_embed)
+                        if rhs_top is not None and _layer_rank(rhs_top) < _layer_rank(current_layer):
+                            _embed_layer_at_path(lhs_chain, rhs_chain_for_embed, rhs_top)
+                    return lhs_chain
+            # Fallback: try the old approach
+            return _build_binary_chain(op_text, lhs_ctx, rhs_ctx)
+
+    # Normal case: current op is the top
+    return _build_binary_chain(op_text, lhs_ctx, rhs_ctx)
+
+
+def _layer_rank(layer_name):
+    """Return the precedence rank of a layer (using one of its operators)."""
+    ops = _LAYER_TO_OPERATORS.get(layer_name, [])
+    if not ops:
+        return -1
+    return _PRECEDENCE_RANK.get(ops[0], -1)
+
+
+def _get_top_op_text(chain):
+    """Return the operator text at the top op layer of a chain, or None."""
+    top = _rhs_top_op_layer(chain)
+    if top is None:
+        return None
+    path = _LAYER_PATHS.get(top)
+    if not path:
+        return None
+    node = _walk_chain(chain, path)
+    if not isinstance(node, dict):
+        return None
+    op_field = _LAYER_OP_FIELDS.get(top)
+    if op_field == "operation":
+        ops = node.get("operation", [])
+        if ops:
+            return ops[0].get("operator")
+    elif op_field == "operator":
+        op_val = node.get("operator")
+        if isinstance(op_val, list) and op_val:
+            return op_val[0]
+        if isinstance(op_val, str) and op_val:
+            return op_val
+    return None
+
+
+def _get_top_op_rhs_chain(chain):
+    """Return the rhs chain at the top op layer of a chain, or None."""
+    top = _rhs_top_op_layer(chain)
+    if top is None:
+        return None
+    path = _LAYER_PATHS.get(top)
+    if not path:
+        return None
+    node = _walk_chain(chain, path)
+    if not isinstance(node, dict):
+        return None
+    op_field = _LAYER_OP_FIELDS.get(top)
+    if op_field == "operation":
+        ops = node.get("operation", [])
+        if ops:
+            return ops[0].get("operand")
+    elif op_field == "operator":
+        op_val = node.get("operand")
+        if isinstance(op_val, list) and op_val:
+            return op_val[0]
+        if isinstance(op_val, dict):
+            return op_val
+    return None
+
+
+def _add_op_to_layer(sub_dict, layer_name, op_text, rhs_ctx):
+    """Add the operator ``op_text`` at the layer ``layer_name`` inside
+    ``sub_dict``. The rhs_ctx is an ANTLR context that will be emitted
+    as a chain to serve as the operator's rhs operand.
+
+    This is used when re-arranging operators: the current op is added
+    to an existing sub-dict that already contains the LHS data.
+    """
+    # The sub_dict is a layer dict (e.g., MultiplicativeExpression for
+    # an additive's operand). We need to add the current op at the
+    # matching layer inside it. For most cases, the current op's layer
+    # IS the sub_dict's layer, so we just set the operation field.
+    sub_layer = sub_dict.get("name", "")
+    if sub_layer == layer_name:
+        # The sub_dict IS the layer we want. Add the op.
+        rhs_chain = _emit_structured_expression(rhs_ctx)
+        if not _is_owned_chain(rhs_chain):
+            rhs_chain = _wrap_expression_layers(rhs_chain)
+        rhs_unwrapped = _unwrap_to_layer(rhs_chain, layer_name)
+        op_field = _LAYER_OP_FIELDS.get(layer_name, "operation")
+        if op_field == "operation":
+            existing = sub_dict.get("operation", [])
+            new_op = _make_op_dict(layer_name, op_text, rhs_unwrapped)
+            sub_dict["operation"] = existing + [new_op]
+        elif op_field == "operator":
+            existing = sub_dict.get("operator", [])
+            if not isinstance(existing, list):
+                existing = [existing] if existing else []
+            existing.append(op_text)
+            sub_dict["operator"] = existing
+            existing_op = sub_dict.get("operand", [])
+            if not isinstance(existing_op, list):
+                existing_op = [existing_op] if existing_op else []
+            existing_op.append(rhs_unwrapped)
+            sub_dict["operand"] = existing_op
+        return
+    # Otherwise, recurse into the sub-dict's child layer
+    # (e.g., for MultiplicativeExpression, the child layer is exponential)
+    child_paths = {
+        "MultiplicativeExpression": ["exponential"],
+        "AdditiveExpression": ["multiplicitive"],
+        "ExponentiationExpression": ["unary"],
+        "UnaryExpression": ["extent"],
+        "ExtentExpression": ["primary"],
+        "PrimaryExpression": ["base"],
+    }
+    path = child_paths.get(sub_layer, [])
+    if not path:
+        return
+    child = sub_dict
+    for step in path:
+        if isinstance(child, dict):
+            child = child.get(step)
+        else:
+            return
+    if isinstance(child, dict):
+        _add_op_to_layer(child, layer_name, op_text, rhs_ctx)
+
+
+def _make_op_dict(layer_name, op_text, operand_dict):
+    """Build an operand dict for a given layer."""
+    if layer_name in ("EqualityExpression",):
+        return {"name": "EqualityOperand", "operator": op_text, "operand": operand_dict}
+    if layer_name in ("RelationalExpression",):
+        return {"name": "RelationalOperand", "operator": op_text, "operand": operand_dict}
+    if layer_name in ("AdditiveExpression",):
+        return {"name": "AdditiveOperand", "operator": op_text, "operand": operand_dict}
+    if layer_name in ("MultiplicativeExpression",):
+        return {"name": "MultiplicativeOperand", "operator": op_text, "operand": operand_dict}
+    if layer_name in ("AndExpression",):
+        return {"name": "AndOperand", "operator": op_text, "operand": operand_dict}
+    if layer_name in ("RangeExpression", "ExponentiationExpression", "OrExpression", "XorExpression", "ImpliesExpression"):
+        return {"name": f"{layer_name.replace('Expression', '')}Operand", "operator": op_text, "operand": operand_dict}
+    return {"name": "Operand", "operator": op_text, "operand": operand_dict}
+
+
+def _embed_layer_at_path(lhs_chain, rhs_chain, layer_name):
+    """Copy the operator-bearing fields from ``rhs_chain`` at
+    ``layer_name`` into ``lhs_chain`` at the same layer."""
+    lhs_node = _walk_chain(lhs_chain, _LAYER_PATHS.get(layer_name, []))
+    rhs_node = _walk_chain(rhs_chain, _LAYER_PATHS.get(layer_name, []))
+    if not isinstance(lhs_node, dict) or not isinstance(rhs_node, dict):
+        return
+    op_field = _LAYER_OP_FIELDS.get(layer_name, "operation")
+    if op_field in rhs_node:
+        lhs_node[op_field] = rhs_node[op_field]
+
+
+_LAYER_PATHS = {
+    "ConditionalExpression": ["expression"],
+    "NullCoalescingExpression": ["expression", "operand", 0],
+    "ImpliesExpression": ["expression", "operand", 0, "implies"],
+    "OrExpression": ["expression", "operand", 0, "implies", "or"],
+    "XorExpression": ["expression", "operand", 0, "implies", "or", "xor"],
+    "AndExpression": ["expression", "operand", 0, "implies", "or", "xor", "and"],
+    "EqualityExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality"],
+    "RelationalExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational"],
+    "RangeExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range"],
+    "AdditiveExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range", "additive"],
+    "MultiplicativeExpression": ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range", "additive", "multiplicitive"],
+}
+
+
+def _fallback_to_text(oe_ctx):
+    """Fallback: preserve the original text as a single
+    FeatureReferenceMember (the v0.51.0 lossy behavior)."""
+    text = oe_ctx.getText() if hasattr(oe_ctx, "getText") else ""
+    return _wrap_expression_layers(_make_feature_reference_primary(text))
+
+
+def _emit_unary_chain(operand_chain, op_text):
+    """Populate the UnaryExpression layer of ``operand_chain`` with
+    the unary operator ``op_text`` and return the chain."""
+    if not _is_owned_chain(operand_chain):
+        operand_chain = _wrap_expression_layers(operand_chain)
+    unary_path = ["expression", "operand", 0, "implies", "or", "xor", "and", "equality", "classification", "relational", "range", "additive", "multiplicitive", "exponential", "unary"]
+    node = _walk_chain(operand_chain, unary_path)
+    if isinstance(node, dict):
+        node["operator"] = op_text
+    return operand_chain
+
+
+def _splice_unary(operand_chain, op_text):
+    """Build a chain with the unary operator applied. The unary operator
+    is at the UnaryExpression layer in the chain."""
+    return _emit_unary_chain(operand_chain, op_text)
+
+
+def _emit_base_expression(oe_ctx):
+    """Emit a base expression (no binary operators). This handles
+    literal values, feature references, invocations, and the
+    field-access chains (a.b.c)."""
+    # Try literal first
+    if hasattr(oe_ctx, "baseExpression") and oe_ctx.baseExpression():
+        be_ctx = oe_ctx.baseExpression()
+        text = be_ctx.getText().strip() if hasattr(be_ctx, "getText") else ""
+        # Literal?
+        if hasattr(be_ctx, "literalExpression") and be_ctx.literalExpression():
+            lit_ctx = be_ctx.literalExpression()
+            lit_text = lit_ctx.getText().strip() if hasattr(lit_ctx, "getText") else ""
+            try:
+                value = int(lit_text)
+                primary = _make_literal_integer_primary(value)
+                return _wrap_expression_layers(primary)
+            except ValueError:
+                pass
+            try:
+                value = float(lit_text)
+                primary = _make_literal_real_primary(value)
+                return _wrap_expression_layers(primary)
+            except ValueError:
+                pass
+            if lit_text.startswith('"') and lit_text.endswith('"'):
+                primary = _make_literal_string_primary(lit_text)
+                return _wrap_expression_layers(primary)
+        # Invocation: base has qualifiedName AND argumentList
+        has_args = hasattr(be_ctx, "argumentList") and be_ctx.argumentList()
+        if has_args and hasattr(be_ctx, "qualifiedName") and be_ctx.qualifiedName():
+            qn_ctx = be_ctx.qualifiedName()
+            names = _extract_qualified_name_parts(qn_ctx)
+            primary = _build_invocation_primary(names, be_ctx.argumentList())
+            return _wrap_expression_layers(primary)
+        # Feature reference (possibly with field access)
+        if hasattr(be_ctx, "qualifiedName") and be_ctx.qualifiedName():
+            # Extract qualified name parts
+            qn_ctx = be_ctx.qualifiedName()
+            names = _extract_qualified_name_parts(qn_ctx)
+            primary = _make_feature_reference_chain(names)
+            return _wrap_expression_layers(primary)
+    return _fallback_to_text(oe_ctx)
+
+
+def _build_invocation_primary(names, arg_list_ctx):
+    """Build a PrimaryExpression containing an InvocationExpression
+    (function call like Power(args))."""
+    return {
+        "name": "PrimaryExpression",
+        "operator": [],
+        "operand": [],
+        "base": {
+            "name": "BaseExpression",
+            "ownedRelationship": {
+                "name": "InvocationExpression",
+                "ownedRelationship": {
+                    "name": "OwnedFeatureTyping",
+                    "type": {
+                        "name": "FeatureType",
+                        "type": {
+                            "name": "QualifiedName",
+                            "names": names,
+                        },
+                        "ownedRelatedElement": [],
+                    },
+                },
+                "arg_list": _build_arg_list_dict(arg_list_ctx),
+            }
+        },
+        "ownedRelationship1": [],
+        "ownedRelationship2": []
+    }
+
+
+def _build_arg_list_dict(arg_list_ctx):
+    """Build an ArgumentList dict from an ANTLR argumentList context."""
+    if arg_list_ctx is None:
+        return {"name": "ArgumentList", "pos_list": None, "named_list": None}
+    # Walk children to find the PositionalArgumentList
+    pal = None
+    for c in (arg_list_ctx.getChildren() if hasattr(arg_list_ctx, "getChildren") else []):
+        if type(c).__name__ == "PositionalArgumentListContext":
+            pal = c
+            break
+    if pal is None:
+        return {"name": "ArgumentList", "pos_list": None, "named_list": None}
+    args = []
+    for am in (pal.getChildren() if hasattr(pal, "getChildren") else []):
+        if type(am).__name__ == "OwnedExpressionContext":
+            arg_text = am.getText() if hasattr(am, "getText") else ""
+            primary = {
+                "name": "PrimaryExpression",
+                "operator": [],
+                "operand": [],
+                "base": {
+                    "name": "BaseExpression",
+                    "ownedRelationship": {
+                        "name": "FeatureReferenceExpression",
+                        "ownedRelationship": [
+                            {
+                                "name": "FeatureReferenceMember",
+                                "memberElement": {
+                                    "name": "QualifiedName",
+                                    "names": [arg_text],
+                                }
+                            }
+                        ]
+                    }
+                },
+                "ownedRelationship1": [],
+                "ownedRelationship2": []
+            }
+            chain = _wrap_expression_layers(primary)
+            args.append({
+                "name": "ArgumentMember",
+                "ownedRelatedElement": {
+                    "name": "Argument",
+                    "ownedRelationship": {
+                        "name": "ArgumentValue",
+                        "ownedRelatedElement": chain,
+                    }
+                }
+            })
+    return {
+        "name": "ArgumentList",
+        "pos_list": {
+            "name": "PositionalArgumentList",
+            "ownedRelationship": args,
+        },
+        "named_list": None,
+    }
+
+
+def _extract_qualified_name_parts(qn_ctx):
+    """Extract the name parts from a qualifiedName ANTLR context."""
+    parts = []
+    if qn_ctx is None:
+        return parts
+    for c in (qn_ctx.getChildren() if hasattr(qn_ctx, "getChildren") else []):
+        tn = type(c).__name__
+        if tn == "NameContext":
+            text = c.getText().strip() if hasattr(c, "getText") else ""
+            if text:
+                parts.append(text)
+        elif tn == "TerminalNodeImpl":
+            text = c.getText().strip()
+            if text and text not in ("::",):
+                parts.append(text)
+    return parts
+
+
+def _make_feature_reference_chain(names):
+    """Build a PrimaryExpression containing a FeatureReferenceExpression
+    with the given qualified name parts. If multiple parts, they
+    represent a qualified name (a::b::c) or a feature chain (a.b.c).
+    The grammar class dumps qualified names with '::' separator and
+    the parts list is preserved.
+    """
+    if not names:
+        return _make_feature_reference_primary("")
+    if len(names) == 1:
+        return _make_feature_reference_primary(names[0])
+    # Multiple parts: use a QualifiedName with the parts list.
+    # The QualifiedName.dump() will join with '::' which matches
+    # the original qualified-name syntax.
+    return {
+        "name": "PrimaryExpression",
+        "operator": [],
+        "operand": [],
+        "base": {
+            "name": "BaseExpression",
+            "ownedRelationship": {
+                "name": "FeatureReferenceExpression",
+                "ownedRelationship": [
+                    {
+                        "name": "FeatureReferenceMember",
+                        "memberElement": {
+                            "name": "QualifiedName",
+                            "names": names,
+                        }
+                    }
+                ]
+            }
+        },
+        "ownedRelationship1": [],
+        "ownedRelationship2": []
+    }
+
+
+# Mapping for chain operator-bearing fields (used by _rhs_top_op_layer)
+_LAYER_OP_FIELDS = {
+    "ConditionalExpression": "operator",
+    "NullCoalescingExpression": "operator",
+    "ImpliesExpression": "operator",
+    "OrExpression": "operator",
+    "XorExpression": "operator",
+    "AndExpression": "operation",
+    "EqualityExpression": "operation",
+    "RelationalExpression": "operation",
+    "RangeExpression": "operator",
+    "AdditiveExpression": "operation",
+    "MultiplicativeExpression": "operation",
+}
+
+
 def _wrap_expression_layers(primary_expression):
     """Wrap a primary expression in all the intermediate expression layers.
     
@@ -10869,26 +11773,27 @@ def _extract_number_value(text):
 
 def _visit_owned_expression(oe_ctx):
     """Visit an ownedExpression context and return the OwnedExpression dict.
-    
-    This handles literals (int, real, string) and unit expressions like "100 [kilogram]".
-    For complex expressions, it falls back to a best-effort interpretation that
-    preserves the original text via a FeatureReferenceMember.
+
+    Phase 1: for complex expressions, use precedence-climbing to recover
+    the correct operator structure (per docs/v0.46.0_expression_capture_plan.md).
+    This replaces the v0.51.0 lossy collapse-to-text behavior so a future
+    name resolver can walk identifiers individually.
     """
     if oe_ctx is None:
         return None
-    
+
     text = oe_ctx.getText().strip() if hasattr(oe_ctx, 'getText') else ''
-    
+
     if not text:
         return None
-    
+
     # Check for unit expression pattern: "value[unit]"
-    if '[' in text and text.endswith(']'):
+    if '[' in text and text.endswith(']') and not _contains_binary_op_outside_unit(text):
         # Split at '['
         idx = text.index('[')
         value_part = text[:idx].strip()
         unit_part = text[idx+1:-1].strip()
-        
+
         # Try to get literal primary for value
         value, is_int = _extract_number_value(value_part)
         if value is not None:
@@ -10898,25 +11803,62 @@ def _visit_owned_expression(oe_ctx):
                 literal_primary = _make_literal_real_primary(value)
             primary_with_unit = _make_primary_with_unit(literal_primary, unit_part)
             return _wrap_expression_layers(primary_with_unit)
-    
-    # Simple literal
-    value, is_int = _extract_number_value(text)
-    if value is not None:
-        if is_int:
-            primary = _make_literal_integer_primary(value)
-        else:
-            primary = _make_literal_real_primary(value)
-        return _wrap_expression_layers(primary)
-    
-    # String literal
-    if text.startswith('"') and text.endswith('"'):
-        primary = _make_literal_string_primary(text)
-        return _wrap_expression_layers(primary)
-    
+
+    # Phase 1 path: try structured emit via precedence-climbing
+    try:
+        chain = _emit_structured_expression(oe_ctx)
+        if chain is not None:
+            return chain
+    except Exception:
+        # Defensive: if structured emit fails for any reason, fall back
+        # to the v0.51.0 lossy behavior (preserves round-trip).
+        pass
+
+    # Simple literal (no operator, no qualified name with `.`)
+    if not _contains_binary_op(text) and not _contains_field_access(text):
+        value, is_int = _extract_number_value(text)
+        if value is not None:
+            if is_int:
+                primary = _make_literal_integer_primary(value)
+            else:
+                primary = _make_literal_real_primary(value)
+            return _wrap_expression_layers(primary)
+
+        # String literal
+        if text.startswith('"') and text.endswith('"'):
+            primary = _make_literal_string_primary(text)
+            return _wrap_expression_layers(primary)
+
     # Complex expression or feature reference - preserve raw text
     # Wrap as a single FeatureReferenceMember with the original text
     primary = _make_feature_reference_primary(text)
     return _wrap_expression_layers(primary)
+
+
+def _contains_binary_op(text):
+    """True if text contains any of the known binary operator characters
+    (outside of bracket-delimited unit expressions)."""
+    for op in _PRECEDENCE_RANK:
+        if op in ("implies", "or", "xor", "and", "istype", "hastype"):
+            continue
+        if op in text:
+            return True
+    return False
+
+
+def _contains_binary_op_outside_unit(text):
+    """True if text contains binary operators OUTSIDE of any [unit] brackets."""
+    # Strip all [unit] expressions
+    import re
+    stripped = re.sub(r'\[[^\]]*\]', '', text)
+    return _contains_binary_op(stripped)
+
+
+def _contains_field_access(text):
+    """True if text contains field-access dots (a.b)."""
+    # Simple heuristic: look for `.` not preceded by a digit
+    import re
+    return bool(re.search(r'\.\w', text))
 
 
 def _visit_value_part(vp_ctx):
