@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## v0.51.0 (2026-08-26)
+
+### :white_check_mark: Test coverage
+
+- **Added three regression tests contributed by
+  [PR #7](https://github.com/mycr0ft/sysmlpy/pull/7) by @jman4162** —
+  the underlying fix for issue #4 (dependency statements) is already
+  shipped in v0.46.0, but PR #7 brought three useful tests:
+  - `test_dependency_qualified_endpoints_split_regression_gh4_pr7` —
+    dotted `Sub::Client` qualified-name endpoints reach the dict
+    as multi-element `names` lists.
+  - `test_dependency_named_multi_client_supplier_regression_gh4_pr7` —
+    `dependency Use from Client1, Client2 to Supplier1;` round-trips
+    with the correct identification and split endpoint lists.
+  - `test_dependency_bare_round_trip_regression_gh4_pr7` — the bare
+    `dependency b to A;` form produces a `clients` list with a single
+    entry (not collapsed into a string), matching the `Dependency`
+    grammar-class contract.
+
+  PR #7 is closed as superseded — v0.46.0 already shipped the
+  underlying fix; this release is purely additional regression
+  coverage. (Note: PR #7 emits ``client``/``supplier`` singular keys
+  whereas this codebase uses plural ``clients``/``suppliers`` to
+  match the `Dependency` grammar class. We keep the plural form.)
+
 ## v0.50.0 (2026-08-26)
 
 ### :bug: Bug Fixes / :twisted_rightwards_arrows: PR alignment

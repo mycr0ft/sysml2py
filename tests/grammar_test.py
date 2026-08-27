@@ -2700,6 +2700,134 @@ def test_dependency_definition_element_dispatch_regression_gh4():
     assert "suppliers" in dep
 
 
+def test_dependency_qualified_endpoints_split_regression_gh4_pr7():
+    """Regression contributed by PR #7: dotted (qualified) endpoints
+    like `Sub::Client` must reach the dict as a qualified name list
+    under ``clients`` / ``suppliers``."""
+    import json
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        dependency Sub::Client to Other::Supplier;
+    }"""
+    raw = load_grammar_antlr(text)
+
+    def find(node, target):
+        if isinstance(node, dict):
+            if node.get("name") == target:
+                return node
+            for v in node.values():
+                r = find(v, target) if isinstance(v, (dict, list)) else None
+                if r: return r
+        elif isinstance(node, list):
+            for it in node:
+                r = find(it, target) if isinstance(it, (dict, list)) else None
+                if r: return r
+        return None
+
+    deps = []
+    def collect(node):
+        if isinstance(node, dict):
+            if node.get("name") == "Dependency":
+                deps.append(node)
+            for v in node.values():
+                collect(v) if isinstance(v, (dict, list)) else None
+        elif isinstance(node, list):
+            for it in node:
+                collect(it) if isinstance(it, (dict, list)) else None
+    collect(raw)
+    assert len(deps) == 1
+    dep = deps[0]
+    assert [q["names"] for q in dep["clients"]] == [["Sub", "Client"]]
+    assert [q["names"] for q in dep["suppliers"]] == [["Other", "Supplier"]]
+
+
+def test_dependency_named_multi_client_supplier_regression_gh4_pr7():
+    """Regression contributed by PR #7: named dep with multiple
+    clients and suppliers via the ``from`` keyword must round-trip
+    with the correct name on ``identification``."""
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        dependency Use from Client1, Client2 to Supplier1;
+    }"""
+    raw = load_grammar_antlr(text)
+
+    def find(node, target):
+        if isinstance(node, dict):
+            if node.get("name") == target:
+                return node
+            for v in node.values():
+                r = find(v, target) if isinstance(v, (dict, list)) else None
+                if r: return r
+        elif isinstance(node, list):
+            for it in node:
+                r = find(it, target) if isinstance(it, (dict, list)) else None
+                if r: return r
+        return None
+
+    deps = []
+    def collect(node):
+        if isinstance(node, dict):
+            if node.get("name") == "Dependency":
+                deps.append(node)
+            for v in node.values():
+                collect(v) if isinstance(v, (dict, list)) else None
+        elif isinstance(node, list):
+            for it in node:
+                collect(it) if isinstance(it, (dict, list)) else None
+    collect(raw)
+    assert len(deps) == 1
+    dep = deps[0]
+    assert dep["identification"]["declaredName"] == "Use"
+    assert [q["names"] for q in dep["clients"]] == [["Client1"], ["Client2"]]
+    assert [q["names"] for q in dep["suppliers"]] == [["Supplier1"]]
+
+
+def test_dependency_bare_round_trip_regression_gh4_pr7():
+    """Regression contributed by PR #7: bare ``dependency b to A;``
+    must round-trip with ``clients`` (plural) containing one entry."""
+    text = """package P {
+        part b;
+        requirement A;
+        dependency b to A;
+    }"""
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "dependency" in dumped
+    assert "b to A" in dumped
+    # Re-load and inspect grammar tree
+    from sysmlpy import load_grammar_antlr
+    raw = load_grammar_antlr(dumped)
+
+    def find(node, target):
+        if isinstance(node, dict):
+            if node.get("name") == target:
+                return node
+            for v in node.values():
+                r = find(v, target) if isinstance(v, (dict, list)) else None
+                if r: return r
+        elif isinstance(node, list):
+            for it in node:
+                r = find(it, target) if isinstance(it, (dict, list)) else None
+                if r: return r
+        return None
+
+    deps = []
+    def collect(node):
+        if isinstance(node, dict):
+            if node.get("name") == "Dependency":
+                deps.append(node)
+            for v in node.values():
+                collect(v) if isinstance(v, (dict, list)) else None
+        elif isinstance(node, list):
+            for it in node:
+                collect(it) if isinstance(it, (dict, list)) else None
+    collect(raw)
+    assert len(deps) == 1
+    dep = deps[0]
+    assert [q["names"] for q in dep["clients"]] == [["b"]]
+    assert [q["names"] for q in dep["suppliers"]] == [["A"]]
+
+
 def test_allocation_endpoints_bare_regression_gh5():
     """Regression for GitHub issue #5: `allocate X to Y;` lost its connector
     endpoints in the visitor dict. The endpoints must survive."""
