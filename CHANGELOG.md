@@ -1,5 +1,53 @@
 # CHANGELOG
 
+## v0.49.0 (2026-08-26)
+
+### :bug: Bug Fixes
+
+- **Braced metadata bodies lose their feature values
+  ([issue #8](https://github.com/mycr0ft/sysmlpy/issues/8)).**
+  `_visit_metadata_feature_dict` only captured the raw body text
+  (`ctx.metadataBody().getText()`) for a braced body. The individual
+  `key = value;` assignments inside the body were unreachable from
+  the dict, so any consumer of `load_grammar_antlr` had no way to read
+  the feature assignments without re-parsing the raw text.
+  Fix:
+  - `_visit_metadata_feature_dict` (`antlr_visitor.py`) now emits
+    a `bodyFeatures` list alongside the raw `body` text. Each entry
+    carries `name` (feature name from `ownedRedefinition`),
+    `value` (raw `=value` text from `valuePart`), `text` (full
+    source text of the element), `featureKeyword` (whether `feature`
+    was used), `redefines` (whether `redefines` was used), and
+    `specialization` (`: Type` text if present).
+  - New `_visit_metadata_body_features` and
+    `_visit_metadata_body_element` helpers in `antlr_visitor.py`
+    walk each `metadataBodyElement` and produce one structured
+    entry. The heterogeneous alternative
+    (`definitionMember | metadataBodyUsageMember | aliasMember |
+    importRule`) is captured as raw-text fallback entries.
+  - `MetadataFeature` (`grammar/classes.py`) now stores
+    `bodyFeatures` as a list attribute and round-trips it through
+    `get_definition()`. The raw `body` text continues to drive
+    `dump()` so whitespace is preserved exactly.
+  - The `;` (SEMI) form still emits `bodyFeatures: []` (an empty
+    list) so consumer code can iterate unconditionally.
+
+  Regression tests in `tests/grammar_test.py::*regression_gh8*`:
+  - `test_metadata_braced_body_features_regression_gh8`
+  - `test_metadata_braced_body_round_trip_regression_gh8`
+  - `test_metadata_semi_body_features_empty_regression_gh8`
+  - `test_metadata_redefines_in_body_regression_gh8`
+  - `test_metadata_specialization_in_body_regression_gh8`
+
+### Known issue NOT addressed
+
+- `metadata Classified { ... }` *inside a `ref x { ... }` body*
+  still goes un-extracted (the `ref`'s `UsageCompletion` body isn't
+  walked for `metadata` applications). Same root cause as the
+  pre-existing `assert constraint` inside `part def` body bug,
+  which v0.48.0 Phase 0 fixed for definitions but not yet for
+  usages. Tracked as a follow-up.
+
 ## v0.48.0 (2026-08-26)
 
 ### :bug: Bug Fixes

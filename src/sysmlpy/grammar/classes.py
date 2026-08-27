@@ -4558,24 +4558,29 @@ class MetadataFeature:
     #   )? metadataBody
     #   ;
     def __init__(self, definition):
-        if valid_definition(definition, "MetadataFeature"):
+        if valid_definition(definition, self.__class__.__name__):
             self.prefix = []
             for p in definition.get("prefixMetadataMember", []):
                 self.prefix.append(PrefixMetadataMember(p))
-            
+
             self.identification = None
             if definition.get("identification") is not None:
                 self.identification = Identification(definition["identification"])
-            
+
             self.typing = None
             if definition.get("ownedFeatureTyping") is not None:
                 self.typing = OwnedFeatureTyping(definition["ownedFeatureTyping"])
-            
+
             self.annotations = []
             for ann in definition.get("ownedRelationship_about", []):
                 self.annotations.append(Annotation(ann))
-            
+
             self.body = definition.get("body", "")
+            # Issue #8: structured per-element capture so consumers can
+            # read individual key = value features without re-parsing
+            # the raw body text. ``dump()`` continues to use the raw
+            # ``self.body`` so whitespace is preserved exactly.
+            self.bodyFeatures = list(definition.get("bodyFeatures", []))
 
     def dump(self):
         output = []
@@ -4601,7 +4606,8 @@ class MetadataFeature:
             "identification": self.identification.get_definition() if self.identification else None,
             "ownedFeatureTyping": self.typing.get_definition() if self.typing else None,
             "ownedRelationship_about": [a.get_definition() for a in self.annotations],
-            "body": self.body
+            "body": self.body,
+            "bodyFeatures": list(self.bodyFeatures),
         }
         return output
 

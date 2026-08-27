@@ -2953,3 +2953,174 @@ def test_assert_constraint_survives_item_def_load_v046_phase0():
     assert cs, "Box Item missing from public API"
     types = [type(c).__name__ for c in cs]
     assert "Constraint" in types
+
+
+# ---------------------------------------------------------------------------
+# Issue #8: braced metadata bodies lose their feature values
+# The visitor previously emitted `"body": ""` for `;` and the raw
+# ``getText()`` for `{ ... } }` (issue #3 fix), but the individual
+# ``key = value;`` assignments inside the body were unreachable from
+# the dict. Per-element structured capture is now emitted as a
+# ``bodyFeatures`` list on the MetadataFeature dict.
+# ---------------------------------------------------------------------------
+
+
+def test_metadata_braced_body_features_regression_gh8():
+    """Issue #8 reproducer: the per-element `key = value` features of a
+    braced metadata body must appear in the visitor dict, not just in
+    the raw body text."""
+    import json
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        analysis study;
+        metadata verificationBinding about study {
+            engine = "demo";
+            costSeconds = 0.5;
+        }
+    }"""
+    raw = load_grammar_antlr(text)
+    def find(node, target):
+        if isinstance(node, dict):
+            if node.get("name") == target:
+                return node
+            for v in node.values():
+                r = find(v, target) if isinstance(v, (dict, list)) else None
+                if r: return r
+        elif isinstance(node, list):
+            for it in node:
+                r = find(it, target) if isinstance(it, (dict, list)) else None
+                if r: return r
+        return None
+    mf = find(raw, "MetadataFeature")
+    assert mf is not None, "MetadataFeature missing from visitor output"
+    assert "bodyFeatures" in mf, (
+        f"MetadataFeature has no bodyFeatures; got keys: {list(mf.keys())}"
+    )
+    bf = mf["bodyFeatures"]
+    assert len(bf) == 2, f"expected 2 features, got {len(bf)}"
+    names = [f.get("name") for f in bf]
+    values = [f.get("value") for f in bf]
+    texts = [f.get("text") for f in bf]
+    assert names == ["engine", "costSeconds"], f"names={names}"
+    assert values == ['="demo"', "=0.5"], f"values={values}"
+    assert texts == ['engine="demo";', "costSeconds=0.5;"], f"texts={texts}"
+    assert mf["body"] == '{engine="demo";costSeconds=0.5;}'
+
+
+def test_metadata_braced_body_round_trip_regression_gh8():
+    """Issue #8: the bodyFeatures list must survive a full Model dump
+    and re-parse round-trip."""
+    text = """package P {
+        analysis study;
+        metadata verificationBinding about study {
+            engine = "demo";
+            costSeconds = 0.5;
+        }
+    }"""
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "engine" in dumped and "costSeconds" in dumped
+    b = loads(dumped)
+    from sysmlpy import load_grammar_antlr
+    raw_after = load_grammar_antlr(dumped)
+    def find(node, target):
+        if isinstance(node, dict):
+            if node.get("name") == target:
+                return node
+            for v in node.values():
+                r = find(v, target) if isinstance(v, (dict, list)) else None
+                if r: return r
+        elif isinstance(node, list):
+            for it in node:
+                r = find(it, target) if isinstance(it, (dict, list)) else None
+                if r: return r
+        return None
+    mf = find(raw_after, "MetadataFeature")
+    assert mf is not None
+    bf = mf["bodyFeatures"]
+    assert len(bf) == 2, f"bodyFeatures lost after round-trip; got {bf}"
+    assert [f.get("name") for f in bf] == ["engine", "costSeconds"]
+
+
+def test_metadata_semi_body_features_empty_regression_gh8():
+    """Issue #8: the `;` form must emit an empty bodyFeatures list."""
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        analysis study;
+        metadata verificationBinding about study;
+    }"""
+    raw = load_grammar_antlr(text)
+    def find(node, target):
+        if isinstance(node, dict):
+            if node.get("name") == target:
+                return node
+            for v in node.values():
+                r = find(v, target) if isinstance(v, (dict, list)) else None
+                if r: return r
+        elif isinstance(node, list):
+            for it in node:
+                r = find(it, target) if isinstance(it, (dict, list)) else None
+                if r: return r
+        return None
+    mf = find(raw, "MetadataFeature")
+    assert mf["body"] == ";"
+    assert mf["bodyFeatures"] == []
+
+
+def test_metadata_redefines_in_body_regression_gh8():
+    """Issue #8: the `redefines X = ...` form must surface
+    `redefines=True` on the bodyFeatures entry."""
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        metadata Classified {
+            redefines classificationLevel = 42;
+        }
+    }"""
+    raw = load_grammar_antlr(text)
+    def find(node, target):
+        if isinstance(node, dict):
+            if node.get("name") == target:
+                return node
+            for v in node.values():
+                r = find(v, target) if isinstance(v, (dict, list)) else None
+                if r: return r
+        elif isinstance(node, list):
+            for it in node:
+                r = find(it, target) if isinstance(it, (dict, list)) else None
+                if r: return r
+        return None
+    mf = find(raw, "MetadataFeature")
+    bf = mf["bodyFeatures"]
+    assert len(bf) == 1
+    assert bf[0]["name"] == "classificationLevel"
+    assert bf[0]["redefines"] is True
+
+
+def test_metadata_specialization_in_body_regression_gh8():
+    """Issue #8: the `: Type = value` form must surface the
+    specialization text on the bodyFeatures entry."""
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        metadata Classified {
+            classificationLevel : Real = 0.5;
+        }
+    }"""
+    raw = load_grammar_antlr(text)
+    def find(node, target):
+        if isinstance(node, dict):
+            if node.get("name") == target:
+                return node
+            for v in node.values():
+                r = find(v, target) if isinstance(v, (dict, list)) else None
+                if r: return r
+        elif isinstance(node, list):
+            for it in node:
+                r = find(it, target) if isinstance(it, (dict, list)) else None
+                if r: return r
+        return None
+    mf = find(raw, "MetadataFeature")
+    bf = mf["bodyFeatures"]
+    assert len(bf) == 1
+    assert bf[0]["name"] == "classificationLevel"
+    assert bf[0]["specialization"] is not None
+    assert "Real" in bf[0]["specialization"]

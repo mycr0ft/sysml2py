@@ -314,6 +314,7 @@ def _visit_metadata_feature_dict(ctx):
                 })
     
     body = ""
+    body_features = []
     if ctx.metadataBody():
         if ctx.metadataBody().SEMI():
             body = ";"
@@ -323,14 +324,124 @@ def _visit_metadata_feature_dict(ctx):
             # the round-trip. Without this, every `key = value;` inside
             # a metadata application is silently dropped at visit time.
             body = ctx.metadataBody().getText()
-    
+            # Issue #8: also surface each metadataBodyElement as a
+            # structured bodyFeatures entry so downstream consumers
+            # (sysml2kit, validators, etc.) can read individual
+            # key = value fields without re-parsing the raw text.
+            # Mirrors the per-endpoint capture introduced for issue #5.
+            body_features = _visit_metadata_body_features(ctx.metadataBody())
+
     return {
         "name": "MetadataFeature",
         "prefixMetadataMember": prefix_members,
         "identification": identification,
         "ownedFeatureTyping": owned_feature_typing,
         "ownedRelationship_about": annotations,
-        "body": body
+        "body": body,
+        "bodyFeatures": body_features,
+    }
+
+
+def _visit_metadata_body_features(mb_ctx):
+    """Capture each ``metadataBodyElement`` from a braced metadata body.
+
+    Issue #8: ``_visit_metadata_feature_dict`` previously emitted the
+    raw body text but never surfaced the individual ``key = value;``
+    items, so consumers of ``load_grammar_antlr`` had no way to read
+    the field assignments without re-parsing the raw text.
+
+    The emitted ``bodyFeatures`` list contains one dict per
+    ``metadataBodyElement``. For the common ``metadataBodyFeature``
+    case each entry carries ``name`` (the feature name from
+    ``ownedRedefinition``), ``value`` (the raw ``=value`` text from
+    ``valuePart``), and ``text`` (the full source text of the
+    element). For the heterogeneous alternative
+    (``definitionMember | metadataBodyUsageMember | aliasMember |
+    importRule``) only ``text`` is captured.
+    """
+    if mb_ctx is None:
+        return []
+
+    features = []
+
+    # First alternative: metadataBodyElement list (the common path).
+    if hasattr(mb_ctx, 'metadataBodyElement') and mb_ctx.metadataBodyElement():
+        for elem in mb_ctx.metadataBodyElement():
+            entry = _visit_metadata_body_element(elem)
+            if entry is not None:
+                features.append(entry)
+
+    # Second alternative: heterogeneous (definitionMember |
+    # metadataBodyUsageMember | aliasMember | importRule). ANTLR
+    # matches exactly one of the two alternatives; if the first
+    # alternative returned nothing, try the heterogeneous shapes.
+    if not features:
+        for attr in ('definitionMember', 'metadataBodyUsageMember',
+                     'aliasMember', 'importRule'):
+            if hasattr(mb_ctx, attr) and getattr(mb_ctx, attr)():
+                items = getattr(mb_ctx, attr)()
+                if not isinstance(items, list):
+                    items = [items]
+                for item in items:
+                    features.append({
+                        "name": None,
+                        "value": None,
+                        "text": item.getText(),
+                    })
+
+    return features
+
+
+def _visit_metadata_body_element(elem_ctx):
+    """Capture a single ``metadataBodyElement`` as a bodyFeatures entry."""
+    if elem_ctx is None:
+        return None
+
+    text = elem_ctx.getText()
+
+    # Common case: metadataBodyFeatureMember -> metadataBodyFeature.
+    if hasattr(elem_ctx, 'metadataBodyFeatureMember') and elem_ctx.metadataBodyFeatureMember():
+        fbm = elem_ctx.metadataBodyFeatureMember()
+        if hasattr(fbm, 'metadataBodyFeature') and fbm.metadataBodyFeature():
+            f = fbm.metadataBodyFeature()
+            # Feature name from ownedRedefinition (qualifiedName).
+            name_text = None
+            if hasattr(f, 'ownedRedefinition') and f.ownedRedefinition():
+                name_text = f.ownedRedefinition().getText()
+            # Value text from valuePart (e.g. '="demo"' or '=0.5').
+            # Preserve the operator so downstream tools can decide
+            # whether '=' vs ':=' vs 'default =' was used.
+            value_text = None
+            if hasattr(f, 'valuePart') and f.valuePart():
+                value_text = f.valuePart().getText()
+            # Optional featureSpecializationPart (e.g. ': Type') and
+            # FEATURE keyword (redefinition marker). Capture for
+            # downstream consumers that need to distinguish redefines
+            # vs new feature declarations.
+            specialization = None
+            if hasattr(f, 'featureSpecializationPart') and f.featureSpecializationPart():
+                specialization = f.featureSpecializationPart().getText()
+            is_feature_keyword = (
+                hasattr(f, 'FEATURE') and f.FEATURE() is not None
+            )
+            is_redefines = (
+                hasattr(f, 'REDEFINES') and getattr(f, 'REDEFINES', lambda: None)() is not None
+            )
+            return {
+                "name": name_text,
+                "value": value_text,
+                "text": text,
+                "featureKeyword": is_feature_keyword,
+                "redefines": is_redefines,
+                "specialization": specialization,
+            }
+
+    # Fallback for non-feature metadataBodyElement shapes
+    # (aliasMember / importRule / nonFeatureMember).
+    return {
+        "name": None,
+        "value": None,
+        "text": text,
     }
 
 
