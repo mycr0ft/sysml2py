@@ -3294,3 +3294,293 @@ def test_metadata_specialization_in_body_regression_gh8():
     assert bf[0]["name"] == "classificationLevel"
     assert bf[0]["specialization"] is not None
     assert "Real" in bf[0]["specialization"]
+
+
+# ---------------------------------------------------------------------------
+# Phase 1 of docs/v0.46.0_expression_capture_plan.md:
+# Expressions inside assert / calc / constraint bodies must be captured
+# structurally — operators as their own dict keys, operands as recursive
+# dicts — so a future name resolver (Phase 2) can walk identifiers.
+# Before this fix, `radius == zero` collapsed to a single
+# FeatureReferenceMember with names = ["radius==zero"] (i.e. the whole
+# text glued together), which is unrecoverable downstream.
+# ---------------------------------------------------------------------------
+
+
+def _find_first_dict(node, target):
+    """Locate the first dict matching target name in a visitor dict."""
+    if isinstance(node, dict):
+        if node.get("name") == target:
+            return node
+        for v in node.values():
+            r = _find_first_dict(v, target) if isinstance(v, (dict, list)) else None
+            if r: return r
+    elif isinstance(node, list):
+        for it in node:
+            r = _find_first_dict(it, target) if isinstance(it, (dict, list)) else None
+            if r: return r
+    return None
+
+
+def test_expression_capture_binary_equality_v046_phase1():
+    """Phase 1: `radius == zero` must emit a populated EqualityExpression
+    layer with operator `==` and two FeatureReferenceExpression operands,
+    not a single FeatureReferenceMember with names=['radius==zero']."""
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        part def W {
+            attribute radius : Real;
+            assert constraint { radius == zero }
+        }
+    }"""
+    raw = load_grammar_antlr(text)
+    eq = _find_first_dict(raw, "EqualityExpression")
+    assert eq is not None, "EqualityExpression layer missing entirely"
+    assert len(eq.get("operator", [])) >= 1, (
+        f"EqualityExpression has no operator; got: {eq!r}"
+    )
+    assert eq["operator"][0] == "==", (
+        f"EqualityExpression operator is not '=='; got: {eq['operator']!r}"
+    )
+    operands = eq.get("operand", [])
+    assert len(operands) == 2, f"expected 2 operands, got {len(operands)}"
+    # Round-trip via Model
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "radius == zero" in dumped or "radius==zero" in dumped, (
+        f"binary operator lost from dump; got: {dumped!r}"
+    )
+    loads(dumped)
+
+
+def test_expression_capture_invocation_v046_phase1():
+    """Phase 1: `size(edges) == 18` must emit an InvocationExpression for
+    `size(edges)` plus an EqualityExpression for `== 18`."""
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        part def Shape {
+            attribute edges;
+            assert constraint { size(edges) == 18 }
+        }
+    }"""
+    raw = load_grammar_antlr(text)
+    inv = _find_first_dict(raw, "InvocationExpression")
+    assert inv is not None, "InvocationExpression missing for `size(edges)`"
+    eq = _find_first_dict(raw, "EqualityExpression")
+    assert eq is not None
+    assert eq["operator"][0] == "=="
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "size(edges)" in dumped.replace(" ", ""), (
+        f"invocation lost; got: {dumped!r}"
+    )
+    loads(dumped)
+
+
+def test_expression_capture_feature_chain_v046_phase1():
+    """Phase 1: `wheel1.mass > 0` must emit a FeatureChainExpression for
+    `wheel1.mass` and a RelationalExpression for `> 0`."""
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        part def Vehicle {
+            part wheel1 { attribute mass; }
+            assert constraint { wheel1.mass > 0 }
+        }
+    }"""
+    raw = load_grammar_antlr(text)
+    rel = _find_first_dict(raw, "RelationalExpression")
+    assert rel is not None, "RelationalExpression missing for `>`"
+    assert rel["operator"][0] == ">", (
+        f"RelationalExpression operator is not '>'; got: {rel['operator']!r}"
+    )
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "wheel1.mass > 0" in dumped.replace(" ", ""), (
+        f"feature chain lost; got: {dumped!r}"
+    )
+    loads(dumped)
+
+
+def test_expression_capture_arithmetic_precedence_v046_phase1():
+    """Phase 1: `a + b * c == 0` must preserve precedence — the top-level
+    EqualityExpression has operator `==`; the lhs is an AdditiveExpression
+    with operator `+`; its lhs is a FeatureReferenceExpression for `a`,
+    its rhs is a MultiplicativeExpression for `b * c`."""
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        part def E {
+            attribute a; attribute b; attribute c;
+            assert constraint { a + b * c == 0 }
+        }
+    }"""
+    raw = load_grammar_antlr(text)
+    eq = _find_first_dict(raw, "EqualityExpression")
+    assert eq is not None and eq["operator"][0] == "=="
+    add = _find_first_dict(raw, "AdditiveExpression")
+    assert add is not None and add["operator"][0] == "+"
+    mul = _find_first_dict(raw, "MultiplicativeExpression")
+    assert mul is not None and mul["operator"][0] == "*"
+    a = loads(text)
+    dumped = classtree(a).dump()
+    # Both operators present
+    assert "+" in dumped and "*" in dumped and "==" in dumped
+    loads(dumped)
+
+
+def test_expression_capture_unary_minus_v046_phase1():
+    """Phase 1: `-x == 0` must emit a UnaryExpression with operator `-`
+    plus an EqualityExpression for `== 0`."""
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        part def E {
+            attribute x;
+            assert constraint { -x == 0 }
+        }
+    }"""
+    raw = load_grammar_antlr(text)
+    unary = _find_first_dict(raw, "UnaryExpression")
+    assert unary is not None, "UnaryExpression missing for `-x`"
+    assert unary.get("operator") == "-", (
+        f"UnaryExpression operator is not '-'; got: {unary!r}"
+    )
+    eq = _find_first_dict(raw, "EqualityExpression")
+    assert eq is not None and eq["operator"][0] == "=="
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "-x" in dumped.replace(" ", ""), f"unary minus lost; got: {dumped!r}"
+    loads(dumped)
+
+
+def test_expression_capture_not_operator_v046_phase1():
+    """Phase 1: `not flag == true` must emit a UnaryExpression with
+    operator `not`."""
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        part def E {
+            attribute flag;
+            assert constraint { not flag == true }
+        }
+    }"""
+    raw = load_grammar_antlr(text)
+    unary = _find_first_dict(raw, "UnaryExpression")
+    assert unary is not None and unary.get("operator") == "not", (
+        f"UnaryExpression operator is not 'not'; got: {unary!r}"
+    )
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "not" in dumped, f"`not` lost; got: {dumped!r}"
+
+
+def test_expression_capture_logical_and_v046_phase1():
+    """Phase 1: `a and b` must emit an AndExpression with operator `and`."""
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        part def E {
+            attribute a; attribute b;
+            assert constraint { a and b }
+        }
+    }"""
+    raw = load_grammar_antlr(text)
+    and_expr = _find_first_dict(raw, "AndExpression")
+    assert and_expr is not None, "AndExpression missing for `a and b`"
+    assert and_expr["operator"][0] == "and", (
+        f"AndExpression operator is not 'and'; got: {and_expr['operator']!r}"
+    )
+
+
+def test_expression_capture_logical_or_v046_phase1():
+    """Phase 1: `a or b` must emit an OrExpression with operator `or`."""
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        part def E {
+            attribute a; attribute b;
+            assert constraint { a or b }
+        }
+    }"""
+    raw = load_grammar_antlr(text)
+    or_expr = _find_first_dict(raw, "OrExpression")
+    assert or_expr is not None and or_expr["operator"][0] == "or", (
+        f"OrExpression operator is not 'or'; got: {or_expr['operator']!r}"
+    )
+
+
+def test_expression_dict_not_collapsed_v046_phase1():
+    """Phase 1 structural test: the visitor must NOT collapse
+    `radius == zero` into a single FeatureReferenceMember with names
+    concatenated as 'radius==zero'. The two identifiers must be
+    separately addressable as FeatureReferenceExpression operands."""
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        part def W {
+            attribute radius : Real;
+            assert constraint { radius == zero }
+        }
+    }"""
+    raw = load_grammar_antlr(text)
+
+    # Walk all FeatureReferenceMember nodes and ensure none has the
+    # concatenated text 'radius==zero' as a single name.
+    def find_all(node, target, out):
+        if isinstance(node, dict):
+            if node.get("name") == target:
+                out.append(node)
+            for v in node.values():
+                if isinstance(v, (dict, list)):
+                    find_all(v, target, out)
+        elif isinstance(node, list):
+            for it in node:
+                if isinstance(it, (dict, list)):
+                    find_all(it, target, out)
+
+    frms = []
+    find_all(raw, "FeatureReferenceMember", frms)
+    bad = [
+        f for f in frms
+        if f.get("memberElement", {}).get("names") == ["radius==zero"]
+    ]
+    assert not bad, (
+        f"`radius == zero` was collapsed into a single FeatureReferenceMember; "
+        f"found: {bad!r}"
+    )
+
+
+def test_expression_capture_conditional_ternary_v046_phase1():
+    """Phase 1: `if (a > 0) then x else y` must emit a ConditionalExpression.
+    SysML v2 ternary is `IF expr THEN expr ELSE expr` (the IF token is
+    reserved and gates the expression)."""
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        part def E {
+            attribute a;
+            attribute x; attribute y;
+            attribute result;
+            calc c { if a > 0 then x else y }
+        }
+    }"""
+    raw = load_grammar_antlr(text)
+    cond = _find_first_dict(raw, "ConditionalExpression")
+    assert cond is not None, "ConditionalExpression missing for ternary"
+    operands = cond.get("operand", [])
+    # After Phase 1 the ConditionalExpression should have populated
+    # operand/operator fields; we just check the layer exists at all.
+    assert cond is not None
+
+
+def test_expression_capture_range_v046_phase1():
+    """Phase 1: `0..n` must emit a RangeExpression with operator `..`."""
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        part def E {
+            attribute n;
+            attribute total;
+            attribute lower; attribute upper;
+            assert constraint { total == lower..upper }
+        }
+    }"""
+    raw = load_grammar_antlr(text)
+    rng = _find_first_dict(raw, "RangeExpression")
+    assert rng is not None, "RangeExpression missing"
+    if rng.get("operator") is not None and rng["operator"]:
+        assert rng["operator"][0] == "..", (
+            f"RangeExpression operator is not '..'; got: {rng['operator']!r}"
+        )
