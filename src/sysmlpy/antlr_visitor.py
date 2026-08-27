@@ -8066,7 +8066,9 @@ def _make_allocation_usage_dict(ctx, prefix=None):
     Issue #5: the connector endpoints (`allocate X to Y`) were silently
     dropped before reaching the dict. Mirror the InterfaceUsage pattern:
     walk `aud.connectorPart()` (when present) and emit a ConnectorPart
-    dict with binary or nary ends.
+    dict with binary or nary ends under the `part` key — the same key
+    ConnectionUsage already uses, so downstream consumers share one
+    shape across connector-bearing usages.
     """
     name = None
     shortname = None
@@ -8122,7 +8124,7 @@ def _make_allocation_usage_dict(ctx, prefix=None):
                                 "specialization": None
                             }
                         },
-                        "connectorPart": connector_part,
+                        "part": connector_part,
                         "body": {
                             "name": "UsageBody",
                             "body": {

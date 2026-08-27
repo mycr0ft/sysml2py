@@ -1,5 +1,38 @@
 # CHANGELOG
 
+## v0.50.0 (2026-08-26)
+
+### :bug: Bug Fixes / :twisted_rightwards_arrows: PR alignment
+
+- **Allocated `AllocationUsage.connectorPart` → `AllocationUsage.part`**
+  to align with [PR #6](https://github.com/mycr0ft/sysmlpy/pull/6)
+  by @jman4162 and the existing `ConnectionUsage` convention. The
+  v0.47.0 fix (issue #5) introduced `connectorPart` as the dict key,
+  which diverged from the codebase's existing `part` field on
+  `ConnectionUsage`. PR #6 surfaced that divergence; this release
+  adopts the standard shape so downstream consumers (e.g. sysml2kit)
+  can read both connector-bearing usages with the same code path.
+  Fix:
+  - `_make_allocation_usage_dict` (`antlr_visitor.py`) now emits the
+    connector dict under the `part` key, matching `ConnectionUsage`.
+  - `AllocationUsage` (`grammar/classes.py`) now reads `definition["part"]`
+    in `__init__` (the legacy `definition["connectorPart"]` is still
+    accepted as a back-compat fallback) and round-trips via
+    `get_definition()` under `part`. Dump format unchanged.
+  - `tests/grammar_test.py::test_allocation_dict_has_connector_part_gh5`
+    updated to assert the new `part` key.
+  - Added `test_allocation_dotted_endpoints_regression_gh5_pr6`
+    (new coverage contributed by PR #6: `allocate A to t.array;`
+    feature-chain endpoint round-trip).
+
+  PR #6's three tests (`test_allocate_endpoints_survive`,
+  `test_named_allocation_still_parses`,
+  `test_allocate_dotted_endpoints`) all pass against this
+  release. PR #6 is being closed as superseded.
+
+  Tests: 438/438 fast pass; 118/123 conformance (same 5 pre-existing
+  failures byte-identical to baseline).
+
 ## v0.49.0 (2026-08-26)
 
 ### :bug: Bug Fixes

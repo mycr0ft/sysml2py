@@ -2768,8 +2768,10 @@ def test_allocation_bare_no_connector_still_works_gh5():
 
 
 def test_allocation_dict_has_connector_part_gh5():
-    """Structural test (issue #5): AllocationUsage dict must carry a
-    `connectorPart` key with the endpoints, not just identification."""
+    """Structural test (issue #5 / PR #6 alignment): AllocationUsage
+    dict must carry the connector endpoints on the ``part`` key (the
+    same key ``ConnectionUsage`` uses, so consumers share one shape
+    across connector-bearing usages), not just identification."""
     import json
     from sysmlpy import load_grammar_antlr
     text = """package P {
@@ -2794,10 +2796,50 @@ def test_allocation_dict_has_connector_part_gh5():
 
     alloc = find(raw, "AllocationUsage")
     assert alloc is not None, "AllocationUsage missing from visitor output"
-    assert "connectorPart" in alloc, (
-        f"AllocationUsage has no connectorPart; got keys: {list(alloc.keys())}"
+    # PR #6 alignment: emit under the `part` key (same as ConnectionUsage).
+    assert "part" in alloc, (
+        f"AllocationUsage has no `part` key; got keys: {list(alloc.keys())}"
     )
-    assert alloc["connectorPart"]["part"]["name"] == "BinaryConnectorPart"
+    assert alloc["part"]["part"]["name"] == "BinaryConnectorPart"
+
+
+def test_allocation_dotted_endpoints_regression_gh5_pr6():
+    """Regression from PR #6: dotted endpoints like `t.array` must reach
+    the dict as a feature chain. Round-trip via the public Model API
+    must also survive."""
+    import json
+    from sysmlpy import load_grammar_antlr
+    text = """package P {
+        part t { part array; }
+        requirement A;
+        allocate A to t.array;
+    }"""
+    raw = load_grammar_antlr(text)
+
+    def find(node, target):
+        if isinstance(node, dict):
+            if node.get("name") == target:
+                return node
+            for v in node.values():
+                r = find(v, target) if isinstance(v, (dict, list)) else None
+                if r: return r
+        elif isinstance(node, list):
+            for it in node:
+                r = find(it, target) if isinstance(it, (dict, list)) else None
+                if r: return r
+        return None
+
+    alloc = find(raw, "AllocationUsage")
+    assert alloc is not None
+    assert alloc.get("part") is not None
+    text_blob = json.dumps(alloc["part"])
+    assert "array" in text_blob
+    assert "t" in text_blob
+    # And the public-API round-trip works too
+    a = loads(text)
+    dumped = classtree(a).dump()
+    assert "allocate" in dumped and "array" in dumped
+    loads(dumped)
 
 
 # ---------------------------------------------------------------------------

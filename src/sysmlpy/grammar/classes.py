@@ -9893,10 +9893,18 @@ class AllocationUsage(_PrefixedUsageBase):
 
     def __init__(self, definition=None):
         super().__init__(definition)
+        # Issue #5 / PR #6: stores the connectorPart (the `allocate X to Y`
+        # endpoints) on the same `part` key ConnectionUsage already uses, so
+        # downstream consumers share one shape across connector-bearing
+        # usages. Initialized from `definition["part"]` for round-trip
+        # compatibility with the visitor; legacy `definition["connectorPart"]`
+        # is also accepted as a fallback so callers that built dicts using
+        # the v0.47.0 contract keep working until they migrate.
         self.connectorPart = None
         if definition is not None and valid_definition(definition, self.__class__.__name__):
-            if definition.get("connectorPart") is not None:
-                self.connectorPart = ConnectorPart(definition["connectorPart"])
+            raw = definition.get("part", definition.get("connectorPart"))
+            if raw is not None:
+                self.connectorPart = ConnectorPart(raw)
 
     def dump(self):
         parts = []
@@ -9916,8 +9924,11 @@ class AllocationUsage(_PrefixedUsageBase):
         return " ".join(parts)
 
     def get_definition(self):
+        # Emit under the `part` key (matching ConnectionUsage convention
+        # from PR #6). The legacy `connectorPart` alias is no longer emitted
+        # but ``__init__`` still accepts it for back-compat reads.
         output = super().get_definition()
-        output["connectorPart"] = self.connectorPart.get_definition() if self.connectorPart else None
+        output["part"] = self.connectorPart.get_definition() if self.connectorPart else None
         return output
 
 

@@ -2,7 +2,7 @@
 
 > **For:** Future agents and team members
 > **Last Updated:** August 28, 2026
-> **Current Version:** v0.49.0
+> **Current Version:** v0.50.0
 > **Repository:** https://github.com/mycr0ft/sysmlpy
 
 ---
