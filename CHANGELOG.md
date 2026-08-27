@@ -25,6 +25,21 @@
   whereas this codebase uses plural ``clients``/``suppliers`` to
   match the `Dependency` grammar class. We keep the plural form.)
 
+### PR review notes (post-v0.51.0)
+
+- **[PR #9](https://github.com/mycr0ft/sysmlpy/pull/9) by @jman4162** —
+  `Surface braced metadata body features in the ANTLR dict`. Same
+  issue (#8) as v0.49.0, simpler implementation: emits a list of
+  raw-text strings (`elem.getText()`) instead of v0.49.0's structured
+  dicts (with `name`, `value`, `text`, `featureKeyword`, `redefines`,
+  `specialization`). **Closed as superseded** — v0.49.0 is strictly
+  more comprehensive (structured per-element dicts, plus the
+  heterogeneous-alternative path for `definitionMember |
+  metadataBodyUsageMember | aliasMember | importRule`, plus the
+  `MetadataFeature` grammar class round-trip). v0.49.0's structured
+  dicts are a strict superset of PR #9's raw-text strings: the
+  `text` field of each entry equals `elem.getText()`.
+
 ## v0.50.0 (2026-08-26)
 
 ### :bug: Bug Fixes / :twisted_rightwards_arrows: PR alignment
