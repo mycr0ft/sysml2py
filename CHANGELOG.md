@@ -1,5 +1,69 @@
 # CHANGELOG
 
+## v0.52.0 (2026-08-27)
+
+### :test_tube: Phase 1 expression-capture: failing-first tests committed
+
+- **Added 10 Phase 1 regression tests** for structured expression
+  capture (per `docs/v0.46.0_expression_capture_plan.md`):
+  - `test_expression_capture_binary_equality_v046_phase1` —
+    `a == b` must emit a `EqualityExpression` with `operation[0]`
+    containing `operator='=='`, `operand.name='ClassificationExpression'`.
+  - `test_expression_capture_invocation_v046_phase1` —
+    `size(edges) == 18` must emit an `InvocationExpression` for
+    `size(edges)` (with `target=size`, `arguments=[edges]`) plus
+    `EqualityExpression` for `== 18`.
+  - `test_expression_capture_feature_chain_v046_phase1` —
+    `wheel1.mass > 0` must emit a feature chain (preserved as
+    `QualifiedName(names=[wheel1, mass])`) and a
+    `RelationalExpression` for `> 0`.
+  - `test_expression_capture_arithmetic_precedence_v046_phase1` —
+    `a + b * c == 0` must capture all three operators (`+`, `*`,
+    `==`) somewhere in the structured output.
+  - `test_expression_capture_unary_minus_v046_phase1` —
+    `-x == 0` must emit a `UnaryExpression` with `operator='-'`.
+  - `test_expression_capture_not_operator_v046_phase1` —
+    `not flag == true` must emit a `UnaryExpression` with
+    `operator='not'`.
+  - `test_expression_capture_logical_and_v046_phase1` —
+    `a and b` must emit an `AndExpression` with `operation[0].operator='and'`.
+  - `test_expression_capture_logical_or_v046_phase1` —
+    `a or b` must emit an `OrExpression` with `operator=['or']`.
+  - `test_expression_capture_conditional_ternary_v046_phase1` —
+    confirms the `ConditionalExpression` layer is present in
+    the chain shape (the grammar's `IF ? :` ternary form is
+    currently not parseable inside `calc` bodies — known
+    grammar limitation, see conformance notes).
+  - `test_expression_capture_range_v046_phase1` —
+    `0..n` must emit a `RangeExpression` with `operator='..'`.
+  - `test_expression_dict_not_collapsed_v046_phase1` —
+    structural test: the visitor must NOT collapse
+    `radius == zero` into a single `FeatureReferenceMember` with
+    `names=['radius==zero']`; the two identifiers must be
+    separately addressable.
+
+### :warning: Phase 1 implementation deferred
+
+The 10 Phase 1 tests are **expected-to-fail** in this release.
+The implementation work surfaced a fundamental grammar limitation:
+the vendored SysML v2 grammar lists all binary operators in the
+same `ownedExpression` rule with equal precedence, so ANTLR
+left-associates and produces a non-precedence-respecting parse
+(e.g. `a + b * c` is parsed as `(a+b) * c`). The current lossy
+visitor (`_visit_owned_expression` collapsing to a single
+`FeatureReferenceMember` with the full text as a name) is the
+only way to make the existing Training-suite round-trip tests
+pass (13 of them, all involving `+`, `-`, `*`, `/` with `+`/`-`).
+A structured emit exposes the precedence misparse in the dump,
+which fails the round-trip.
+
+The Phase 1 implementation will land in v0.53.0 alongside a
+grammar fix (either vendoring a precedence-climbing grammar or
+post-processing the parse tree to re-arrange operators by
+binding power). Until then, `_visit_owned_expression` retains
+its v0.51.0 behavior (single `FeatureReferenceMember` with full
+expression text as a name).
+
 ## v0.51.0 (2026-08-26)
 
 ### :white_check_mark: Test coverage
