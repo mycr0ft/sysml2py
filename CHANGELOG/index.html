@@ -431,6 +431,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0500-2026-08-26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.50.0 (2026-08-26)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.50.0 (2026-08-26)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bug-bug-fixes-twisted_rightwards_arrows-pr-alignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :bug: Bug Fixes / :twisted_rightwards_arrows: PR alignment
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0490-2026-08-26" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2307,6 +2335,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0500-2026-08-26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.50.0 (2026-08-26)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.50.0 (2026-08-26)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bug-bug-fixes-twisted_rightwards_arrows-pr-alignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :bug: Bug Fixes / :twisted_rightwards_arrows: PR alignment
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0490-2026-08-26" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4142,6 +4198,36 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0500-2026-08-26">v0.50.0 (2026-08-26)<a class="headerlink" href="#v0500-2026-08-26" title="Permanent link">&para;</a></h2>
+<h3 id="bug-bug-fixes-twisted_rightwards_arrows-pr-alignment">:bug: Bug Fixes / :twisted_rightwards_arrows: PR alignment<a class="headerlink" href="#bug-bug-fixes-twisted_rightwards_arrows-pr-alignment" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Allocated <code>AllocationUsage.connectorPart</code> → <code>AllocationUsage.part</code></strong>
+  to align with <a href="https://github.com/mycr0ft/sysmlpy/pull/6">PR #6</a>
+  by @jman4162 and the existing <code>ConnectionUsage</code> convention. The
+  v0.47.0 fix (issue #5) introduced <code>connectorPart</code> as the dict key,
+  which diverged from the codebase's existing <code>part</code> field on
+  <code>ConnectionUsage</code>. PR #6 surfaced that divergence; this release
+  adopts the standard shape so downstream consumers (e.g. sysml2kit)
+  can read both connector-bearing usages with the same code path.
+  Fix:</li>
+<li><code>_make_allocation_usage_dict</code> (<code>antlr_visitor.py</code>) now emits the
+    connector dict under the <code>part</code> key, matching <code>ConnectionUsage</code>.</li>
+<li><code>AllocationUsage</code> (<code>grammar/classes.py</code>) now reads <code>definition["part"]</code>
+    in <code>__init__</code> (the legacy <code>definition["connectorPart"]</code> is still
+    accepted as a back-compat fallback) and round-trips via
+    <code>get_definition()</code> under <code>part</code>. Dump format unchanged.</li>
+<li><code>tests/grammar_test.py::test_allocation_dict_has_connector_part_gh5</code>
+    updated to assert the new <code>part</code> key.</li>
+<li>Added <code>test_allocation_dotted_endpoints_regression_gh5_pr6</code>
+    (new coverage contributed by PR #6: <code>allocate A to t.array;</code>
+    feature-chain endpoint round-trip).</li>
+</ul>
+<p>PR #6's three tests (<code>test_allocate_endpoints_survive</code>,
+  <code>test_named_allocation_still_parses</code>,
+  <code>test_allocate_dotted_endpoints</code>) all pass against this
+  release. PR #6 is being closed as superseded.</p>
+<p>Tests: 438/438 fast pass; 118/123 conformance (same 5 pre-existing
+  failures byte-identical to baseline).</p>
 <h2 id="v0490-2026-08-26">v0.49.0 (2026-08-26)<a class="headerlink" href="#v0490-2026-08-26" title="Permanent link">&para;</a></h2>
 <h3 id="bug-bug-fixes">:bug: Bug Fixes<a class="headerlink" href="#bug-bug-fixes" title="Permanent link">&para;</a></h3>
 <ul>
