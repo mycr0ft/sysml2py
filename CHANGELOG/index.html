@@ -453,6 +453,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#pr-review-notes-post-v0510" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PR review notes (post-v0.51.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2385,6 +2396,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#pr-review-notes-post-v0510" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PR review notes (post-v0.51.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -4277,6 +4299,21 @@
   coverage. (Note: PR #7 emits <code>client</code>/<code>supplier</code> singular keys
   whereas this codebase uses plural <code>clients</code>/<code>suppliers</code> to
   match the <code>Dependency</code> grammar class. We keep the plural form.)</p>
+<h3 id="pr-review-notes-post-v0510">PR review notes (post-v0.51.0)<a class="headerlink" href="#pr-review-notes-post-v0510" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><a href="https://github.com/mycr0ft/sysmlpy/pull/9">PR #9</a> by @jman4162</strong> —
+  <code>Surface braced metadata body features in the ANTLR dict</code>. Same
+  issue (#8) as v0.49.0, simpler implementation: emits a list of
+  raw-text strings (<code>elem.getText()</code>) instead of v0.49.0's structured
+  dicts (with <code>name</code>, <code>value</code>, <code>text</code>, <code>featureKeyword</code>, <code>redefines</code>,
+  <code>specialization</code>). <strong>Closed as superseded</strong> — v0.49.0 is strictly
+  more comprehensive (structured per-element dicts, plus the
+  heterogeneous-alternative path for <code>definitionMember |
+  metadataBodyUsageMember | aliasMember | importRule</code>, plus the
+  <code>MetadataFeature</code> grammar class round-trip). v0.49.0's structured
+  dicts are a strict superset of PR #9's raw-text strings: the
+  <code>text</code> field of each entry equals <code>elem.getText()</code>.</li>
+</ul>
 <h2 id="v0500-2026-08-26">v0.50.0 (2026-08-26)<a class="headerlink" href="#v0500-2026-08-26" title="Permanent link">&para;</a></h2>
 <h3 id="bug-bug-fixes-twisted_rightwards_arrows-pr-alignment">:bug: Bug Fixes / :twisted_rightwards_arrows: PR alignment<a class="headerlink" href="#bug-bug-fixes-twisted_rightwards_arrows-pr-alignment" title="Permanent link">&para;</a></h3>
 <ul>
