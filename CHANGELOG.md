@@ -1,5 +1,46 @@
 # CHANGELOG
 
+## v0.53.0 (2026-08-28)
+
+### :sparkles: Per-precedence expression grammar + structured cascade emit
+
+The vendored SysML v2 grammar is regenerated from the upstream
+`daltskin/sysml-v2-grammar` with the per-precedence cascade
+implemented properly. v0.52.0's precedence-climbing pass is
+obsolete and replaced by a direct walker over the new grammar's
+precedence levels (`nullCoalescing -> ... -> primary`).
+
+Also fixed: `xor`/`and` precedence order. The OMG XText reference
+grammar has `implies < or < xor < and < equality` (and binds tighter
+than xor); the daltskin generator's `OPERATOR_PRECEDENCE` table
+and per-level list had them swapped. `a xor b and c` now parses as
+`a xor (b and c)` instead of `(a xor b) and c`.
+
+Two visitor/class bugs fixed:
+
+- `first` keyword was dropped from guarded transitions when no
+  usage declaration was given; the grammar allows `transition first A if c then B;`
+- `render` usage bodies (doc, comment, ...) were dropped on
+  round-trip; the visitor previously stubbed the body empty
+- `UnaryExpression.dump()` now renders prefix operators
+  (`-x`, `not flag`)
+
+Six grammar tests rewritten from non-standard syntax
+(`guard`, `render state X { shape box; color ...; annotation "..."; }`)
+to OMG-standard forms (`if`, `render X { doc /* ... */; comment about X /* ... */; }`).
+The old syntax only existed in sysmlpy's hand-patched vendored
+grammar; the OMG grammar has no such keywords.
+
+### :test_tube: Test results
+
+- **143/143** grammar tests pass (was 130/143 with the prior grammar)
+- **144/144** class/main/repr/navigate tests pass
+- **310/310** official OMG conformance files parse via the
+  companion `daltskin/sysml-v2-grammar` repo (was vacuously
+  passing before -- the conformance runner had three bugs that
+  silently passed every file without actually parsing it; those
+  were fixed in a separate commit on the daltskin side)
+
 ## v0.52.0 (2026-08-27)
 
 ### :sparkles: Phase 1 expression-capture: implementation shipped
