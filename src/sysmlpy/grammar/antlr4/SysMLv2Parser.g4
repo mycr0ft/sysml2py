@@ -21,34 +21,81 @@ options {
 
 ownedExpression
     : IF ownedExpression QUESTION ownedExpression ELSE ownedExpression
-    | ownedExpression QUESTION_QUESTION ownedExpression
-    | ownedExpression IMPLIES ownedExpression
-    | ownedExpression OR ownedExpression
-    | ownedExpression AND ownedExpression
-    | ownedExpression XOR ownedExpression
-    | ownedExpression PIPE ownedExpression
-    | ownedExpression AMP ownedExpression
-    | ownedExpression ( EQ_EQ | BANG_EQ | EQ_EQ_EQ | BANG_EQ_EQ) ownedExpression
-    | ownedExpression ( LT | GT | LE | GE) ownedExpression
-    | ownedExpression DOT_DOT ownedExpression
-    | ownedExpression ( PLUS | MINUS) ownedExpression
-    | ownedExpression ( STAR | SLASH | PERCENT) ownedExpression
-    | <assoc = right> ownedExpression ( STAR_STAR | CARET) ownedExpression
-    | ( PLUS | MINUS | TILDE | NOT) ownedExpression
-    | ( AT_SIGN | AT_AT) typeReference
-    | ownedExpression ( ISTYPE | HASTYPE | AT_SIGN) typeReference
-    | ownedExpression AS typeReference
-    | ownedExpression AT_AT typeReference
-    | ownedExpression META typeReference
-    | ownedExpression LBRACK sequenceExpressionList? RBRACK
-    | ownedExpression HASH LPAREN sequenceExpressionList? RPAREN
-    | ownedExpression argumentList
-    | ownedExpression DOT qualifiedName
-    | ownedExpression DOT bodyExpression
-    | ownedExpression DOT_QUESTION bodyExpression
-    | ownedExpression ARROW qualifiedName ( bodyExpression | argumentList)
+    | nullCoalescingExpression
+    ;
+
+nullCoalescingExpression
+    : impliesExpression ( QUESTION_QUESTION impliesExpression )*
+    ;
+
+impliesExpression
+    : orExpression ( IMPLIES orExpression )*
+    ;
+
+orExpression
+    : xorExpression ( ( OR | PIPE ) xorExpression )*
+    ;
+
+xorExpression
+    : andExpression ( XOR andExpression )*
+    ;
+
+andExpression
+    : equalityExpression ( ( AND | AMP ) equalityExpression )*
+    ;
+
+equalityExpression
+    : classificationExpression ( ( EQ_EQ | BANG_EQ | EQ_EQ_EQ | BANG_EQ_EQ ) classificationExpression )*
+    ;
+
+relationalExpression
+    : rangeExpression ( ( LT | GT | LE | GE ) rangeExpression )*
+    ;
+
+rangeExpression
+    : additiveExpression ( DOT_DOT additiveExpression )*
+    ;
+
+additiveExpression
+    : multiplicativeExpression ( ( PLUS | MINUS ) multiplicativeExpression )*
+    ;
+
+multiplicativeExpression
+    : exponentiationExpression ( ( STAR | SLASH | PERCENT ) exponentiationExpression )*
+    ;
+
+exponentiationExpression
+    : unaryExpression ( ( STAR_STAR | CARET ) exponentiationExpression )?
+    ;
+
+classificationExpression
+    : relationalExpression (
+        ISTYPE typeReference
+      | HASTYPE typeReference
+      | AT_SIGN typeReference
+      | AS typeReference
+      | AT_AT typeReference
+      | META typeReference
+      )?
+    ;
+
+unaryExpression
+    : ( PLUS | MINUS | TILDE | NOT ) unaryExpression
+    | ( AT_SIGN | AT_AT ) typeReference
     | ALL typeReference
-    | baseExpression
+    | primaryExpression
+    ;
+
+primaryExpression
+    : baseExpression (
+        DOT qualifiedName
+      | DOT bodyExpression
+      | DOT_QUESTION bodyExpression
+      | LBRACK sequenceExpressionList? RBRACK
+      | HASH LPAREN sequenceExpressionList? RPAREN
+      | argumentList
+      | ARROW qualifiedName ( bodyExpression | argumentList )
+      )*
     ;
 
 typeReference
@@ -56,17 +103,17 @@ typeReference
     ;
 
 sequenceExpressionList
-    : ownedExpression (COMMA ownedExpression)*
+    : ownedExpression ( COMMA ownedExpression )*
     ;
 
 baseExpression
     : nullExpression
-    | REGULAR_COMMENT // ignore block comments used as expression placeholders
+    | REGULAR_COMMENT   // ignore block comments used as expression placeholders
     | literalExpression
-    | qualifiedName (argumentList | DOT METADATA)? // merged featureRef/metadataAccess/invocation
+    | qualifiedName ( argumentList | DOT METADATA )?   // merged featureRef/metadataAccess/invocation
     | constructorExpression
     | bodyExpression
-    | LPAREN AS typeReference RPAREN // cast expression: (as Type)
+    | LPAREN AS typeReference RPAREN   // metadata cast expression: (as MetadataType)
     | LPAREN sequenceExpressionList? RPAREN
     ;
 
@@ -79,14 +126,6 @@ featureReferenceExpression
     : qualifiedName
     ;
 
-metadataAccessExpression
-    : qualifiedName DOT METADATA
-    ;
-
-invocationExpression
-    : qualifiedName argumentList
-    ;
-
 constructorExpression
     : NEW qualifiedName argumentList
     ;
@@ -96,15 +135,15 @@ bodyExpression
     ;
 
 argumentList
-    : LPAREN (positionalArgumentList | namedArgumentList)? RPAREN
+    : LPAREN ( positionalArgumentList | namedArgumentList )? RPAREN
     ;
 
 positionalArgumentList
-    : ownedExpression (COMMA ownedExpression)*
+    : ownedExpression ( COMMA ownedExpression )*
     ;
 
 namedArgumentList
-    : namedArgument (COMMA namedArgument)*
+    : namedArgument ( COMMA namedArgument )*
     ;
 
 namedArgument
@@ -119,26 +158,11 @@ literalExpression
     | literalInfinity
     ;
 
-literalBoolean
-    : TRUE
-    | FALSE
-    ;
-
-literalString
-    : DOUBLE_STRING
-    ;
-
-literalInteger
-    : INTEGER
-    ;
-
-literalReal
-    : REAL
-    ;
-
-literalInfinity
-    : STAR
-    ;
+literalBoolean : TRUE | FALSE ;
+literalString : DOUBLE_STRING ;
+literalInteger : INTEGER ;
+literalReal : REAL ;
+literalInfinity : STAR ;
 
 argumentMember
     : ownedExpression
@@ -173,12 +197,6 @@ unreservedKeyword
     | PREDICATE
     | INTERACTION
     | METACLASS
-    | COLOR
-    | SHAPE
-    | SHOW
-    | EVENTS
-    | ANNOTATION
-    | GUARD
     ;
 
 // ===== Parser rules =====
@@ -190,14 +208,10 @@ identification
     | name
     ;
 
-qualifiedIdentification
-    : (DOLLAR COLON_COLON)? name COLON_COLON (name COLON_COLON)* name
-    ;
-
 relationshipBody
     : SEMI
     | LBRACE relationshipOwnedElement* RBRACE
-    | LBRACE ( ownedAnnotation)* RBRACE
+    | LBRACE ( ownedAnnotation )* RBRACE
     ;
 
 relationshipOwnedElement
@@ -211,10 +225,8 @@ ownedRelatedElement
     ;
 
 dependency
-    : (prefixMetadataAnnotation)* DEPENDENCY (identification? FROM)? qualifiedName (
-        COMMA qualifiedName
-    )* TO qualifiedName (COMMA qualifiedName)* relationshipBody
-    | (prefixMetadataAnnotation)* DEPENDENCY dependencyDeclaration relationshipBody
+    : ( prefixMetadataAnnotation )* DEPENDENCY ( identification? FROM )? qualifiedName ( COMMA qualifiedName )* TO qualifiedName ( COMMA qualifiedName )* relationshipBody
+    | ( prefixMetadataAnnotation )* DEPENDENCY dependencyDeclaration relationshipBody
     ;
 
 annotation
@@ -233,15 +245,15 @@ annotatingElement
     ;
 
 comment
-    : (COMMENT identification? ( ABOUT annotation ( COMMA annotation)*)?)? (LOCALE DOUBLE_STRING)? REGULAR_COMMENT
+    : ( COMMENT identification? ( ABOUT annotation ( COMMA annotation )* )? )? ( LOCALE DOUBLE_STRING )? REGULAR_COMMENT
     ;
 
 documentation
-    : DOC identification? (LOCALE DOUBLE_STRING)? REGULAR_COMMENT
+    : DOC identification? ( LOCALE DOUBLE_STRING )? REGULAR_COMMENT
     ;
 
 textualRepresentation
-    : (REP identification?)? LANGUAGE DOUBLE_STRING REGULAR_COMMENT
+    : ( REP identification? )? LANGUAGE DOUBLE_STRING REGULAR_COMMENT
     ;
 
 rootNamespace
@@ -249,7 +261,7 @@ rootNamespace
     ;
 
 namespace
-    : (prefixMetadataMember)* namespaceDeclaration namespaceBody
+    : ( prefixMetadataMember )* namespaceDeclaration namespaceBody
     ;
 
 namespaceDeclaration
@@ -268,7 +280,7 @@ namespaceBodyElement
     ;
 
 memberPrefix
-    : (visibilityIndicator)?
+    : ( visibilityIndicator )?
     ;
 
 visibilityIndicator
@@ -291,20 +303,19 @@ namespaceFeatureMember
     ;
 
 aliasMember
-    : memberPrefix ALIAS (LT name GT)? (name)? FOR qualifiedName relationshipBody
+    : memberPrefix ALIAS ( LT name GT )? ( name )? FOR qualifiedName relationshipBody
     ;
 
 qualifiedName
-    : (DOLLAR COLON_COLON)? (name COLON_COLON)* name
+    : ( DOLLAR COLON_COLON )? ( name COLON_COLON )* name
     ;
 
-// Import visibility is required at the syntax level, matching the official
-// KerML/SysML 2026-05 BNF ("Import = visibility = VisibilityIndicator 'import' ...",
-// KerML §8.2.3.4.2 / SysML-textual-bnf.kebnf). daltskin's translation makes it
-// optional; this local deviation keeps the official shape (a bare 'import' is a
-// syntax error, as the official XPECT fixture Import_Visibility_Valid expects).
+qualifiedIdentification
+    : ( DOLLAR COLON_COLON )? ( name COLON_COLON )+ name
+    ;
+
 importRule
-    : visibilityIndicator IMPORT (ALL)? importDeclaration relationshipBody
+    : ( visibilityIndicator )? IMPORT ( ALL )? importDeclaration relationshipBody
     ;
 
 importDeclaration
@@ -313,18 +324,16 @@ importDeclaration
     ;
 
 membershipImport
-    : qualifiedName (COLON_COLON STAR_STAR)?
+    : qualifiedName ( COLON_COLON STAR_STAR )?
     ;
 
 namespaceImport
-    : qualifiedName COLON_COLON STAR (COLON_COLON STAR_STAR)?
+    : qualifiedName COLON_COLON STAR ( COLON_COLON STAR_STAR )?
     | filterPackage
     ;
 
-// OMG 2026-05 KeBNF added a real FilterPackageImport production; the previous
-// TODO stub (filterPackageImport : IDENTIFIER) is no longer needed.
 filterPackage
-    : filterPackageImportDeclaration (filterPackageMember)+
+    : filterPackageImportDeclaration ( filterPackageMember )+
     ;
 
 filterPackageMember
@@ -383,19 +392,19 @@ type
     ;
 
 typePrefix
-    : (ABSTRACT)? (prefixMetadataMember)*
+    : ( ABSTRACT )? ( prefixMetadataMember )*
     ;
 
 typeDeclaration
-    : (ALL)? identification? (ownedMultiplicity)? (specializationPart | conjugationPart)+ typeRelationshipPart*
+    : ( ALL )? identification? ( ownedMultiplicity )? ( specializationPart | conjugationPart )+ typeRelationshipPart*
     ;
 
 specializationPart
-    : (COLON_GT | SPECIALIZES) ownedSpecialization (COMMA ownedSpecialization)*
+    : ( COLON_GT | SPECIALIZES ) ownedSpecialization ( COMMA ownedSpecialization )*
     ;
 
 conjugationPart
-    : (TILDE | CONJUGATES) ownedConjugation
+    : ( TILDE | CONJUGATES ) ownedConjugation
     ;
 
 typeRelationshipPart
@@ -406,19 +415,19 @@ typeRelationshipPart
     ;
 
 disjoiningPart
-    : DISJOINT FROM ownedDisjoining (COMMA ownedDisjoining)*
+    : DISJOINT FROM ownedDisjoining ( COMMA ownedDisjoining )*
     ;
 
 unioningPart
-    : UNIONS unioning (COMMA unioning)*
+    : UNIONS unioning ( COMMA unioning )*
     ;
 
 intersectingPart
-    : INTERSECTS intersecting (COMMA intersecting)*
+    : INTERSECTS intersecting ( COMMA intersecting )*
     ;
 
 differencingPart
-    : DIFFERENCES differencing (COMMA differencing)*
+    : DIFFERENCES differencing ( COMMA differencing )*
     ;
 
 typeBody
@@ -434,7 +443,7 @@ typeBodyElement
     ;
 
 specialization
-    : (SPECIALIZATION identification?)? SUBTYPE specificType (COLON_GT | SPECIALIZES) generalType relationshipBody
+    : ( SPECIALIZATION identification? )? SUBTYPE specificType ( COLON_GT | SPECIALIZES ) generalType relationshipBody
     ;
 
 ownedSpecialization
@@ -442,44 +451,39 @@ ownedSpecialization
     ;
 
 specificType
-    : qualifiedName (DOT qualifiedName)*
+    : qualifiedName ( DOT qualifiedName )*
     ;
 
 generalType
-    : qualifiedName (DOT qualifiedName)*
+    : qualifiedName ( DOT qualifiedName )*
     ;
 
 conjugation
-    : (CONJUGATION identification?)? CONJUGATE qualifiedName (DOT qualifiedName)* (
-        TILDE
-        | CONJUGATES
-    ) qualifiedName (DOT qualifiedName)* relationshipBody
+    : ( CONJUGATION identification? )? CONJUGATE qualifiedName ( DOT qualifiedName )* ( TILDE | CONJUGATES ) qualifiedName ( DOT qualifiedName )* relationshipBody
     ;
 
 ownedConjugation
-    : qualifiedName (DOT qualifiedName)*
+    : qualifiedName ( DOT qualifiedName )*
     ;
 
 disjoining
-    : (DISJOINING identification?)? DISJOINT qualifiedName (DOT qualifiedName)* FROM qualifiedName (
-        DOT qualifiedName
-    )* relationshipBody
+    : ( DISJOINING identification? )? DISJOINT qualifiedName ( DOT qualifiedName )* FROM qualifiedName ( DOT qualifiedName )* relationshipBody
     ;
 
 ownedDisjoining
-    : qualifiedName (DOT qualifiedName)*
+    : qualifiedName ( DOT qualifiedName )*
     ;
 
 unioning
-    : qualifiedName (DOT qualifiedName)*
+    : qualifiedName ( DOT qualifiedName )*
     ;
 
 intersecting
-    : qualifiedName (DOT qualifiedName)*
+    : qualifiedName ( DOT qualifiedName )*
     ;
 
 differencing
-    : qualifiedName (DOT qualifiedName)*
+    : qualifiedName ( DOT qualifiedName )*
     ;
 
 featureMember
@@ -500,15 +504,15 @@ classifier
     ;
 
 classifierDeclaration
-    : (ALL)? identification? (ownedMultiplicity)? (superclassingPart | conjugationPart)? typeRelationshipPart*
+    : ( ALL )? identification? ( ownedMultiplicity )? ( superclassingPart | conjugationPart )? typeRelationshipPart*
     ;
 
 superclassingPart
-    : (COLON_GT | SPECIALIZES) ownedSubclassification (COMMA ownedSubclassification)*
+    : ( COLON_GT | SPECIALIZES ) ownedSubclassification ( COMMA ownedSubclassification )*
     ;
 
 subclassification
-    : (SPECIALIZATION identification?)? SUBCLASSIFIER qualifiedName (COLON_GT | SPECIALIZES) qualifiedName relationshipBody
+    : ( SPECIALIZATION identification? )? SUBCLASSIFIER qualifiedName ( COLON_GT | SPECIALIZES ) qualifiedName relationshipBody
     ;
 
 ownedSubclassification
@@ -516,22 +520,19 @@ ownedSubclassification
     ;
 
 feature
-    : (
-        featurePrefix ( FEATURE | prefixMetadataMember) featureDeclaration?
-        | ( endFeaturePrefix | basicFeaturePrefix) ( REF)? featureDeclaration
-    ) valuePart? typeBody
+    : ( featurePrefix ( FEATURE | prefixMetadataMember ) featureDeclaration? | ( endFeaturePrefix | basicFeaturePrefix ) ( REF )? featureDeclaration ) valuePart? typeBody
     ;
 
 endFeaturePrefix
-    : (CONST)? END
+    : ( CONST )? END
     ;
 
 basicFeaturePrefix
-    : (featureDirection)? (DERIVED)? (ABSTRACT)? (COMPOSITE | PORTION)? (VAR | CONST)?
+    : ( featureDirection )? ( DERIVED )? ( ABSTRACT )? ( COMPOSITE | PORTION )? ( VAR | CONST )?
     ;
 
 featurePrefix
-    : (endFeaturePrefix ownedCrossFeatureMember | basicFeaturePrefix) (prefixMetadataMember)*
+    : ( endFeaturePrefix ownedCrossFeatureMember | basicFeaturePrefix ) ( prefixMetadataMember )*
     ;
 
 ownedCrossFeatureMember
@@ -550,15 +551,11 @@ featureDirection
     ;
 
 featureDeclaration
-    : (ALL)? (
-        featureIdentification ( featureSpecializationPart | conjugationPart)?
-        | featureSpecializationPart
-        | conjugationPart
-    ) featureRelationshipPart*
+    : ( ALL )? ( featureIdentification ( featureSpecializationPart | conjugationPart )? | featureSpecializationPart | conjugationPart ) featureRelationshipPart*
     ;
 
 featureIdentification
-    : LT name GT (name)?
+    : LT name GT ( name )?
     | name
     ;
 
@@ -570,7 +567,7 @@ featureRelationshipPart
     ;
 
 chainingPart
-    : CHAINS qualifiedName (DOT qualifiedName)*
+    : CHAINS qualifiedName ( DOT qualifiedName )*
     ;
 
 invertingPart
@@ -578,7 +575,7 @@ invertingPart
     ;
 
 typeFeaturingPart
-    : FEATURED BY ownedTypeFeaturing (COMMA ownedTypeFeaturing)*
+    : FEATURED BY ownedTypeFeaturing ( COMMA ownedTypeFeaturing )*
     ;
 
 featureSpecializationPart
@@ -587,8 +584,8 @@ featureSpecializationPart
     ;
 
 multiplicityPart
-    : ownedMultiplicity (ORDERED ( NONUNIQUE)? | NONUNIQUE ( ORDERED)?)?
-    | ( ORDERED ( NONUNIQUE)? | NONUNIQUE ( ORDERED)?)
+    : ownedMultiplicity ( ORDERED ( NONUNIQUE )? | NONUNIQUE ( ORDERED )? )?
+    | ( ORDERED ( NONUNIQUE )? | NONUNIQUE ( ORDERED )? )
     ;
 
 featureSpecialization
@@ -600,96 +597,81 @@ featureSpecialization
     ;
 
 typings
-    : typedBy (COMMA featureTyping)*
+    : typedBy ( COMMA featureTyping )*
     ;
 
 typedBy
-    : (COLON | TYPED BY | DEFINED BY) featureTyping
+    : ( COLON | TYPED BY | DEFINED BY ) featureTyping
     ;
 
 subsettings
-    : subsets (COMMA ownedSubsetting)*
+    : subsets ( COMMA ownedSubsetting )*
     ;
 
 subsets
-    : (COLON_GT | SUBSETS) ownedSubsetting
+    : ( COLON_GT | SUBSETS ) ownedSubsetting
     ;
 
 references
-    : (COLON_COLON_GT | REFERENCES) ownedReferenceSubsetting
+    : ( COLON_COLON_GT | REFERENCES ) ownedReferenceSubsetting
     ;
 
 crosses
-    : (FAT_ARROW | CROSSES) ownedCrossSubsetting
+    : ( FAT_ARROW | CROSSES ) ownedCrossSubsetting
     ;
 
 redefinitions
-    : redefines (COMMA ownedRedefinition)*
+    : redefines ( COMMA ownedRedefinition )*
     ;
 
 redefines
-    : (COLON_GT_GT | REDEFINES) ownedRedefinition
+    : ( COLON_GT_GT | REDEFINES ) ownedRedefinition
     ;
 
 featureTyping
-    : (SPECIALIZATION identification?)? TYPING qualifiedName (COLON | TYPED BY) generalType relationshipBody
+    : ( SPECIALIZATION identification? )? TYPING qualifiedName ( COLON | TYPED BY ) generalType relationshipBody
     | ownedFeatureTyping
     | conjugatedPortTyping
     ;
 
 ownedFeatureTyping
-    : qualifiedName (DOT qualifiedName)*
+    : qualifiedName ( DOT qualifiedName )*
     ;
 
 subsetting
-    : (SPECIALIZATION identification?)? SUBSET specificType (COLON_GT | SUBSETS) generalType relationshipBody
+    : ( SPECIALIZATION identification? )? SUBSET specificType ( COLON_GT | SUBSETS ) generalType relationshipBody
     ;
 
 ownedSubsetting
-    : qualifiedName (DOT qualifiedName)*
+    : qualifiedName ( DOT qualifiedName )*
     ;
 
 ownedReferenceSubsetting
-    : qualifiedName (DOT qualifiedName)*
+    : qualifiedName ( DOT qualifiedName )*
     ;
 
 ownedCrossSubsetting
-    : qualifiedName (DOT qualifiedName)*
+    : qualifiedName ( DOT qualifiedName )*
     ;
 
 redefinition
-    : (SPECIALIZATION identification?)? REDEFINITION specificType (COLON_GT_GT | REDEFINES) generalType relationshipBody
+    : ( SPECIALIZATION identification? )? REDEFINITION specificType ( COLON_GT_GT | REDEFINES ) generalType relationshipBody
     ;
 
 ownedRedefinition
-    : qualifiedName (DOT qualifiedName)*
-    ;
-
-ownedFeatureChain
-    : featureChain
-    | ownedFeatureChaining ( DOT ownedFeatureChaining)+
-    ;
-
-featureChain
-    : ownedFeatureChaining (DOT ownedFeatureChaining)+
-    ;
-
-ownedFeatureChaining
-    : qualifiedName
+    : qualifiedName ( DOT qualifiedName )*
     ;
 
 featureInverting
-    : (INVERTING identification?)? INVERSE qualifiedName (DOT qualifiedName)* OF qualifiedName (
-        DOT qualifiedName
-    )* relationshipBody
+    : ( INVERTING identification? )? INVERSE qualifiedName ( DOT qualifiedName )* OF qualifiedName ( DOT qualifiedName )* relationshipBody
     ;
 
 ownedFeatureInverting
-    : qualifiedName (DOT qualifiedName)*
+    : qualifiedName ( DOT qualifiedName )*
     ;
 
 typeFeaturing
-    : FEATURING (identification? OF)? qualifiedName BY qualifiedName relationshipBody
+    : FEATURING ( identification? OF )? qualifiedName BY qualifiedName relationshipBody
     ;
 
 ownedTypeFeaturing
@@ -717,7 +699,7 @@ associationStructure
     ;
 
 connector
-    : featurePrefix CONNECTOR (featureDeclaration? valuePart? | connectorDeclaration) typeBody
+    : featurePrefix CONNECTOR ( featureDeclaration? valuePart? | connectorDeclaration ) typeBody
     ;
 
 connectorDeclaration
@@ -726,13 +708,11 @@ connectorDeclaration
     ;
 
 binaryConnectorDeclaration
-    : (featureDeclaration? FROM | ALL FROM?)? connectorEndMember TO connectorEndMember
+    : ( featureDeclaration? FROM | ALL FROM? )? connectorEndMember TO connectorEndMember
     ;
 
 naryConnectorDeclaration
-    : featureDeclaration? LPAREN connectorEndMember COMMA connectorEndMember (
-        COMMA connectorEndMember
-    )* RPAREN
+    : featureDeclaration? LPAREN connectorEndMember COMMA connectorEndMember ( COMMA connectorEndMember )* RPAREN
     ;
 
 connectorEndMember
@@ -740,7 +720,7 @@ connectorEndMember
     ;
 
 connectorEnd
-    : (ownedCrossMultiplicityMember)? (name ( COLON_COLON_GT | REFERENCES))? ownedReferenceSubsetting ownedMultiplicity?
+    : ( ownedCrossMultiplicityMember )? ( name ( COLON_COLON_GT | REFERENCES ) )? ownedReferenceSubsetting ownedMultiplicity?
     ;
 
 ownedCrossMultiplicityMember
@@ -756,8 +736,8 @@ bindingConnector
     ;
 
 bindingConnectorDeclaration
-    : featureDeclaration (OF connectorEndMember EQ connectorEndMember)?
-    | ( ALL)? ( OF? connectorEndMember EQ connectorEndMember)?
+    : featureDeclaration ( OF connectorEndMember EQ connectorEndMember )?
+    | ( ALL )? ( OF? connectorEndMember EQ connectorEndMember )?
     ;
 
 succession
@@ -765,8 +745,8 @@ succession
     ;
 
 successionDeclaration
-    : featureDeclaration (FIRST connectorEndMember THEN connectorEndMember)?
-    | ( ALL)? ( FIRST? connectorEndMember THEN connectorEndMember)?
+    : featureDeclaration ( FIRST connectorEndMember THEN connectorEndMember )?
+    | ( ALL )? ( FIRST? connectorEndMember THEN connectorEndMember )?
     ;
 
 behavior
@@ -787,7 +767,7 @@ functionBody
     ;
 
 functionBodyPart
-    : (definitionBodyItem | typeBodyElement | returnFeatureMember)* (resultExpressionMember)?
+    : ( definitionBodyItem | typeBodyElement | returnFeatureMember )* ( resultExpressionMember )?
     ;
 
 returnFeatureMember
@@ -811,138 +791,11 @@ booleanExpression
     ;
 
 invariant
-    : featurePrefix INV (TRUE | FALSE)? featureDeclaration valuePart? functionBody
-    ;
-
-ownedExpressionMember
-    : ownedExpression
-    ;
-
-metadataReference
-    : elementReferenceMember
-    ;
-
-typeReferenceMember
-    : typeReference
-    ;
-
-typeResultMember
-    : typeReference
-    ;
-
-referenceTyping
-    : qualifiedName
-    ;
-
-emptyResultMember
-    : emptyFeature_
-    ;
-
-sequenceOperatorExpression
-    : ownedExpressionMember COMMA sequenceExpressionListMember
-    ;
-
-sequenceExpressionListMember
-    : sequenceExpressionList
-    ;
-
-bodyArgumentMember
-    : bodyArgument
-    ;
-
-bodyArgument
-    : bodyArgumentValue
-    ;
-
-bodyArgumentValue
-    : bodyExpression
-    ;
-
-functionReferenceArgumentMember
-    : functionReferenceArgument
-    ;
-
-functionReferenceArgument
-    : functionReferenceArgumentValue
-    ;
-
-functionReferenceArgumentValue
-    : functionReferenceExpression
-    ;
-
-functionReferenceExpression
-    : functionReferenceMember
-    ;
-
-functionReferenceMember
-    : functionReference
-    ;
-
-functionReference
-    : referenceTyping
+    : featurePrefix INV ( TRUE | FALSE )? featureDeclaration valuePart? functionBody
     ;
 
 featureChainMember
-    : qualifiedName (DOT qualifiedName)*
-    ;
-
-ownedFeatureChainMember
-    : featureChain
-    | ownedFeatureChain
-    ;
-
-featureReferenceMember
-    : featureReference
-    ;
-
-featureReference
-    : qualifiedName
-    ;
-
-elementReferenceMember
-    : qualifiedName
-    ;
-
-constructorResultMember
-    : constructorResult
-    ;
-
-constructorResult
-    : argumentList
-    ;
-
-instantiatedTypeMember
-    : qualifiedName (DOT qualifiedName)*
-    ;
-
-instantiatedTypeReference
-    : qualifiedName
-    ;
-
-namedArgumentMember
-    : namedArgument
-    ;
-
-parameterRedefinition
-    : qualifiedName
-    ;
-
-expressionBodyMember
-    : expressionBody
-    ;
-
-expressionBody
-    : LBRACE functionBodyPart RBRACE
-    ;
-
-booleanValue
-    : TRUE
-    | FALSE
-    ;
-
-realValue
-    : INTEGER? DOT (INTEGER | REAL)
-    | REAL
+    : qualifiedName ( DOT qualifiedName )*
     ;
 
 interaction
@@ -958,26 +811,19 @@ successionFlow
     ;
 
 flowDeclaration
-    : featureDeclaration valuePart? (OF payloadFeatureMember)? (
-        FROM flowEndMember TO flowEndMember
-    )?
-    | ( ALL)? flowEndMember TO flowEndMember
-    | usageDeclaration? valuePart? (OF flowPayloadFeatureMember)? (
-        FROM flowEndMember TO flowEndMember
-    )?
+    : featureDeclaration valuePart? ( OF payloadFeatureMember )? ( FROM flowEndMember TO flowEndMember )?
+    | ( ALL )? flowEndMember TO flowEndMember
+    | usageDeclaration? valuePart? ( OF flowPayloadFeatureMember )? ( FROM flowEndMember TO flowEndMember )?
     ;
 
 payloadFeatureMember
     : payloadFeature
     ;
 
-// OMG 2026-05 BNF sync (daltskin/sysml-v2-grammar v2026.05.0, commits #8/#9):
-// identification is required in the typed alternatives and the ownedFeatureTyping /
-// ownedMultiplicity pair is normalized.
 payloadFeature
     : identification payloadFeatureSpecializationPart valuePart?
     | identification valuePart
-    | ownedFeatureTyping ( ownedMultiplicity)?
+    | ownedFeatureTyping ( ownedMultiplicity )?
     | ownedMultiplicity ownedFeatureTyping
     | identification? payloadFeatureSpecializationPart valuePart?
     ;
@@ -992,19 +838,7 @@ flowEndMember
     ;
 
 flowEnd
-    : qualifiedName (DOT qualifiedName)*
-    ;
-
-flowFeatureMember
-    : flowFeature
-    ;
-
-flowFeature
-    : flowFeatureRedefinition
-    ;
-
-flowFeatureRedefinition
-    : qualifiedName
+    : qualifiedName ( DOT qualifiedName )*
     ;
 
 valuePart
@@ -1012,7 +846,7 @@ valuePart
     ;
 
 featureValue
-    : (EQ | COLON_EQ | DEFAULT ( EQ | COLON_EQ)?) ownedExpression
+    : ( EQ | COLON_EQ | DEFAULT ( EQ | COLON_EQ )? ) ownedExpression
     ;
 
 multiplicity
@@ -1037,11 +871,11 @@ ownedMultiplicityRange
     ;
 
 multiplicityBounds
-    : LBRACK (multiplicityExpressionMember DOT_DOT)? multiplicityExpressionMember RBRACK
+    : LBRACK ( multiplicityExpressionMember DOT_DOT )? multiplicityExpressionMember RBRACK
     ;
 
 multiplicityExpressionMember
-    : (literalExpression | featureReferenceExpression)
+    : ( literalExpression | featureReferenceExpression )
     ;
 
 metaclass
@@ -1063,19 +897,17 @@ prefixMetadataFeature
     ;
 
 metadataFeature
-    : (prefixMetadataMember)* (AT_SIGN | METADATA) metadataFeatureDeclaration (
-        ABOUT annotation ( COMMA annotation)*
-    )? metadataBody
+    : ( prefixMetadataMember )* ( AT_SIGN | METADATA ) metadataFeatureDeclaration ( ABOUT annotation ( COMMA annotation )* )? metadataBody
     ;
 
 metadataFeatureDeclaration
-    : (identification? ( COLON | TYPED BY))? ownedFeatureTyping
+    : ( identification? ( COLON | TYPED BY ) )? ownedFeatureTyping
     ;
 
 metadataBody
     : SEMI
-    | LBRACE ( metadataBodyElement)* RBRACE
-    | LBRACE (definitionMember | metadataBodyUsageMember | aliasMember | importRule)* RBRACE
+    | LBRACE ( metadataBodyElement )* RBRACE
+    | LBRACE ( definitionMember | metadataBodyUsageMember | aliasMember | importRule )* RBRACE
     ;
 
 metadataBodyElement
@@ -1090,15 +922,15 @@ metadataBodyFeatureMember
     ;
 
 metadataBodyFeature
-    : FEATURE? (COLON_GT_GT | REDEFINES)? ownedRedefinition featureSpecializationPart? valuePart? metadataBody
+    : FEATURE? ( COLON_GT_GT | REDEFINES )? ownedRedefinition featureSpecializationPart? valuePart? metadataBody
     ;
 
 package
-    : (prefixMetadataMember)* packageDeclaration packageBody
+    : ( prefixMetadataMember )* packageDeclaration packageBody
     ;
 
 libraryPackage
-    : (STANDARD)? LIBRARY (prefixMetadataMember)* packageDeclaration packageBody
+    : ( STANDARD )? LIBRARY ( prefixMetadataMember )* packageDeclaration packageBody
     ;
 
 packageDeclaration
@@ -1115,13 +947,9 @@ elementFilterMember
     ;
 
 dependencyDeclaration
-    : (identification? FROM)? qualifiedName (COMMA qualifiedName)* TO qualifiedName (
-        COMMA qualifiedName
-    )*
+    : ( identification? FROM )? qualifiedName ( COMMA qualifiedName )* TO qualifiedName ( COMMA qualifiedName )*
     ;
 
-// SYSML21-319 (SysML 2.1 RTF Ballot 1, Pilot PR #775): an annotating member of an
-// enumeration definition may now have an explicit visibility indicator.
 annotatingMember
     : memberPrefix annotatingElement
     ;
@@ -1134,7 +962,7 @@ packageBodyElement
     ;
 
 packageMember
-    : memberPrefix (definitionElement | usageElement)
+    : memberPrefix ( definitionElement | usageElement )
     ;
 
 definitionElement
@@ -1204,15 +1032,15 @@ definitionBody
 definitionBodyItem
     : importRule
     | memberPrefix definitionBodyItemContent
-    | ( sourceSuccessionMember)? memberPrefix endOccurrenceUsageElement
-    | ( sourceSuccessionMember)? memberPrefix occurrenceUsageElement
+    | ( sourceSuccessionMember )? memberPrefix endOccurrenceUsageElement
+    | ( sourceSuccessionMember )? memberPrefix occurrenceUsageElement
     ;
 
 // Factored dispatch: after memberPrefix is consumed, the next token
 // (ALIAS, VARIANT, keyword, or identifier) unambiguously selects the branch.
 // This reduces the SLL prediction DFA from 6 nullable-prefix alternatives to 3+4.
 definitionBodyItemContent
-    : ALIAS (LT name GT)? (name)? FOR qualifiedName relationshipBody
+    : ALIAS ( LT name GT )? ( name )? FOR qualifiedName relationshipBody
     | VARIANT variantUsageElement
     | definitionElement
     | nonOccurrenceUsageElement
@@ -1230,10 +1058,6 @@ nonOccurrenceUsageMember
     : memberPrefix nonOccurrenceUsageElement
     ;
 
-occurrenceUsageMember
-    : memberPrefix occurrenceUsageElement
-    ;
-
 structureUsageMember
     : memberPrefix structureUsageElement
     ;
@@ -1243,11 +1067,11 @@ behaviorUsageMember
     ;
 
 refPrefix
-    : (featureDirection)? (DERIVED)? (ABSTRACT | VARIATION)? (CONSTANT)?
+    : ( featureDirection )? ( DERIVED )? ( ABSTRACT | VARIATION )? ( CONSTANT )?
     ;
 
 basicUsagePrefix
-    : refPrefix (REF)?
+    : refPrefix ( REF )?
     ;
 
 endUsagePrefix
@@ -1289,7 +1113,7 @@ defaultReferenceUsage
     ;
 
 referenceUsage
-    : (endUsagePrefix | refPrefix) REF usage
+    : ( endUsagePrefix | refPrefix ) REF usage
     ;
 
 // Unnamed end feature with specialization (e.g., end :>> QualifiedName;)
@@ -1318,7 +1142,7 @@ nonOccurrenceUsageElement
 // The END keyword marks a feature as a connection/interface/flow endpoint.
 // The optional multiplicity constrains the end feature cardinality.
 endOccurrenceUsageElement
-    : END (name)? (ownedCrossMultiplicityMember)? (NONUNIQUE)? occurrenceUsageElement
+    : END ( name )? ( ownedCrossMultiplicityMember )? ( NONUNIQUE )? occurrenceUsageElement
     ;
 
 occurrenceUsageElement
@@ -1388,7 +1212,7 @@ variantUsageElement
     ;
 
 subclassificationPart
-    : (COLON_GT | SPECIALIZES) ownedSubclassification (COMMA ownedSubclassification)*
+    : ( COLON_GT | SPECIALIZES ) ownedSubclassification ( COMMA ownedSubclassification )*
     ;
 
 attributeDefinition
@@ -1405,11 +1229,11 @@ enumerationDefinition
 
 enumerationBody
     : SEMI
-    | LBRACE ( annotatingMember | enumerationUsageMember)* RBRACE
+    | LBRACE ( annotatingMember | enumerationUsageMember )* RBRACE
     ;
 
 enumerationUsageMember
-    : (prefixMetadataMember)* memberPrefix enumeratedValue
+    : ( prefixMetadataMember )* memberPrefix enumeratedValue
     ;
 
 enumeratedValue
@@ -1421,7 +1245,7 @@ enumerationUsage
     ;
 
 occurrenceDefinitionPrefix
-    : basicDefinitionPrefix? (INDIVIDUAL emptyMultiplicityMember)? definitionExtensionKeyword*
+    : basicDefinitionPrefix? ( INDIVIDUAL emptyMultiplicityMember )? definitionExtensionKeyword*
     ;
 
 occurrenceDefinition
@@ -1437,7 +1261,7 @@ emptyMultiplicityMember
     ;
 
 occurrenceUsagePrefix
-    : basicUsagePrefix (INDIVIDUAL)? (portionKind)? usageExtensionKeyword*
+    : basicUsagePrefix ( INDIVIDUAL )? ( portionKind )? usageExtensionKeyword*
     ;
 
 occurrenceUsage
@@ -1449,7 +1273,7 @@ individualUsage
     ;
 
 portionUsage
-    : basicUsagePrefix (INDIVIDUAL)? portionKind usageExtensionKeyword* usage
+    : basicUsagePrefix ( INDIVIDUAL )? portionKind usageExtensionKeyword* usage
     ;
 
 portionKind
@@ -1458,10 +1282,7 @@ portionKind
     ;
 
 eventOccurrenceUsage
-    : occurrenceUsagePrefix EVENT (
-        ownedReferenceSubsetting featureSpecializationPart?
-        | OCCURRENCE usageDeclaration?
-    ) usageCompletion
+    : occurrenceUsagePrefix EVENT ( ownedReferenceSubsetting featureSpecializationPart? | OCCURRENCE usageDeclaration? ) usageCompletion
     ;
 
 sourceSuccessionMember
@@ -1477,7 +1298,7 @@ sourceEndMember
     ;
 
 sourceEnd
-    : (ownedMultiplicity)?
+    : ( ownedMultiplicity )?
     ;
 
 itemDefinition
@@ -1521,10 +1342,7 @@ connectionDefinition
     ;
 
 connectionUsage
-    : occurrenceUsagePrefix (
-        CONNECTION usageDeclaration? valuePart? ( CONNECT connectorPart)?
-        | CONNECT connectorPart
-    ) usageBody
+    : occurrenceUsagePrefix ( CONNECTION usageDeclaration? valuePart? ( CONNECT connectorPart )? | CONNECT connectorPart ) usageBody
     ;
 
 connectorPart
@@ -1537,15 +1355,15 @@ binaryConnectorPart
     ;
 
 naryConnectorPart
-    : LPAREN connectorEndMember COMMA connectorEndMember (COMMA connectorEndMember)* RPAREN
+    : LPAREN connectorEndMember COMMA connectorEndMember ( COMMA connectorEndMember )* RPAREN
     ;
 
 bindingConnectorAsUsage
-    : usagePrefix (BINDING usageDeclaration?)? BIND connectorEndMember EQ connectorEndMember usageBody
+    : usagePrefix ( BINDING usageDeclaration? )? BIND connectorEndMember EQ connectorEndMember usageBody
     ;
 
 successionAsUsage
-    : usagePrefix (SUCCESSION usageDeclaration?)? FIRST connectorEndMember THEN connectorEndMember usageBody
+    : usagePrefix ( SUCCESSION usageDeclaration? )? FIRST connectorEndMember THEN connectorEndMember usageBody
     ;
 
 interfaceDefinition
@@ -1561,7 +1379,7 @@ interfaceBodyItem
     : definitionMember
     | variantUsageMember
     | interfaceNonOccurrenceUsageMember
-    | ( sourceSuccessionMember)? interfaceOccurrenceUsageMember
+    | ( sourceSuccessionMember )? interfaceOccurrenceUsageMember
     | aliasMember
     | importRule
     ;
@@ -1598,7 +1416,7 @@ interfaceUsage
     ;
 
 interfaceUsageDeclaration
-    : usageDeclaration? valuePart? (CONNECT interfacePart)?
+    : usageDeclaration? valuePart? ( CONNECT interfacePart )?
     | interfacePart
     ;
 
@@ -1612,7 +1430,7 @@ binaryInterfacePart
     ;
 
 naryInterfacePart
-    : LPAREN interfaceEndMember COMMA interfaceEndMember (COMMA interfaceEndMember)* RPAREN
+    : LPAREN interfaceEndMember COMMA interfaceEndMember ( COMMA interfaceEndMember )* RPAREN
     ;
 
 interfaceEndMember
@@ -1620,7 +1438,7 @@ interfaceEndMember
     ;
 
 interfaceEnd
-    : (ownedCrossMultiplicityMember)? (name ( COLON_COLON_GT | REFERENCES))? ownedReferenceSubsetting ownedMultiplicity?
+    : ( ownedCrossMultiplicityMember )? ( name ( COLON_COLON_GT | REFERENCES ) )? ownedReferenceSubsetting
     ;
 
 allocationDefinition
@@ -1632,7 +1450,7 @@ allocationUsage
     ;
 
 allocationUsageDeclaration
-    : ALLOCATION usageDeclaration? (ALLOCATE connectorPart)?
+    : ALLOCATION usageDeclaration? ( ALLOCATE connectorPart )?
     | ALLOCATE connectorPart
     ;
 
@@ -1645,9 +1463,7 @@ message
     ;
 
 messageDeclaration
-    : usageDeclaration? valuePart? (OF flowPayloadFeatureMember)? (
-        FROM messageEventMember TO messageEventMember
-    )?
+    : usageDeclaration? valuePart? ( OF flowPayloadFeatureMember )? ( FROM messageEventMember TO messageEventMember )?
     | messageEventMember TO messageEventMember
     ;
 
@@ -1675,15 +1491,6 @@ flowPayloadFeature
     : payloadFeature
     ;
 
-flowEndSubsetting
-    : qualifiedName
-    | featureChainPrefix
-    ;
-
-featureChainPrefix
-    : (ownedFeatureChaining DOT)+ ownedFeatureChaining DOT
-    ;
-
 actionDefinition
     : occurrenceDefinitionPrefix ACTION DEF definitionDeclaration actionBody
     ;
@@ -1695,8 +1502,8 @@ actionBody
 
 actionBodyItem
     : nonBehaviorBodyItem
-    | initialNodeMember ( actionTargetSuccessionMember)*
-    | (sourceSuccessionMember)? actionBehaviorMember (actionTargetSuccessionMember)*
+    | initialNodeMember ( actionTargetSuccessionMember )*
+    | ( sourceSuccessionMember )? actionBehaviorMember ( actionTargetSuccessionMember )*
     | guardedSuccessionMember
     ;
 
@@ -1706,7 +1513,7 @@ nonBehaviorBodyItem
     | definitionMember
     | variantUsageMember
     | nonOccurrenceUsageMember
-    | ( sourceSuccessionMember)? structureUsageMember
+    | ( sourceSuccessionMember )? structureUsageMember
     ;
 
 actionBehaviorMember
@@ -1743,7 +1550,7 @@ performActionUsage
     ;
 
 performActionUsageDeclaration
-    : (ownedReferenceSubsetting featureSpecializationPart? | ACTION usageDeclaration?) valuePart?
+    : ( ownedReferenceSubsetting featureSpecializationPart? | ACTION usageDeclaration? ) valuePart?
     ;
 
 actionNode
@@ -1773,7 +1580,7 @@ controlNode
     ;
 
 controlNodePrefix
-    : refPrefix (INDIVIDUAL)? (portionKind)? usageExtensionKeyword*
+    : refPrefix ( INDIVIDUAL )? ( portionKind )? usageExtensionKeyword*
     ;
 
 mergeNode
@@ -1801,7 +1608,7 @@ acceptNodeDeclaration
     ;
 
 acceptParameterPart
-    : payloadParameterMember (VIA nodeParameterMember)?
+    : payloadParameterMember ( VIA nodeParameterMember )?
     ;
 
 payloadParameterMember
@@ -1822,15 +1629,12 @@ triggerFeatureValue
     ;
 
 triggerExpression
-    : (AT | AFTER) argumentMember
+    : ( AT | AFTER ) argumentMember
     | WHEN argumentExpressionMember
     ;
 
 sendNode
-    : occurrenceUsagePrefix (actionNodeUsageDeclaration | actionUsageDeclaration) SEND (
-        nodeParameterMember senderReceiverPart?
-        | emptyParameterMember senderReceiverPart?
-    ) actionBody
+    : occurrenceUsagePrefix ( actionNodeUsageDeclaration | actionUsageDeclaration ) SEND ( nodeParameterMember senderReceiverPart? | emptyParameterMember senderReceiverPart? ) actionBody
     ;
 
 sendNodeDeclaration
@@ -1838,7 +1642,7 @@ sendNodeDeclaration
     ;
 
 senderReceiverPart
-    : VIA nodeParameterMember (TO nodeParameterMember)?
+    : VIA nodeParameterMember ( TO nodeParameterMember )?
     | emptyParameterMember TO nodeParameterMember
     ;
 
@@ -1863,7 +1667,7 @@ assignmentNode
     ;
 
 assignmentNodeDeclaration
-    : (actionNodeUsageDeclaration)? ASSIGN assignmentTargetMember featureChainMember COLON_EQ nodeParameterMember
+    : ( actionNodeUsageDeclaration )? ASSIGN assignmentTargetMember featureChainMember COLON_EQ nodeParameterMember
     ;
 
 assignmentTargetMember
@@ -1871,7 +1675,7 @@ assignmentTargetMember
     ;
 
 assignmentTargetParameter
-    : (assignmentTargetBinding DOT)?
+    : ( assignmentTargetBinding DOT )?
     ;
 
 assignmentTargetBinding
@@ -1879,13 +1683,11 @@ assignmentTargetBinding
     ;
 
 terminateNode
-    : occurrenceUsagePrefix actionNodeUsageDeclaration? TERMINATE (nodeParameterMember)? actionBody
+    : occurrenceUsagePrefix actionNodeUsageDeclaration? TERMINATE ( nodeParameterMember )? actionBody
     ;
 
 ifNode
-    : actionNodePrefix IF expressionParameterMember actionBodyParameterMember (
-        ELSE ( actionBodyParameterMember | ifNodeParameterMember)
-    )?
+    : actionNodePrefix IF expressionParameterMember actionBodyParameterMember ( ELSE ( actionBodyParameterMember | ifNodeParameterMember ) )?
     ;
 
 expressionParameterMember
@@ -1897,7 +1699,7 @@ actionBodyParameterMember
     ;
 
 actionBodyParameter
-    : (ACTION usageDeclaration?)? LBRACE actionBodyItem* RBRACE
+    : ( ACTION usageDeclaration? )? LBRACE actionBodyItem* RBRACE
     ;
 
 ifNodeParameterMember
@@ -1905,9 +1707,7 @@ ifNodeParameterMember
     ;
 
 whileLoopNode
-    : actionNodePrefix (WHILE expressionParameterMember | LOOP emptyParameterMember) actionBodyParameterMember (
-        UNTIL expressionParameterMember SEMI
-    )?
+    : actionNodePrefix ( WHILE expressionParameterMember | LOOP emptyParameterMember ) actionBodyParameterMember ( UNTIL expressionParameterMember SEMI )?
     ;
 
 forLoopNode
@@ -1918,12 +1718,8 @@ forVariableDeclarationMember
     : usageDeclaration?
     ;
 
-forVariableDeclaration
-    : usageDeclaration?
-    ;
-
 actionTargetSuccession
-    : (targetSuccession | guardedTargetSuccession | defaultTargetSuccession) usageBody
+    : ( targetSuccession | guardedTargetSuccession | defaultTargetSuccession ) usageBody
     ;
 
 targetSuccession
@@ -1939,7 +1735,7 @@ defaultTargetSuccession
     ;
 
 guardedSuccession
-    : (SUCCESSION usageDeclaration?)? FIRST featureChainMember guardExpressionMember THEN transitionSuccessionMember usageBody
+    : ( SUCCESSION usageDeclaration? )? FIRST featureChainMember guardExpressionMember THEN transitionSuccessionMember usageBody
     ;
 
 stateDefinition
@@ -1948,14 +1744,14 @@ stateDefinition
 
 stateDefBody
     : SEMI
-    | ( PARALLEL)? LBRACE stateBodyItem* RBRACE
+    | ( PARALLEL )? LBRACE stateBodyItem* RBRACE
     ;
 
 stateBodyItem
     : nonBehaviorBodyItem
-    | (sourceSuccessionMember)? behaviorUsageMember (targetTransitionUsageMember)*
+    | ( sourceSuccessionMember )? behaviorUsageMember ( targetTransitionUsageMember )*
     | transitionUsageMember
-    | entryActionMember ( entryTransitionMember)*
+    | entryActionMember ( entryTransitionMember )*
     | doActionMember
     | exitActionMember
     ;
@@ -1973,7 +1769,7 @@ exitActionMember
     ;
 
 entryTransitionMember
-    : memberPrefix (guardedTargetSuccession | THEN transitionSuccessionMember) SEMI
+    : memberPrefix ( guardedTargetSuccession | THEN transitionSuccessionMember ) SEMI
     ;
 
 stateActionUsage
@@ -2014,30 +1810,19 @@ stateUsage
 
 stateUsageBody
     : SEMI
-    | ( PARALLEL)? LBRACE stateBodyItem* RBRACE
+    | ( PARALLEL )? LBRACE stateBodyItem* RBRACE
     ;
 
 exhibitStateUsage
-    : occurrenceUsagePrefix EXHIBIT (
-        ownedReferenceSubsetting featureSpecializationPart?
-        | STATE usageDeclaration?
-    ) valuePart? stateUsageBody
+    : occurrenceUsagePrefix EXHIBIT ( ownedReferenceSubsetting featureSpecializationPart? | STATE usageDeclaration? ) valuePart? stateUsageBody
     ;
 
 transitionUsage
-    : TRANSITION (usageDeclaration? FIRST)? featureChainMember emptyParameterMember (
-        emptyParameterMember triggerActionMember
-    )? (guardExpressionMember)? (effectBehaviorMember)? THEN transitionSuccessionMember actionBody
+    : TRANSITION ( usageDeclaration? FIRST )? featureChainMember emptyParameterMember ( emptyParameterMember triggerActionMember )? ( guardExpressionMember )? ( effectBehaviorMember )? THEN transitionSuccessionMember actionBody
     ;
 
 targetTransitionUsage
-    : emptyParameterMember (
-        TRANSITION (emptyParameterMember triggerActionMember)? (guardExpressionMember)? (
-            effectBehaviorMember
-        )?
-        | emptyParameterMember triggerActionMember (guardExpressionMember)? (effectBehaviorMember)?
-        | guardExpressionMember ( effectBehaviorMember)?
-    )? THEN transitionSuccessionMember actionBody
+    : emptyParameterMember ( TRANSITION ( emptyParameterMember triggerActionMember )? ( guardExpressionMember )? ( effectBehaviorMember )? | emptyParameterMember triggerActionMember ( guardExpressionMember )? ( effectBehaviorMember )? | guardExpressionMember ( effectBehaviorMember )? )? THEN transitionSuccessionMember actionBody
     ;
 
 triggerActionMember
@@ -2049,7 +1834,7 @@ triggerAction
     ;
 
 guardExpressionMember
-    : (IF | GUARD) ownedExpression
+    : IF ownedExpression
     ;
 
 effectBehaviorMember
@@ -2065,19 +1850,19 @@ effectBehaviorUsage
     ;
 
 transitionPerformActionUsage
-    : performActionUsageDeclaration (LBRACE actionBodyItem* RBRACE)?
+    : performActionUsageDeclaration ( LBRACE actionBodyItem* RBRACE )?
     ;
 
 transitionAcceptActionUsage
-    : acceptNodeDeclaration (LBRACE actionBodyItem* RBRACE)?
+    : acceptNodeDeclaration ( LBRACE actionBodyItem* RBRACE )?
     ;
 
 transitionSendActionUsage
-    : sendNodeDeclaration (LBRACE actionBodyItem* RBRACE)?
+    : sendNodeDeclaration ( LBRACE actionBodyItem* RBRACE )?
     ;
 
 transitionAssignmentActionUsage
-    : assignmentNodeDeclaration (LBRACE actionBodyItem* RBRACE)?
+    : assignmentNodeDeclaration ( LBRACE actionBodyItem* RBRACE )?
     ;
 
 transitionSuccessionMember
@@ -2106,7 +1891,7 @@ calculationBody
     ;
 
 calculationBodyPart
-    : calculationBodyItem* (resultExpressionMember)?
+    : calculationBodyItem* ( resultExpressionMember )?
     ;
 
 calculationBodyItem
@@ -2127,10 +1912,7 @@ constraintUsage
     ;
 
 assertConstraintUsage
-    : occurrenceUsagePrefix ASSERT (NOT)? (
-        ownedReferenceSubsetting featureSpecializationPart?
-        | CONSTRAINT constraintUsageDeclaration
-    ) calculationBody
+    : occurrenceUsagePrefix ASSERT ( NOT )? ( ownedReferenceSubsetting featureSpecializationPart? | CONSTRAINT constraintUsageDeclaration ) calculationBody
     ;
 
 constraintUsageDeclaration
@@ -2175,7 +1957,7 @@ requirementKind
 
 requirementConstraintUsage
     : ownedReferenceSubsetting featureSpecializationPart? requirementBody
-    | (usageExtensionKeyword* CONSTRAINT | usageExtensionKeyword+) constraintUsageDeclaration calculationBody
+    | ( usageExtensionKeyword* CONSTRAINT | usageExtensionKeyword+ ) constraintUsageDeclaration calculationBody
     ;
 
 framedConcernMember
@@ -2183,11 +1965,8 @@ framedConcernMember
     ;
 
 framedConcernUsage
-    // SYSML21-366 (SysML 2.1 RTF Ballot 1, Pilot PR #775): the second alternative of a
-    // framed concern usage has a requirement body (and a constraint usage declaration),
-    // not a calculation body.
     : ownedReferenceSubsetting featureSpecializationPart? requirementBody
-    | (usageExtensionKeyword* CONCERN | usageExtensionKeyword+) constraintUsageDeclaration requirementBody
+    | ( usageExtensionKeyword* CONCERN | usageExtensionKeyword+ ) constraintUsageDeclaration requirementBody
     ;
 
 actorMember
@@ -2211,10 +1990,7 @@ requirementUsage
     ;
 
 satisfyRequirementUsage
-    : occurrenceUsagePrefix (ASSERT ( NOT)? | NOT)? SATISFY (
-        ownedReferenceSubsetting featureSpecializationPart?
-        | REQUIREMENT usageDeclaration?
-    ) valuePart? (BY satisfactionSubjectMember)? requirementBody
+    : occurrenceUsagePrefix ( ASSERT ( NOT )? | NOT )? SATISFY ( ownedReferenceSubsetting featureSpecializationPart? | REQUIREMENT usageDeclaration? ) valuePart? ( BY satisfactionSubjectMember )? requirementBody
     ;
 
 satisfactionSubjectMember
@@ -2251,7 +2027,7 @@ caseUsage
 
 caseBody
     : SEMI
-    | LBRACE caseBodyItem* ( resultExpressionMember)? RBRACE
+    | LBRACE caseBodyItem* ( resultExpressionMember )? RBRACE
     ;
 
 caseBodyItem
@@ -2292,7 +2068,7 @@ requirementVerificationMember
 
 requirementVerificationUsage
     : ownedReferenceSubsetting featureSpecialization* requirementBody
-    | (usageExtensionKeyword* REQUIREMENT | usageExtensionKeyword+) constraintUsageDeclaration requirementBody
+    | ( usageExtensionKeyword* REQUIREMENT | usageExtensionKeyword+ ) constraintUsageDeclaration requirementBody
     ;
 
 useCaseDefinition
@@ -2304,10 +2080,7 @@ useCaseUsage
     ;
 
 includeUseCaseUsage
-    : occurrenceUsagePrefix INCLUDE (
-        ownedReferenceSubsetting featureSpecializationPart?
-        | USE CASE usageDeclaration?
-    ) valuePart? caseBody
+    : occurrenceUsagePrefix INCLUDE ( ownedReferenceSubsetting featureSpecializationPart? | USE CASE usageDeclaration? ) valuePart? caseBody
     ;
 
 viewDefinition
@@ -2322,7 +2095,6 @@ viewDefinitionBody
 viewDefinitionBodyItem
     : definitionBodyItem
     | elementFilterMember
-    | renderStateMember
     | viewRenderingMember
     ;
 
@@ -2332,7 +2104,7 @@ viewRenderingMember
 
 viewRenderingUsage
     : ownedReferenceSubsetting featureSpecializationPart? usageBody
-    | ( usageExtensionKeyword* RENDERING | usageExtensionKeyword+) usage
+    | ( usageExtensionKeyword* RENDERING | usageExtensionKeyword+ ) usage
     ;
 
 viewUsage
@@ -2347,52 +2119,12 @@ viewBody
 viewBodyItem
     : definitionBodyItem
     | elementFilterMember
-    | renderStateMember
     | viewRenderingMember
     | expose
     ;
 
-renderStateMember
-    : memberPrefix RENDER STATE name renderStateBody
-    ;
-
-renderStateBody
-    : SEMI
-    | LBRACE renderStateBodyItem* RBRACE
-    ;
-
-renderStateBodyItem
-    : shapeDirective
-    | colorDirective
-    | showDirective
-    | annotationDirective
-    ;
-
-shapeDirective
-    : SHAPE name SEMI
-    ;
-
-colorDirective
-    : COLOR name SEMI
-    ;
-
-showDirective
-    : SHOW showTarget SEMI
-    ;
-
-showTarget
-    : ENTRY BEHAVIOR
-    | DO BEHAVIOR
-    | EVENTS
-    | name
-    ;
-
-annotationDirective
-    : ANNOTATION (STRING | DOUBLE_STRING) SEMI
-    ;
-
 expose
-    : EXPOSE (membershipExpose | namespaceExpose) relationshipBody
+    : EXPOSE ( membershipExpose | namespaceExpose ) relationshipBody
     ;
 
 membershipExpose
@@ -2420,21 +2152,11 @@ renderingUsage
     ;
 
 metadataDefinition
-    : (ABSTRACT)? definitionExtensionKeyword* METADATA DEF definition
+    : ( ABSTRACT )? definitionExtensionKeyword* METADATA DEF definition
     ;
 
 prefixMetadataUsage
     : ownedFeatureTyping
-    ;
-
-metadataUsage
-    : usageExtensionKeyword* (AT_SIGN | METADATA) metadataUsageDeclaration (
-        ABOUT annotation ( COMMA annotation)*
-    )? metadataBody
-    ;
-
-metadataUsageDeclaration
-    : (identification? ( COLON | TYPED BY))? ownedFeatureTyping
     ;
 
 metadataBodyUsageMember
@@ -2442,7 +2164,7 @@ metadataBodyUsageMember
     ;
 
 metadataBodyUsage
-    : REF? (COLON_GT_GT | REDEFINES)? ownedRedefinition featureSpecializationPart? valuePart? metadataBody
+    : REF? ( COLON_GT_GT | REDEFINES )? ownedRedefinition featureSpecializationPart? valuePart? metadataBody
     ;
 
 extendedDefinition
@@ -2459,7 +2181,7 @@ filterPackageImportDeclaration
     ;
 
 namespaceImportDirect
-    : qualifiedName COLON_COLON STAR (COLON_COLON STAR_STAR)?
+    : qualifiedName COLON_COLON STAR ( COLON_COLON STAR_STAR )?
     ;
 
 // ===== Stub rules for undefined references =====
@@ -2483,7 +2205,7 @@ emptyUsage_
     ;
 
 nonFeatureChainPrimaryExpression
-    : IDENTIFIER /* TODO: stub for nonFeatureChainPrimaryExpression */
+    : IDENTIFIER  /* TODO: stub for nonFeatureChainPrimaryExpression */
     ;
 
 portConjugation

@@ -1,4 +1,4 @@
-# Generated from /storage16/home/jfox/sysmlpy/src/sysmlpy/grammar/antlr4/SysMLv2Parser.g4 by ANTLR 4.13.2
+# Generated from src/sysmlpy/grammar/antlr4/SysMLv2Parser.g4 by ANTLR 4.13.2
 from antlr4 import *
 if "." in __name__:
     from .SysMLv2Parser import SysMLv2Parser
@@ -11,6 +11,76 @@ class SysMLv2ParserVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by SysMLv2Parser#ownedExpression.
     def visitOwnedExpression(self, ctx:SysMLv2Parser.OwnedExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SysMLv2Parser#nullCoalescingExpression.
+    def visitNullCoalescingExpression(self, ctx:SysMLv2Parser.NullCoalescingExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SysMLv2Parser#impliesExpression.
+    def visitImpliesExpression(self, ctx:SysMLv2Parser.ImpliesExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SysMLv2Parser#orExpression.
+    def visitOrExpression(self, ctx:SysMLv2Parser.OrExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SysMLv2Parser#xorExpression.
+    def visitXorExpression(self, ctx:SysMLv2Parser.XorExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SysMLv2Parser#andExpression.
+    def visitAndExpression(self, ctx:SysMLv2Parser.AndExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SysMLv2Parser#equalityExpression.
+    def visitEqualityExpression(self, ctx:SysMLv2Parser.EqualityExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SysMLv2Parser#relationalExpression.
+    def visitRelationalExpression(self, ctx:SysMLv2Parser.RelationalExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SysMLv2Parser#rangeExpression.
+    def visitRangeExpression(self, ctx:SysMLv2Parser.RangeExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SysMLv2Parser#additiveExpression.
+    def visitAdditiveExpression(self, ctx:SysMLv2Parser.AdditiveExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SysMLv2Parser#multiplicativeExpression.
+    def visitMultiplicativeExpression(self, ctx:SysMLv2Parser.MultiplicativeExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SysMLv2Parser#exponentiationExpression.
+    def visitExponentiationExpression(self, ctx:SysMLv2Parser.ExponentiationExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SysMLv2Parser#classificationExpression.
+    def visitClassificationExpression(self, ctx:SysMLv2Parser.ClassificationExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SysMLv2Parser#unaryExpression.
+    def visitUnaryExpression(self, ctx:SysMLv2Parser.UnaryExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SysMLv2Parser#primaryExpression.
+    def visitPrimaryExpression(self, ctx:SysMLv2Parser.PrimaryExpressionContext):
         return self.visitChildren(ctx)
 
 
@@ -36,16 +106,6 @@ class SysMLv2ParserVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by SysMLv2Parser#featureReferenceExpression.
     def visitFeatureReferenceExpression(self, ctx:SysMLv2Parser.FeatureReferenceExpressionContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#metadataAccessExpression.
-    def visitMetadataAccessExpression(self, ctx:SysMLv2Parser.MetadataAccessExpressionContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#invocationExpression.
-    def visitInvocationExpression(self, ctx:SysMLv2Parser.InvocationExpressionContext):
         return self.visitChildren(ctx)
 
 
@@ -131,11 +191,6 @@ class SysMLv2ParserVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by SysMLv2Parser#identification.
     def visitIdentification(self, ctx:SysMLv2Parser.IdentificationContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#qualifiedIdentification.
-    def visitQualifiedIdentification(self, ctx:SysMLv2Parser.QualifiedIdentificationContext):
         return self.visitChildren(ctx)
 
 
@@ -246,6 +301,11 @@ class SysMLv2ParserVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by SysMLv2Parser#qualifiedName.
     def visitQualifiedName(self, ctx:SysMLv2Parser.QualifiedNameContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SysMLv2Parser#qualifiedIdentification.
+    def visitQualifiedIdentification(self, ctx:SysMLv2Parser.QualifiedIdentificationContext):
         return self.visitChildren(ctx)
 
 
@@ -609,21 +669,6 @@ class SysMLv2ParserVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by SysMLv2Parser#ownedFeatureChain.
-    def visitOwnedFeatureChain(self, ctx:SysMLv2Parser.OwnedFeatureChainContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#featureChain.
-    def visitFeatureChain(self, ctx:SysMLv2Parser.FeatureChainContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#ownedFeatureChaining.
-    def visitOwnedFeatureChaining(self, ctx:SysMLv2Parser.OwnedFeatureChainingContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by SysMLv2Parser#featureInverting.
     def visitFeatureInverting(self, ctx:SysMLv2Parser.FeatureInvertingContext):
         return self.visitChildren(ctx)
@@ -784,163 +829,8 @@ class SysMLv2ParserVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by SysMLv2Parser#ownedExpressionMember.
-    def visitOwnedExpressionMember(self, ctx:SysMLv2Parser.OwnedExpressionMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#metadataReference.
-    def visitMetadataReference(self, ctx:SysMLv2Parser.MetadataReferenceContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#typeReferenceMember.
-    def visitTypeReferenceMember(self, ctx:SysMLv2Parser.TypeReferenceMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#typeResultMember.
-    def visitTypeResultMember(self, ctx:SysMLv2Parser.TypeResultMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#referenceTyping.
-    def visitReferenceTyping(self, ctx:SysMLv2Parser.ReferenceTypingContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#emptyResultMember.
-    def visitEmptyResultMember(self, ctx:SysMLv2Parser.EmptyResultMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#sequenceOperatorExpression.
-    def visitSequenceOperatorExpression(self, ctx:SysMLv2Parser.SequenceOperatorExpressionContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#sequenceExpressionListMember.
-    def visitSequenceExpressionListMember(self, ctx:SysMLv2Parser.SequenceExpressionListMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#bodyArgumentMember.
-    def visitBodyArgumentMember(self, ctx:SysMLv2Parser.BodyArgumentMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#bodyArgument.
-    def visitBodyArgument(self, ctx:SysMLv2Parser.BodyArgumentContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#bodyArgumentValue.
-    def visitBodyArgumentValue(self, ctx:SysMLv2Parser.BodyArgumentValueContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#functionReferenceArgumentMember.
-    def visitFunctionReferenceArgumentMember(self, ctx:SysMLv2Parser.FunctionReferenceArgumentMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#functionReferenceArgument.
-    def visitFunctionReferenceArgument(self, ctx:SysMLv2Parser.FunctionReferenceArgumentContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#functionReferenceArgumentValue.
-    def visitFunctionReferenceArgumentValue(self, ctx:SysMLv2Parser.FunctionReferenceArgumentValueContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#functionReferenceExpression.
-    def visitFunctionReferenceExpression(self, ctx:SysMLv2Parser.FunctionReferenceExpressionContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#functionReferenceMember.
-    def visitFunctionReferenceMember(self, ctx:SysMLv2Parser.FunctionReferenceMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#functionReference.
-    def visitFunctionReference(self, ctx:SysMLv2Parser.FunctionReferenceContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by SysMLv2Parser#featureChainMember.
     def visitFeatureChainMember(self, ctx:SysMLv2Parser.FeatureChainMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#ownedFeatureChainMember.
-    def visitOwnedFeatureChainMember(self, ctx:SysMLv2Parser.OwnedFeatureChainMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#featureReferenceMember.
-    def visitFeatureReferenceMember(self, ctx:SysMLv2Parser.FeatureReferenceMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#featureReference.
-    def visitFeatureReference(self, ctx:SysMLv2Parser.FeatureReferenceContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#elementReferenceMember.
-    def visitElementReferenceMember(self, ctx:SysMLv2Parser.ElementReferenceMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#constructorResultMember.
-    def visitConstructorResultMember(self, ctx:SysMLv2Parser.ConstructorResultMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#constructorResult.
-    def visitConstructorResult(self, ctx:SysMLv2Parser.ConstructorResultContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#instantiatedTypeMember.
-    def visitInstantiatedTypeMember(self, ctx:SysMLv2Parser.InstantiatedTypeMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#instantiatedTypeReference.
-    def visitInstantiatedTypeReference(self, ctx:SysMLv2Parser.InstantiatedTypeReferenceContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#namedArgumentMember.
-    def visitNamedArgumentMember(self, ctx:SysMLv2Parser.NamedArgumentMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#parameterRedefinition.
-    def visitParameterRedefinition(self, ctx:SysMLv2Parser.ParameterRedefinitionContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#expressionBodyMember.
-    def visitExpressionBodyMember(self, ctx:SysMLv2Parser.ExpressionBodyMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#expressionBody.
-    def visitExpressionBody(self, ctx:SysMLv2Parser.ExpressionBodyContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#booleanValue.
-    def visitBooleanValue(self, ctx:SysMLv2Parser.BooleanValueContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#realValue.
-    def visitRealValue(self, ctx:SysMLv2Parser.RealValueContext):
         return self.visitChildren(ctx)
 
 
@@ -986,21 +876,6 @@ class SysMLv2ParserVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by SysMLv2Parser#flowEnd.
     def visitFlowEnd(self, ctx:SysMLv2Parser.FlowEndContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#flowFeatureMember.
-    def visitFlowFeatureMember(self, ctx:SysMLv2Parser.FlowFeatureMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#flowFeature.
-    def visitFlowFeature(self, ctx:SysMLv2Parser.FlowFeatureContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#flowFeatureRedefinition.
-    def visitFlowFeatureRedefinition(self, ctx:SysMLv2Parser.FlowFeatureRedefinitionContext):
         return self.visitChildren(ctx)
 
 
@@ -1206,11 +1081,6 @@ class SysMLv2ParserVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by SysMLv2Parser#nonOccurrenceUsageMember.
     def visitNonOccurrenceUsageMember(self, ctx:SysMLv2Parser.NonOccurrenceUsageMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#occurrenceUsageMember.
-    def visitOccurrenceUsageMember(self, ctx:SysMLv2Parser.OccurrenceUsageMemberContext):
         return self.visitChildren(ctx)
 
 
@@ -1649,16 +1519,6 @@ class SysMLv2ParserVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by SysMLv2Parser#flowEndSubsetting.
-    def visitFlowEndSubsetting(self, ctx:SysMLv2Parser.FlowEndSubsettingContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#featureChainPrefix.
-    def visitFeatureChainPrefix(self, ctx:SysMLv2Parser.FeatureChainPrefixContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by SysMLv2Parser#actionDefinition.
     def visitActionDefinition(self, ctx:SysMLv2Parser.ActionDefinitionContext):
         return self.visitChildren(ctx)
@@ -1911,11 +1771,6 @@ class SysMLv2ParserVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by SysMLv2Parser#forVariableDeclarationMember.
     def visitForVariableDeclarationMember(self, ctx:SysMLv2Parser.ForVariableDeclarationMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#forVariableDeclaration.
-    def visitForVariableDeclaration(self, ctx:SysMLv2Parser.ForVariableDeclarationContext):
         return self.visitChildren(ctx)
 
 
@@ -2374,46 +2229,6 @@ class SysMLv2ParserVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by SysMLv2Parser#renderStateMember.
-    def visitRenderStateMember(self, ctx:SysMLv2Parser.RenderStateMemberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#renderStateBody.
-    def visitRenderStateBody(self, ctx:SysMLv2Parser.RenderStateBodyContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#renderStateBodyItem.
-    def visitRenderStateBodyItem(self, ctx:SysMLv2Parser.RenderStateBodyItemContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#shapeDirective.
-    def visitShapeDirective(self, ctx:SysMLv2Parser.ShapeDirectiveContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#colorDirective.
-    def visitColorDirective(self, ctx:SysMLv2Parser.ColorDirectiveContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#showDirective.
-    def visitShowDirective(self, ctx:SysMLv2Parser.ShowDirectiveContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#showTarget.
-    def visitShowTarget(self, ctx:SysMLv2Parser.ShowTargetContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#annotationDirective.
-    def visitAnnotationDirective(self, ctx:SysMLv2Parser.AnnotationDirectiveContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by SysMLv2Parser#expose.
     def visitExpose(self, ctx:SysMLv2Parser.ExposeContext):
         return self.visitChildren(ctx)
@@ -2456,16 +2271,6 @@ class SysMLv2ParserVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by SysMLv2Parser#prefixMetadataUsage.
     def visitPrefixMetadataUsage(self, ctx:SysMLv2Parser.PrefixMetadataUsageContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#metadataUsage.
-    def visitMetadataUsage(self, ctx:SysMLv2Parser.MetadataUsageContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SysMLv2Parser#metadataUsageDeclaration.
-    def visitMetadataUsageDeclaration(self, ctx:SysMLv2Parser.MetadataUsageDeclarationContext):
         return self.visitChildren(ctx)
 
 
