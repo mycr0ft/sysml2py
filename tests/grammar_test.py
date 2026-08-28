@@ -2407,27 +2407,37 @@ def test_subject_qualified_name_roundtrip():
     assert strip_ws(text) == strip_ws(b.dump())
 
 
-def test_guard_keyword_in_transition_roundtrip():
-    """guard keyword in transition body round-trips."""
+def test_guard_expression_in_transition_roundtrip():
+    """guard expression ('if') in transition body round-trips.
+
+    Note: the standard SysML v2 guard keyword is 'if' (the KEBNF
+    GuardExpressionMember is `'if' { kind = 'guard' } OwnedExpression`);
+    the old 'guard' keyword was a non-standard extension.
+    """
     text = """package P {
     state def SM {
         state A;
         state B;
-        transition first A guard condition then B;
+        transition first A if condition then B;
     }
 }"""
     a = loads(text)
     b = classtree(a)
     dump = b.dump()
-    assert "guard" in dump or "if" in dump, f"guard/if not found in: {dump}"
+    assert "if condition" in dump, f"guard 'if' not found in: {dump}"
+    assert strip_ws(text) == strip_ws(dump)
 
 
-def test_render_state_in_view_def_roundtrip():
-    """render state with shape directive in view def body round-trips."""
+def test_render_usage_with_doc_body_roundtrip():
+    """render usage with documentation body in view def body round-trips.
+
+    Standard form: `render <name> { doc /* ... */ }` (ViewRenderingUsage
+    reference-subsetting alternative with a usage body).
+    """
     text = """package P {
     view def V {
-        render state Initializing {
-            shape box;
+        render Initializing {
+            doc /* box */
         }
     }
 }"""
@@ -2436,12 +2446,12 @@ def test_render_state_in_view_def_roundtrip():
     assert strip_ws(text) == strip_ws(b.dump())
 
 
-def test_render_state_with_color_directive_roundtrip():
-    """render state with color directive in view def body round-trips."""
+def test_render_usage_with_comment_about_roundtrip():
+    """render usage with comment annotation round-trips."""
     text = """package P {
     view def V {
-        render state Active {
-            color lightgreen;
+        render Active {
+            comment c about Active /* lightgreen */
         }
     }
 }"""
@@ -2450,13 +2460,13 @@ def test_render_state_with_color_directive_roundtrip():
     assert strip_ws(text) == strip_ws(b.dump())
 
 
-def test_render_state_with_multiple_directives_roundtrip():
-    """render state with multiple directives in view def body round-trips."""
+def test_render_usage_with_multiple_annotations_roundtrip():
+    """render usage with multiple annotating members round-trips."""
     text = """package P {
     view def V {
-        render state Running {
-            shape box;
-            color lightblue;
+        render Running {
+            doc /* box */
+            comment c about Running /* lightblue */
         }
     }
 }"""
@@ -2493,12 +2503,16 @@ def test_performed_action_usage_regression():
 
 
 def test_annotation_double_quoted_string_roundtrip():
-    """Double-quoted strings in annotation directives should parse and round-trip."""
+    """Documentation bodies render as annotations and round-trip.
+
+    Standard annotations use `doc /* ... */` (the KEBNF Documentation
+    body is a REGULAR_COMMENT); the old `annotation "..."` keyword was a
+    non-standard extension.
+    """
     text = """package P {
     view def V {
-        render state Active {
-            shape box;
-            annotation "This is a description";
+        render Active {
+            doc /* This is a description */
         }
     }
 }"""
@@ -2508,12 +2522,11 @@ def test_annotation_double_quoted_string_roundtrip():
 
 
 def test_annotation_single_quoted_string_roundtrip():
-    """Single-quoted strings in annotation directives should still work."""
+    """Named comment annotations about an element round-trip."""
     text = """package P {
     view def V {
-        render state Active {
-            shape box;
-            annotation 'This is a description';
+        render Active {
+            comment c about Active /* This is a description */
         }
     }
 }"""

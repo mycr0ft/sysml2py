@@ -2065,10 +2065,12 @@ class TransitionUsage:
     def __init__(self, definition):
         self.keyword = "transition"
         self.declaration = None
+        self.has_first = False
         self.children = []
         if valid_definition(definition, self.__class__.__name__):
             if definition["declaration"] is not None:
                 self.declaration = UsageDeclaration(definition["declaration"])
+            self.has_first = bool(definition.get("hasFirst"))
 
             self.body = ActionBody(definition["body"])
 
@@ -2088,6 +2090,10 @@ class TransitionUsage:
         output = [self.keyword]
         if self.declaration is not None:
             output.append(self.declaration.dump())
+        # grammar: TRANSITION ( usageDeclaration? FIRST )? — a declared
+        # name is only allowed together with 'first', and 'first' may
+        # also appear on its own
+        if self.declaration is not None or self.has_first:
             output.append("\n   first")
 
         for child in self.children:
@@ -2103,6 +2109,7 @@ class TransitionUsage:
             "name": self.__class__.__name__,
             "keyword": self.keyword,
             "declaration": None,
+            "hasFirst": self.has_first,
             "body": None,
             "ownedRelationship": [],
         }
@@ -6029,6 +6036,12 @@ class UnaryExpression:
 
     def dump(self):
         if self.extent is not None:
+            if self.operator:
+                # prefix operator: no space for symbol operators
+                # ('-x'), one for keyword operators ('not flag')
+                if self.operator in ("+", "-", "~"):
+                    return "{}{}".format(self.operator, self.extent.dump())
+                return "{} {}".format(self.operator, self.extent.dump())
             return self.extent.dump()
         return ""
 

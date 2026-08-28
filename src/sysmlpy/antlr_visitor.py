@@ -4665,10 +4665,16 @@ def _visit_transition_usage(ctx):
     body = None
     if hasattr(ctx, 'actionBody') and ctx.actionBody():
         body = _visit_action_body(ctx.actionBody())
-    
+
+    # Whether the FIRST keyword was present
+    # (grammar: TRANSITION ( usageDeclaration? FIRST )? ... — 'first' may
+    # appear with or without a declared name)
+    has_first = bool(hasattr(ctx, 'FIRST') and ctx.FIRST())
+
     return {
         "name": name,
         "declaration": decl,
+        "hasFirst": has_first,
         "body": body,
         "ownedRelationship": owned_rel
     }
@@ -8799,7 +8805,17 @@ def _make_view_rendering_member_dict(ctx, prefix=None):
                 pass  # TODO: handle featureSpecializationPart
             
             if hasattr(vru, 'usageBody') and vru.usageBody():
-                body = {"name": "UsageBody", "body": {"name": "DefinitionBody", "ownedRelatedElement": []}}
+                ub_ctx = vru.usageBody()
+                body_items = []
+                if hasattr(ub_ctx, 'definitionBody') and ub_ctx.definitionBody():
+                    body_items = _visit_definition_body_dict(ub_ctx.definitionBody())
+                body = {
+                    "name": "UsageBody",
+                    "body": {
+                        "name": "DefinitionBody",
+                        "ownedRelatedElement": body_items,
+                    },
+                }
         
         elif hasattr(vru, 'usage') and vru.usage():
             usage_ctx = vru.usage()
@@ -11074,105 +11090,460 @@ def _unwrap_to_layer(rhs_chain, layer_name):
     return _walk_chain(rhs_chain, path)
 
 
+def _split_level_ctx(ctx, child_type_name):
+    """Split a per-precedence level context into (first_operand_ctx,
+    [(op_text, operand_ctx), ...]) by walking its direct children.
+
+    Used with the per-precedence grammar rules (e.g.
+    ``additiveExpression : multiplicativeExpression
+    ( ( PLUS | MINUS ) multiplicativeExpression )*``) where every
+    operand is the same child rule and operators are the terminals
+    between them.
+    """
+    first = None
+    pairs = []
+    pending_op = None
+    for c in (ctx.getChildren() if hasattr(ctx, "getChildren") else []):
+        tn = type(c).__name__
+        if tn == "TerminalNodeImpl":
+            pending_op = c.getText()
+        elif tn == child_type_name:
+            if first is None:
+                first = c
+            else:
+                pairs.append((pending_op, c))
+            pending_op = None
+    return first, pairs
+
+
+def _emit_null_coalescing_level(ctx):
+    # impliesExpression ( QUESTION_QUESTION impliesExpression )*
+    first, pairs = _split_level_ctx(ctx, "ImpliesExpressionContext")
+    if pairs:
+        return None  # '??' not dumped by the grammar class -> text
+    implies = _emit_implies_level(first)
+    if implies is None:
+        return None
+    return {
+        "name": "NullCoalescingExpression",
+        "operator": [],
+        "operand": [],
+        "implies": implies,
+    }
+
+
+def _emit_implies_level(ctx):
+    # orExpression ( IMPLIES orExpression )*
+    first, pairs = _split_level_ctx(ctx, "OrExpressionContext")
+    if pairs:
+        return None  # 'implies' not dumped by the grammar class -> text
+    or_expr = _emit_or_level(first)
+    if or_expr is None:
+        return None
+    return {"name": "ImpliesExpression", "operator": [], "operand": [], "or": or_expr}
+
+
+def _emit_or_level(ctx):
+    # xorExpression ( ( OR | PIPE ) xorExpression )*
+    first, pairs = _split_level_ctx(ctx, "XorExpressionContext")
+    if pairs:
+        return None  # 'or'/'|' not dumped by the grammar class -> text
+    xor_expr = _emit_xor_level(first)
+    if xor_expr is None:
+        return None
+    return {"name": "OrExpression", "operator": [], "operand": [], "xor": xor_expr}
+
+
+def _emit_xor_level(ctx):
+    # andExpression ( XOR andExpression )*
+    first, pairs = _split_level_ctx(ctx, "AndExpressionContext")
+    if pairs:
+        return None  # 'xor' not dumped by the grammar class -> text
+    and_expr = _emit_and_level(first)
+    if and_expr is None:
+        return None
+    return {"name": "XorExpression", "operator": [], "operand": [], "and": and_expr}
+
+
+def _emit_and_level(ctx):
+    # equalityExpression ( ( AND | AMP ) equalityExpression )*
+    first, pairs = _split_level_ctx(ctx, "EqualityExpressionContext")
+    if pairs:
+        return None  # 'and'/'&' not dumped by the grammar class -> text
+    eq = _emit_equality_level(first)
+    if eq is None:
+        return None
+    return {"name": "AndExpression", "operation": [], "equality": eq}
+
+
+def _emit_equality_level(ctx):
+    # classificationExpression ( ( EQ_EQ | BANG_EQ | EQ_EQ_EQ | BANG_EQ_EQ ) classificationExpression )*
+    first, pairs = _split_level_ctx(ctx, "ClassificationExpressionContext")
+    cls_first = _emit_classification_level(first)
+    if cls_first is None:
+        return None
+    ops = []
+    for op_text, cls_ctx in pairs:
+        cls_dict = _emit_classification_level(cls_ctx)
+        if cls_dict is None:
+            return None
+        ops.append(
+            {"name": "EqualityOperand", "operator": op_text, "operand": cls_dict}
+        )
+    return {"name": "EqualityExpression", "classification": cls_first, "operation": ops}
+
+
+def _emit_classification_level(ctx):
+    # relationalExpression ( ISTYPE | HASTYPE | AT_SIGN | AS | AT_AT | META typeReference )?
+    rel_ctx = ctx.relationalExpression() if hasattr(ctx, "relationalExpression") else None
+    if rel_ctx is None:
+        return None
+    # a postfix operator is a direct terminal child (outside the
+    # relationalExpression context); it is not dumped by the grammar
+    # class, so keep the whole expression as text when present
+    for c in (ctx.getChildren() if hasattr(ctx, "getChildren") else []):
+        if type(c).__name__ == "TerminalNodeImpl":
+            return None
+    rel = _emit_relational_level(rel_ctx)
+    if rel is None:
+        return None
+    return {
+        "name": "ClassificationExpression",
+        "operator": None,
+        "operand": [],
+        "relational": rel,
+    }
+
+
+def _emit_relational_level(ctx):
+    # rangeExpression ( ( LT | GT | LE | GE ) rangeExpression )*
+    first, pairs = _split_level_ctx(ctx, "RangeExpressionContext")
+    range_first = _emit_range_level(first)
+    if range_first is None:
+        return None
+    ops = []
+    for op_text, rng_ctx in pairs:
+        rng_dict = _emit_range_level(rng_ctx)
+        if rng_dict is None:
+            return None
+        ops.append(
+            {"name": "RelationalOperand", "operator": op_text, "operand": rng_dict}
+        )
+    return {"name": "RelationalExpression", "range": range_first, "operation": ops}
+
+
+def _emit_range_level(ctx):
+    # additiveExpression ( DOT_DOT additiveExpression )*
+    first, pairs = _split_level_ctx(ctx, "AdditiveExpressionContext")
+    add_first = _emit_additive_level(first)
+    if add_first is None:
+        return None
+    if len(pairs) > 1:
+        return None  # grammar class supports a single '..' operand
+    operand = None
+    if pairs:
+        operand = _emit_additive_level(pairs[0][1])
+        if operand is None:
+            return None
+    return {"name": "RangeExpression", "operand": operand, "additive": add_first}
+
+
+def _emit_additive_level(ctx):
+    # multiplicativeExpression ( ( PLUS | MINUS ) multiplicativeExpression )*
+    first, pairs = _split_level_ctx(ctx, "MultiplicativeExpressionContext")
+    mul_first = _emit_multiplicative_level(first)
+    if mul_first is None:
+        return None
+    ops = []
+    for op_text, mul_ctx in pairs:
+        mul_dict = _emit_multiplicative_level(mul_ctx)
+        if mul_dict is None:
+            return None
+        ops.append(
+            {"name": "AdditiveOperand", "operator": op_text, "operand": mul_dict}
+        )
+    return {"name": "AdditiveExpression", "multiplicitive": mul_first, "operation": ops}
+
+
+def _emit_multiplicative_level(ctx):
+    # exponentiationExpression ( ( STAR | SLASH | PERCENT ) exponentiationExpression )*
+    first, pairs = _split_level_ctx(ctx, "ExponentiationExpressionContext")
+    exp_first = _emit_exponentiation_level(first)
+    if exp_first is None:
+        return None
+    ops = []
+    for op_text, exp_ctx in pairs:
+        exp_dict = _emit_exponentiation_level(exp_ctx)
+        if exp_dict is None:
+            return None
+        ops.append(
+            {
+                "name": "MultiplicativeOperand",
+                "operator": op_text,
+                "operand": exp_dict,
+            }
+        )
+    return {
+        "name": "MultiplicativeExpression",
+        "exponential": exp_first,
+        "operation": ops,
+    }
+
+
+def _emit_exponentiation_level(ctx):
+    # unaryExpression ( ( STAR_STAR | CARET ) exponentiationExpression )?
+    # '**'/'^' are right-associative and not dumped by the grammar
+    # class, so keep the text when present
+    if hasattr(ctx, "exponentiationExpression") and ctx.exponentiationExpression():
+        return None
+    unary_ctx = ctx.unaryExpression() if hasattr(ctx, "unaryExpression") else None
+    if unary_ctx is None:
+        return None
+    unary = _emit_unary_level(unary_ctx)
+    if unary is None:
+        return None
+    return {"name": "ExponentiationExpression", "operator": [], "operand": [], "unary": unary}
+
+
+def _emit_unary_level(ctx):
+    # ( PLUS | MINUS | TILDE | NOT ) unaryExpression
+    # | ( AT_SIGN | AT_AT ) typeReference
+    # | ALL typeReference
+    # | primaryExpression
+    prim_ctx = ctx.primaryExpression() if hasattr(ctx, "primaryExpression") else None
+    if prim_ctx is not None:
+        primary = _emit_primary_level(prim_ctx)
+        if primary is None:
+            return None
+        return {
+            "name": "UnaryExpression",
+            "operator": None,
+            "operand": [],
+            "extent": {
+                "name": "ExtentExpression",
+                "operator": "",
+                "operand": [],
+                "primary": primary,
+            },
+        }
+    children = list(ctx.getChildren()) if hasattr(ctx, "getChildren") else []
+    if children and type(children[0]).__name__ == "TerminalNodeImpl":
+        op_text = children[0].getText().strip()
+        if op_text in ("+", "-", "~", "not"):
+            # operand must be a unaryExpression without its own prefix
+            # operator (nested prefixes are not representable in the
+            # chain shape)
+            operand_ctx = None
+            for c in children[1:]:
+                if type(c).__name__ == "UnaryExpressionContext":
+                    operand_ctx = c
+                    break
+            if operand_ctx is None:
+                return None
+            inner_prim = (
+                operand_ctx.primaryExpression()
+                if hasattr(operand_ctx, "primaryExpression")
+                else None
+            )
+            if inner_prim is None:
+                return None
+            primary = _emit_primary_level(inner_prim)
+            if primary is None:
+                return None
+            return {
+                "name": "UnaryExpression",
+                "operator": op_text,
+                "operand": [],
+                "extent": {
+                    "name": "ExtentExpression",
+                    "operator": "",
+                    "operand": [],
+                    "primary": primary,
+                },
+            }
+    return None  # '@'/'@@'/'all' typeReference forms -> text
+
+
+def _base_feature_names(be_ctx):
+    """Return the qualified-name parts of a baseExpression that is a
+    plain feature reference, or None for any other base form."""
+    if be_ctx is None:
+        return None
+    if hasattr(be_ctx, "qualifiedName") and be_ctx.qualifiedName():
+        return _extract_qualified_name_parts(be_ctx.qualifiedName())
+    return None
+
+
+def _emit_primary_level(ctx):
+    # baseExpression ( DOT qualifiedName | DOT bodyExpression | DOT_QUESTION bodyExpression
+    #                | LBRACK sequenceExpressionList? RBRACK | HASH LPAREN sequenceExpressionList? RPAREN
+    #                | argumentList | ARROW qualifiedName ( bodyExpression | argumentList ) )*
+    be_ctx = ctx.baseExpression() if hasattr(ctx, "baseExpression") else None
+    if be_ctx is None:
+        return None
+    children = list(ctx.getChildren()) if hasattr(ctx, "getChildren") else []
+
+    # Classify the suffix part (everything after the baseExpression)
+    suffix_terms = []  # (kind, value) where kind: 'term'|'ctx'
+    for c in children:
+        if type(c).__name__ == "BaseExpressionContext":
+            suffix_terms = []  # reset at the (single) base context
+            continue
+        if type(c).__name__ == "TerminalNodeImpl":
+            suffix_terms.append(("term", c.getText()))
+        else:
+            suffix_terms.append(("ctx", c))
+
+    if not suffix_terms:
+        return _emit_base_primary(be_ctx)
+
+    # Single argumentList suffix: invocation (name(args))
+    if len(suffix_terms) == 1 and suffix_terms[0][0] == "ctx" \
+            and type(suffix_terms[0][1]).__name__ == "ArgumentListContext":
+        names = _base_feature_names(be_ctx)
+        if names:
+            return _build_invocation_primary(names, suffix_terms[0][1])
+        return None
+
+    # One or more `DOT qualifiedName` suffixes: feature chain (a.b.c)
+    if suffix_terms and all(
+        (k == "term" and v == ".") if k == "term" else type(v).__name__ == "QualifiedNameContext"
+        for k, v in suffix_terms
+    ) and len(suffix_terms) % 2 == 0:
+        names = _base_feature_names(be_ctx)
+        chain_parts = []
+        ok = True
+        for k, v in suffix_terms:
+            if k == "ctx":
+                parts = _extract_qualified_name_parts(v)
+                if not parts:
+                    ok = False
+                    break
+                chain_parts.append(parts)
+        if ok and names:
+            # PrimaryExpression with a FeatureChainMember
+            # (a.b -> base 'a' + ownedRelationship1 chain '.b')
+            if len(chain_parts) == 1:
+                member = {
+                    "name": "FeatureChainMember",
+                    "memberElement": {
+                        "name": "QualifiedName",
+                        "names": chain_parts[0],
+                    },
+                }
+            else:
+                member = {
+                    "name": "FeatureChainMember",
+                    "ownedRelatedElement": {
+                        "name": "OwnedFeatureChain",
+                        "feature": {
+                            "name": "FeatureChain",
+                            "ownedRelationship": [
+                                {
+                                    "name": "OwnedFeatureChaining",
+                                    "chainingFeature": {
+                                        "name": "QualifiedName",
+                                        "names": parts,
+                                    },
+                                }
+                                for parts in chain_parts
+                            ],
+                        },
+                    },
+                }
+            primary = _make_feature_reference_chain(names)
+            primary["ownedRelationship1"] = [member]
+            return primary
+
+    return None  # other suffix forms -> text
+
+
+def _emit_base_primary(be_ctx):
+    """Emit a PrimaryExpression dict for a simple baseExpression
+    (literal, feature reference, or invocation). Returns None for
+    anything else."""
+    if be_ctx is None:
+        return None
+    if hasattr(be_ctx, "literalExpression") and be_ctx.literalExpression():
+        lit_ctx = be_ctx.literalExpression()
+        lit_text = lit_ctx.getText().strip() if hasattr(lit_ctx, "getText") else ""
+        try:
+            value = int(lit_text)
+            return _make_literal_integer_primary(value)
+        except ValueError:
+            pass
+        try:
+            value = float(lit_text)
+            return _make_literal_real_primary(value)
+        except ValueError:
+            pass
+        if lit_text.startswith('"') and lit_text.endswith('"'):
+            return _make_literal_string_primary(lit_text)
+        # boolean/null keywords have no dedicated grammar class; keep
+        # them as feature references so the text round-trips
+        if lit_text in ("true", "false", "null"):
+            return _make_feature_reference_primary(lit_text)
+        return None
+    names = _base_feature_names(be_ctx)
+    if names:
+        # merged form: qualifiedName ( argumentList | DOT METADATA )?
+        if hasattr(be_ctx, "argumentList") and be_ctx.argumentList():
+            return _build_invocation_primary(names, be_ctx.argumentList())
+        return _make_feature_reference_chain(names)
+    return None
+
+
 def _emit_structured_expression(oe_ctx):
-    """Recursively emit a structured OwnedExpression dict for an ANTLR
-    ownedExpression context, using precedence-climbing to recover the
-    correct operator order.
+    """Emit a structured OwnedExpression chain dict for an ANTLR
+    ownedExpression context by walking the per-precedence grammar
+    cascade directly.
 
-    The vendored grammar uses left-associative same-precedence for all
-    binary operators, so the ANTLR parse tree is NOT a correct precedence
-    tree. We re-arrange operators by descending into the LHS sub-expression
-    and checking if it has a lower-precedence operator at its top — if so,
-    the LHS's operator is the actual top, and the current operator moves
-    into the LHS's RHS.
+    The vendored grammar uses one rule per precedence level
+    (nullCoalescingExpression -> impliesExpression -> ... ->
+    exponentiationExpression -> unaryExpression -> primaryExpression),
+    matching the OMG XText reference grammar, so the parse tree already
+    encodes the correct operator structure -- no precedence climbing is
+    needed.
 
-    Returns a full OwnedExpression chain dict.
+    Returns a full OwnedExpression chain dict, or None when the
+    expression uses a form the chain shape cannot represent (ternary
+    'if/else', logical and/or/xor/implies chains, postfix
+    classification operators, '**', feature-access suffixes other than
+    a plain 'DOT qualifiedName' chain, ...). Callers fall back to text
+    preservation for those (documented limitation).
+
+    Legacy note: v0.52.0 implemented a precedence-climbing rearrangement
+    pass on top of the old flat ownedExpression rule. The per-precedence
+    grammar (regenerated from the fixed generator) made that obsolete;
+    the old helpers are retained but unused.
     """
     if oe_ctx is None:
         return None
 
-    children = list(oe_ctx.getChildren()) if hasattr(oe_ctx, "getChildren") else []
-    if not children:
+    # Ternary conditional: IF ownedExpression QUESTION ownedExpression
+    # ELSE ownedExpression (ConditionalExpression layer drops the
+    # if/else structure in dump) -> text fallback
+    if hasattr(oe_ctx, "IF") and oe_ctx.IF():
         return None
 
-    # Unary prefix form: first child is a terminal (op), rest is the operand
-    if len(children) >= 2:
-        first = children[0]
-        if type(first).__name__ == "TerminalNodeImpl":
-            text = first.getText().strip()
-            if _is_unary_prefix_token(text):
-                operand_chain = _emit_structured_expression(children[1])
-                return _splice_unary(operand_chain, text)
-
-    # Find the top-level operator in this OE's children
-    op_idx, op_text = _find_split_index(children)
-    if op_idx is None:
-        # No binary operator — but check for field-access dot suffix
-        # (a.b pattern: [OwnedExpr, DOT, QualifiedName])
-        if len(children) == 3 and type(children[1]).__name__ == "TerminalNodeImpl" \
-                and children[1].getText().strip() == "." \
-                and type(children[2]).__name__ == "QualifiedNameContext":
-            # Field access: emit as a single FeatureReferenceExpression
-            # with the full text. The grammar class lacks a
-            # FeatureChainExpression, so we fall back to text to
-            # preserve round-trip.
-            return _fallback_to_text(oe_ctx)
-        # No binary operator — it's a base expression
-        return _emit_base_expression(oe_ctx)
-
-    # Logical operators (and/or/xor/implies/? ?) at the top level:
-    # the grammar classes use list-based operand/operator fields which
-    # don't fit the chain layout. Fall back to text preservation.
-    if op_text in ("and", "or", "xor", "implies", "and_op"):
-        return _fallback_to_text(oe_ctx)
-
-    # Split LHS and RHS at the top-level op
-    lhs_children = children[:op_idx]
-    rhs_children = children[op_idx + 1:]
-    if len(lhs_children) != 1 or len(rhs_children) != 1:
-        return _fallback_to_text(oe_ctx)
-    lhs_ctx = lhs_children[0]
-    rhs_ctx = rhs_children[0]
-    if type(lhs_ctx).__name__ != "OwnedExpressionContext" or type(rhs_ctx).__name__ != "OwnedExpressionContext":
-        return _fallback_to_text(oe_ctx)
-
-    # Recurse on the LHS first
-    lhs_chain = _emit_structured_expression(lhs_ctx)
-    if lhs_chain is None:
-        return _fallback_to_text(oe_ctx)
-
-    # Check if the LHS chain has a top operator with LOWER precedence
-    # than the current op. If so, the LHS's top is the actual top, and
-    # the current op moves into the LHS's RHS (as an additional sub-op).
-    lhs_top_layer = _rhs_top_op_layer(lhs_chain)
-    if lhs_top_layer is not None:
-        lhs_top_rank = _layer_rank(lhs_top_layer)
-        current_rank = _PRECEDENCE_RANK.get(op_text, 0)
-        if lhs_top_rank < current_rank:
-            # Re-arrange: the LHS chain becomes the new outer, and the
-            # current op is added to the LHS's top op's RHS sub-dict.
-            lhs_top_op = _get_top_op_text(lhs_chain)
-            lhs_top_rhs = _get_top_op_rhs_chain(lhs_chain)
-            if lhs_top_rhs is not None and isinstance(lhs_top_rhs, dict):
-                # Find the layer for the current op
-                current_layer = _OPERATOR_TO_LAYER.get(op_text)
-                if current_layer is not None:
-                    # Add the current op to the LHS's top op's RHS
-                    _add_op_to_layer(lhs_top_rhs, current_layer, op_text, rhs_ctx)
-                    # Also embed any higher-layer operators from the
-                    # rhs_ctx into the lhs chain (e.g., `==` from `c==0`)
-                    rhs_chain_for_embed = _emit_structured_expression(rhs_ctx)
-                    if rhs_chain_for_embed is not None and _is_owned_chain(rhs_chain_for_embed):
-                        # Find the top op layer in the rhs and embed it
-                        rhs_top = _rhs_top_op_layer(rhs_chain_for_embed)
-                        if rhs_top is not None and _layer_rank(rhs_top) < _layer_rank(current_layer):
-                            _embed_layer_at_path(lhs_chain, rhs_chain_for_embed, rhs_top)
-                    return lhs_chain
-            # Fallback: try the old approach
-            return _build_binary_chain(op_text, lhs_ctx, rhs_ctx)
-
-    # Normal case: current op is the top
-    return _build_binary_chain(op_text, lhs_ctx, rhs_ctx)
+    nce_ctx = (
+        oe_ctx.nullCoalescingExpression()
+        if hasattr(oe_ctx, "nullCoalescingExpression")
+        else None
+    )
+    if nce_ctx is None:
+        return None
+    nce_dict = _emit_null_coalescing_level(nce_ctx)
+    if nce_dict is None:
+        return None
+    return {
+        "name": "OwnedExpression",
+        "expression": {
+            "name": "ConditionalExpression",
+            "operator": [],
+            "operand": [nce_dict],
+        },
+    }
 
 
 def _layer_rank(layer_name):
@@ -11450,37 +11821,19 @@ def _build_arg_list_dict(arg_list_ctx):
     args = []
     for am in (pal.getChildren() if hasattr(pal, "getChildren") else []):
         if type(am).__name__ == "OwnedExpressionContext":
-            arg_text = am.getText() if hasattr(am, "getText") else ""
-            primary = {
-                "name": "PrimaryExpression",
-                "operator": [],
-                "operand": [],
-                "base": {
-                    "name": "BaseExpression",
-                    "ownedRelationship": {
-                        "name": "FeatureReferenceExpression",
-                        "ownedRelationship": [
-                            {
-                                "name": "FeatureReferenceMember",
-                                "memberElement": {
-                                    "name": "QualifiedName",
-                                    "names": [arg_text],
-                                }
-                            }
-                        ]
-                    }
-                },
-                "ownedRelationship1": [],
-                "ownedRelationship2": []
-            }
-            chain = _wrap_expression_layers(primary)
+            # Build each argument as a structured expression chain,
+            # falling back to text preservation when the chain shape
+            # cannot represent it
+            arg_chain = _emit_structured_expression(am)
+            if arg_chain is None:
+                arg_chain = _fallback_to_text(am)
             args.append({
                 "name": "ArgumentMember",
                 "ownedRelatedElement": {
                     "name": "Argument",
                     "ownedRelationship": {
                         "name": "ArgumentValue",
-                        "ownedRelatedElement": chain,
+                        "ownedRelatedElement": arg_chain,
                     }
                 }
             })
