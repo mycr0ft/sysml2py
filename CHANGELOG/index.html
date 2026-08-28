@@ -431,6 +431,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0530-2026-08-28" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.53.0 (2026-08-28)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.53.0 (2026-08-28)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sparkles-per-precedence-expression-grammar-structured-cascade-emit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :sparkles: Per-precedence expression grammar + structured cascade emit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test_tube-test-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :test_tube: Test results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0520-2026-08-27" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -454,7 +493,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#test_tube-test-results" class="md-nav__link">
+  <a href="#test_tube-test-results_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         :test_tube: Test results
@@ -2435,6 +2474,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0530-2026-08-28" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.53.0 (2026-08-28)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.53.0 (2026-08-28)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sparkles-per-precedence-expression-grammar-structured-cascade-emit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :sparkles: Per-precedence expression grammar + structured cascade emit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test_tube-test-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :test_tube: Test results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0520-2026-08-27" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2458,7 +2536,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#test_tube-test-results" class="md-nav__link">
+  <a href="#test_tube-test-results_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         :test_tube: Test results
@@ -4398,6 +4476,42 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0530-2026-08-28">v0.53.0 (2026-08-28)<a class="headerlink" href="#v0530-2026-08-28" title="Permanent link">&para;</a></h2>
+<h3 id="sparkles-per-precedence-expression-grammar-structured-cascade-emit">:sparkles: Per-precedence expression grammar + structured cascade emit<a class="headerlink" href="#sparkles-per-precedence-expression-grammar-structured-cascade-emit" title="Permanent link">&para;</a></h3>
+<p>The vendored SysML v2 grammar is regenerated from the upstream
+<code>daltskin/sysml-v2-grammar</code> with the per-precedence cascade
+implemented properly. v0.52.0's precedence-climbing pass is
+obsolete and replaced by a direct walker over the new grammar's
+precedence levels (<code>nullCoalescing -&gt; ... -&gt; primary</code>).</p>
+<p>Also fixed: <code>xor</code>/<code>and</code> precedence order. The OMG XText reference
+grammar has <code>implies &lt; or &lt; xor &lt; and &lt; equality</code> (and binds tighter
+than xor); the daltskin generator's <code>OPERATOR_PRECEDENCE</code> table
+and per-level list had them swapped. <code>a xor b and c</code> now parses as
+<code>a xor (b and c)</code> instead of <code>(a xor b) and c</code>.</p>
+<p>Two visitor/class bugs fixed:</p>
+<ul>
+<li><code>first</code> keyword was dropped from guarded transitions when no
+  usage declaration was given; the grammar allows <code>transition first A if c then B;</code></li>
+<li><code>render</code> usage bodies (doc, comment, ...) were dropped on
+  round-trip; the visitor previously stubbed the body empty</li>
+<li><code>UnaryExpression.dump()</code> now renders prefix operators
+  (<code>-x</code>, <code>not flag</code>)</li>
+</ul>
+<p>Six grammar tests rewritten from non-standard syntax
+(<code>guard</code>, <code>render state X { shape box; color ...; annotation "..."; }</code>)
+to OMG-standard forms (<code>if</code>, <code>render X { doc /* ... */; comment about X /* ... */; }</code>).
+The old syntax only existed in sysmlpy's hand-patched vendored
+grammar; the OMG grammar has no such keywords.</p>
+<h3 id="test_tube-test-results">:test_tube: Test results<a class="headerlink" href="#test_tube-test-results" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>143/143</strong> grammar tests pass (was 130/143 with the prior grammar)</li>
+<li><strong>144/144</strong> class/main/repr/navigate tests pass</li>
+<li><strong>310/310</strong> official OMG conformance files parse via the
+  companion <code>daltskin/sysml-v2-grammar</code> repo (was vacuously
+  passing before -- the conformance runner had three bugs that
+  silently passed every file without actually parsing it; those
+  were fixed in a separate commit on the daltskin side)</li>
+</ul>
 <h2 id="v0520-2026-08-27">v0.52.0 (2026-08-27)<a class="headerlink" href="#v0520-2026-08-27" title="Permanent link">&para;</a></h2>
 <h3 id="sparkles-phase-1-expression-capture-implementation-shipped">:sparkles: Phase 1 expression-capture: implementation shipped<a class="headerlink" href="#sparkles-phase-1-expression-capture-implementation-shipped" title="Permanent link">&para;</a></h3>
 <p>Phase 1 of <code>docs/v0.46.0_expression_capture_plan.md</code> lands. The
@@ -4411,7 +4525,7 @@ left-associates and produces a non-precedence-respecting parse
 runs a precedence-climbing pass on the ANTLR children list to
 re-arrange operators by binding power before emitting the
 structured chain.</p>
-<h3 id="test_tube-test-results">:test_tube: Test results<a class="headerlink" href="#test_tube-test-results" title="Permanent link">&para;</a></h3>
+<h3 id="test_tube-test-results_1">:test_tube: Test results<a class="headerlink" href="#test_tube-test-results_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>143/143</strong> grammar tests pass (5m 30s; 10 phase1 tests +
   132 non-phase1 including the 53 Training-suite tests that
