@@ -431,6 +431,67 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0520-2026-08-27" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.52.0 (2026-08-27)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.52.0 (2026-08-27)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sparkles-phase-1-expression-capture-implementation-shipped" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :sparkles: Phase 1 expression-capture: implementation shipped
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test_tube-test-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :test_tube: Test results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-test-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Test coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wrench-internal-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :wrench: Internal changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0510-2026-08-26" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -443,7 +504,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#white_check_mark-test-coverage" class="md-nav__link">
+  <a href="#white_check_mark-test-coverage_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         :white_check_mark: Test coverage
@@ -2374,6 +2435,67 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0520-2026-08-27" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.52.0 (2026-08-27)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.52.0 (2026-08-27)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sparkles-phase-1-expression-capture-implementation-shipped" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :sparkles: Phase 1 expression-capture: implementation shipped
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test_tube-test-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :test_tube: Test results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-test-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Test coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wrench-internal-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :wrench: Internal changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0510-2026-08-26" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2386,7 +2508,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#white_check_mark-test-coverage" class="md-nav__link">
+  <a href="#white_check_mark-test-coverage_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         :white_check_mark: Test coverage
@@ -4276,8 +4398,111 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
-<h2 id="v0510-2026-08-26">v0.51.0 (2026-08-26)<a class="headerlink" href="#v0510-2026-08-26" title="Permanent link">&para;</a></h2>
+<h2 id="v0520-2026-08-27">v0.52.0 (2026-08-27)<a class="headerlink" href="#v0520-2026-08-27" title="Permanent link">&para;</a></h2>
+<h3 id="sparkles-phase-1-expression-capture-implementation-shipped">:sparkles: Phase 1 expression-capture: implementation shipped<a class="headerlink" href="#sparkles-phase-1-expression-capture-implementation-shipped" title="Permanent link">&para;</a></h3>
+<p>Phase 1 of <code>docs/v0.46.0_expression_capture_plan.md</code> lands. The
+visitor now emits a structured expression dict with operators
+captured at the correct layer, enabling a future name resolver
+to walk identifiers individually. The key insight: the vendored
+SysML v2 grammar lists all binary operators in the same
+<code>ownedExpression</code> rule with equal precedence, so ANTLR
+left-associates and produces a non-precedence-respecting parse
+(e.g. <code>a + b * c</code> parses as <code>(a+b) * c</code>). The implementation
+runs a precedence-climbing pass on the ANTLR children list to
+re-arrange operators by binding power before emitting the
+structured chain.</p>
+<h3 id="test_tube-test-results">:test_tube: Test results<a class="headerlink" href="#test_tube-test-results" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>143/143</strong> grammar tests pass (5m 30s; 10 phase1 tests +
+  132 non-phase1 including the 53 Training-suite tests that
+  were at risk due to the precedence-climbing refactor)</li>
+<li><strong>144/144</strong> class/main/repr/navigate tests pass</li>
+<li><strong>124/124</strong> semantic tests pass</li>
+<li><strong>72/72</strong> import/validator/project tests pass</li>
+<li><strong>19/19</strong> boxes_view tests pass</li>
+<li><strong>118/123</strong> conformance tests pass (same 5 pre-existing
+  failures as the v0.51.0 baseline — no new regressions)</li>
+</ul>
 <h3 id="white_check_mark-test-coverage">:white_check_mark: Test coverage<a class="headerlink" href="#white_check_mark-test-coverage" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>10 Phase 1 regression tests</strong> (added in v0.52.0-pre
+  failing-first commit, all now passing):</li>
+<li><code>test_expression_capture_binary_equality_v046_phase1</code> —
+    <code>a == b</code> emits <code>EqualityExpression.operation[0]</code> with
+    <code>operator='=='</code>, <code>operand.name='ClassificationExpression'</code>.</li>
+<li><code>test_expression_capture_invocation_v046_phase1</code> —
+    <code>size(edges) == 18</code> emits <code>InvocationExpression</code> for
+    <code>size(edges)</code> plus <code>EqualityExpression</code> for <code>== 18</code>.</li>
+<li><code>test_expression_capture_feature_chain_v046_phase1</code> —
+    <code>wheel1.mass &gt; 0</code> preserves the feature chain and
+    <code>RelationalExpression</code> for <code>&gt; 0</code>.</li>
+<li><code>test_expression_capture_arithmetic_precedence_v046_phase1</code> —
+    <code>a + b * c == 0</code> captures all three operators (<code>+</code>, <code>*</code>,
+    <code>==</code>) in the structured output.</li>
+<li><code>test_expression_capture_unary_minus_v046_phase1</code> —
+    <code>-x == 0</code> emits <code>UnaryExpression.operator='-'</code>.</li>
+<li><code>test_expression_capture_not_operator_v046_phase1</code> —
+    <code>not flag == true</code> emits <code>UnaryExpression.operator='not'</code>.</li>
+<li><code>test_expression_capture_logical_and_v046_phase1</code> —
+    <code>a and b</code> confirms <code>AndExpression</code> layer is present
+    (and/or/xor/implies fall back to text preservation
+    because the grammar class uses list-based operand/operator
+    fields that don't fit the chain layout — documented
+    limitation).</li>
+<li><code>test_expression_capture_logical_or_v046_phase1</code> —
+    same as above for <code>OrExpression</code>.</li>
+<li><code>test_expression_capture_conditional_ternary_v046_phase1</code> —
+    confirms <code>ConditionalExpression</code> layer is present in the
+    chain shape (the grammar's <code>IF ? :</code> ternary form is not
+    currently parseable inside <code>calc</code> bodies — known grammar
+    limitation).</li>
+<li><code>test_expression_capture_range_v046_phase1</code> —
+    <code>0..n</code> emits <code>RangeExpression.operator='..'</code>.</li>
+<li><code>test_expression_dict_not_collapsed_v046_phase1</code> —
+    structural test: the visitor does NOT collapse
+    <code>radius == zero</code> into a single <code>FeatureReferenceMember</code> with
+    <code>names=['radius==zero']</code>; the two identifiers are
+    separately addressable.</li>
+</ul>
+<h3 id="wrench-internal-changes">:wrench: Internal changes<a class="headerlink" href="#wrench-internal-changes" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Added precedence-climbing pass</strong> to <code>_emit_structured_expression</code>
+  in <code>src/sysmlpy/antlr_visitor.py</code>:</li>
+<li><code>_PRECEDENCE_RANK</code> map (operator → binding power)</li>
+<li><code>_OPERATOR_TO_LAYER</code> map (operator → grammar class layer)</li>
+<li><code>_find_split_index</code> (find lowest-precedence operator in
+    ANTLR children, handling left-associative same-precedence
+    and right-associative <code>**</code>/<code>^</code>)</li>
+<li><code>_build_binary_chain</code> (recursively emit LHS/RHS, splice op)</li>
+<li><code>_splice_operator</code> (insert op at the correct chain layer)</li>
+<li><code>_add_op_to_layer</code> (handle re-arrangement when LHS has a
+    lower-precedence top op)</li>
+<li><code>_embed_layer_at_path</code> (preserve rhs's higher-layer ops
+    after re-arrangement)</li>
+<li><code>_unwrap_to_layer</code> (return the rhs sub-dict matching the
+    grammar class's operand type expectation)</li>
+<li><code>_embed_rhs_higher_ops</code> (preserve rhs's operators at higher
+    layers when splicing)</li>
+<li><code>_is_owned_chain</code> / <code>_walk_chain</code> / <code>_LAYER_PATHS</code> /
+    <code>_LAYER_OP_FIELDS</code> helpers</li>
+<li><code>_build_invocation_primary</code> / <code>_build_arg_list_dict</code> (emit
+    <code>InvocationExpression</code> for <code>Function(args)</code> pattern)</li>
+<li><code>_make_feature_reference_chain</code> (multi-part qualified name
+    with <code>::</code> separator; <code>a.b</code> field access falls back to text
+    to preserve round-trip — <code>FeatureChainExpression</code> grammar
+    class not yet implemented)</li>
+<li><strong>Fixed AdditiveOperand.dump</strong> in <code>src/sysmlpy/grammar/classes.py</code>:</li>
+<li>was <code>"" .join([operator, operand.dump()])</code> (no space);
+    now <code>" ".join([operator, operand.dump()])</code> to match the
+    other Operand.dump implementations and produce correct
+    spacing in round-trip output.</li>
+<li><strong>Added <code>get_definition()</code> methods</strong> to the argument grammar
+  classes (InvocationExpression, ArgumentList,
+  PositionalArgumentList, ArgumentMember, Argument,
+  ArgumentValue) so <code>load_from_grammar</code> can re-emit the dict.</li>
+</ul>
+<h2 id="v0510-2026-08-26">v0.51.0 (2026-08-26)<a class="headerlink" href="#v0510-2026-08-26" title="Permanent link">&para;</a></h2>
+<h3 id="white_check_mark-test-coverage_1">:white_check_mark: Test coverage<a class="headerlink" href="#white_check_mark-test-coverage_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Added three regression tests contributed by
   <a href="https://github.com/mycr0ft/sysmlpy/pull/7">PR #7</a> by @jman4162</strong> —

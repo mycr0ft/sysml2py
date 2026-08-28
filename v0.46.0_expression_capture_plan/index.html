@@ -661,10 +661,26 @@
   allocation usages inside <code>part def</code>, <code>item def</code>, etc. bodies
   now survive <code>Part.load_from_grammar</code> into the public-API tree.
   10 regression tests in <code>tests/grammar_test.py::*v046_phase0*</code>.
-- <strong>Phase 1+ (expression refactor) — pending</strong>: implement the
-  visitor refactor in §5.
+- <strong>Phase 1 (expression refactor) — DONE in v0.52.0</strong>: visitor
+  now emits a structured expression dict with operators
+  captured at the correct layer, using a precedence-climbing
+  pass to recover the correct operator order from the
+  left-associative ANTLR parse. 10 regression tests in
+  <code>tests/grammar_test.py::*v046_phase1</code> (binary equality,
+  invocation, feature chain, arithmetic precedence, unary minus,
+  <code>not</code> operator, logical <code>and</code>/<code>or</code> (text-preservation fallback),
+  conditional ternary (layer-presence), range, structural
+  non-collapse). Known limitations:
+  - <code>and</code>/<code>or</code>/<code>xor</code>/<code>implies</code> fall back to text preservation
+    (the grammar classes use list-based operand/operator fields
+    that don't fit the chain layout).
+  - <code>a.b</code> field access falls back to text preservation
+    (the grammar class lacks a <code>FeatureChainExpression</code> that
+    <code>BaseExpression</code> can read).
+  - The grammar's <code>IF ? :</code> ternary form is not currently
+    parseable inside <code>calc</code> bodies (known grammar limitation).
 <strong>Author:</strong> Context from issue #3 triage + codebase investigation.
-<strong>Target release:</strong> v0.46.0 (Phase 1+), v0.48.0 (Phase 0 prerequisite shipped)
+<strong>Target release:</strong> v0.48.0 (Phase 0), v0.52.0 (Phase 1)
 <strong>Estimated effort:</strong> ~1 week (see §8).</p>
 </blockquote>
 <hr />
