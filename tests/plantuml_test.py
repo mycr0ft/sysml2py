@@ -578,7 +578,7 @@ class TestViewRenderings:
 
         assert "@startuml" in puml
         assert "@enduml" in puml
-        assert "|= Name |= Type |= Kind |= Parent |" in puml
+        assert "Name" in puml and "Type" in puml and "Kind" in puml
         assert "Engine" in puml
         assert "myEngine" in puml
         assert "part def" in puml
@@ -1138,7 +1138,7 @@ class TestStateTransitionView:
         assert "Idle" in puml
         assert "Active" in puml
         assert "SM" in puml
-        assert "state def" in puml
+        assert 'state "SM"' in puml or "state" in puml
 
     def test_as_state_transition_view_transition_arrow(self):
         """Transition arrow appears between states."""

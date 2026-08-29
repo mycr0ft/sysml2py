@@ -3,6 +3,9 @@
 
 import pytest
 import json
+
+kuzu = pytest.importorskip("kuzu")
+
 from sysmlpy.store import (
     KuzuStore, create_store,
     REL_PARENT_CHILD, REL_TYPED_BY, REL_SPECIALIZES

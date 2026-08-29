@@ -15,6 +15,8 @@ from sysmlpy.store import (
 @pytest.fixture(params=["memory", "networkx"])
 def store(request):
     """Run each test against both backends."""
+    if request.param == "networkx":
+        pytest.importorskip("networkx")
     return create_store(request.param)
 
 
@@ -25,6 +27,7 @@ def mem_store():
 
 @pytest.fixture
 def nx_store():
+    pytest.importorskip("networkx")
     return NetworkXStore()
 
 
@@ -36,11 +39,13 @@ class TestCreateStore:
         assert isinstance(s, InMemoryStore)
 
     def test_networkx_backend(self):
+        pytest.importorskip("networkx")
         s = create_store("networkx")
         assert isinstance(s, NetworkXStore)
 
     def test_short_names(self):
         assert isinstance(create_store("inmemory"), InMemoryStore)
+        pytest.importorskip("networkx")
         assert isinstance(create_store("nx"), NetworkXStore)
         assert isinstance(create_store("graph"), NetworkXStore)
 
