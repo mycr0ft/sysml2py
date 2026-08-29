@@ -4,6 +4,7 @@
 > **Last Updated:** August 28, 2026
 > **Current Version:** v0.53.0
 > **Repository:** https://github.com/mycr0ft/sysmlpy
+> **Master Development Plan:** [docs/DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)
 
 ---
 
