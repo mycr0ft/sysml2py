@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#todo" class="md-skip">
+        <a href="#sysmlpy-todo-action-items" class="md-skip">
           Skip to content
         </a>
       
@@ -405,6 +405,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TODO
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -421,6 +439,47 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#active-tasks-phase-a-v0531" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Active Tasks (Phase A: v0.53.1)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upcoming-milestones" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upcoming Milestones
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -446,6 +505,36 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#active-tasks-phase-a-v0531" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Active Tasks (Phase A: v0.53.1)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upcoming-milestones" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upcoming Milestones
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -464,9 +553,28 @@
   
 
 
-<h1 id="todo">TODO<a class="headerlink" href="#todo" title="Permanent link">&para;</a></h1>
-<p>This page tracks planned work and known issues for sysmlpy.</p>
+<h1 id="sysmlpy-todo-action-items">sysmlpy — TODO &amp; Action Items<a class="headerlink" href="#sysmlpy-todo-action-items" title="Permanent link">&para;</a></h1>
+<p>See the comprehensive <a href="docs/DEVELOPMENT_PLAN.md">Master Development Plan</a> for architectural roadmap, active development phases, and planned milestones.</p>
 <p>See <a href="../STATUS/">STATUS.md</a> and <a href="../CHANGELOG/">CHANGELOG.md</a> for the current project status and release history.</p>
+<hr />
+<h2 id="active-tasks-phase-a-v0531">Active Tasks (Phase A: v0.53.1)<a class="headerlink" href="#active-tasks-phase-a-v0531" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] <strong>Grammar Class <code>get_definition()</code> Completeness:</strong></li>
+<li>[ ] Add <code>AdditiveOperand.get_definition()</code> in <code>src/sysmlpy/grammar/classes.py</code></li>
+<li>[ ] Add <code>AssignmentNode.get_definition()</code> in <code>src/sysmlpy/grammar/classes.py</code></li>
+<li>[ ] Add <code>TriggerValuePart.get_definition()</code>, <code>TriggerFeatureValue.get_definition()</code>, <code>TriggerExpression.get_definition()</code></li>
+<li>[ ] Run reflection audit across all ~354 grammar classes to ensure zero missing <code>get_definition()</code> or <code>children</code> implementations</li>
+<li>[ ] <strong>XPect Conformance Suite:</strong></li>
+<li>[ ] Update <code>tests/sysmlv2/validation/valid/Import_Visibility_Valid.error</code> to match the expected syntax error on bare import</li>
+<li>[ ] Verify 123/123 (100%) passing conformance suite</li>
+</ul>
+<hr />
+<h2 id="upcoming-milestones">Upcoming Milestones<a class="headerlink" href="#upcoming-milestones" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] <strong>Phase B (v0.54.0):</strong> Name resolution on structured expressions (<code>assert constraint</code>, <code>calc</code>, <code>constraint</code>, <code>default value</code>)</li>
+<li>[ ] <strong>Phase C (v0.55.0):</strong> Semantic expression type compatibility and unit safety checking</li>
+<li>[ ] <strong>Phase D (v0.56.0+):</strong> ANTLR SLL mode fast-path parsing &amp; graph store query enhancements</li>
+</ul>
 
 
 
