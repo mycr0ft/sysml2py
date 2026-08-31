@@ -1017,8 +1017,8 @@
 <h1 id="sysmlpy-project-work-summary">sysmlpy — Project Work Summary<a class="headerlink" href="#sysmlpy-project-work-summary" title="Permanent link">&para;</a></h1>
 <blockquote>
 <p><strong>For:</strong> Future agents and team members
-<strong>Last Updated:</strong> August 30, 2026
-<strong>Current Version:</strong> v0.54.0
+<strong>Last Updated:</strong> August 31, 2026
+<strong>Current Version:</strong> v0.55.0
 <strong>Repository:</strong> https://github.com/mycr0ft/sysmlpy
 <strong>Master Development Plan:</strong> <a href="../DEVELOPMENT_PLAN/">docs/DEVELOPMENT_PLAN.md</a></p>
 </blockquote>
@@ -1053,7 +1053,7 @@
 <a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>│   ├── main_test.py         # 7 integration tests
 <a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│   ├── plantuml_test.py     # 122 PlantUML view rendering tests
 <a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>│   ├── boxes_view_test.py   # 19 boxes-backed state-machine visualizer tests (v0.36.0)
-<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│   ├── semantic_test.py     # 136 semantic analysis tests
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│   ├── semantic_test.py     # 153 semantic analysis tests
 <a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>│   ├── project_test.py      # 17 multi-file loading tests
 <a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>│   ├── navigate_test.py     # 42 model navigation tests
 <a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>│   ├── import_test.py       # 21 import resolution tests
@@ -1128,6 +1128,11 @@
 <td><strong>Expression Name Resolution</strong></td>
 <td>✅ Complete (v0.54.0)</td>
 <td>Identifiers in constraint/calc/default/guard bodies resolve against the symbol table; segment-by-segment feature-chain resolution</td>
+</tr>
+<tr>
+<td><strong>Expression Type Checking</strong></td>
+<td>✅ Complete (v0.55.0)</td>
+<td>Operand-category rules (<code>OPERAND_TYPE_MISMATCH</code>) + <code>+</code>/<code>-</code> unit-dimension safety via pint (<code>UNIT_DIMENSION_MISMATCH</code>); <code>const_fold()</code> static reduction</td>
 </tr>
 <tr>
 <td><strong>OCL Constraints</strong></td>

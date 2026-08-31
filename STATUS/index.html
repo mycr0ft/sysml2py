@@ -1210,7 +1210,7 @@
 
 
 <h1 id="sysmlpy-project-status">sysmlpy — Project Status<a class="headerlink" href="#sysmlpy-project-status" title="Permanent link">&para;</a></h1>
-<p>Current version: <strong>v0.54.0</strong> (2026-08-30)</p>
+<p>Current version: <strong>v0.55.0</strong> (2026-08-31)</p>
 <hr />
 <h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
 <h3 id="public-api-classes">Public API Classes<a class="headerlink" href="#public-api-classes" title="Permanent link">&para;</a></h3>
@@ -1828,7 +1828,7 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><code>tests/semantic_test.py</code></td>
-<td>136</td>
+<td>153</td>
 <td>✅ All pass</td>
 </tr>
 <tr>
@@ -1952,7 +1952,7 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><code>semantic.py</code></td>
-<td>Operand <strong>type</strong> and <strong>unit</strong> checking inside expressions not yet implemented (Phase C, v0.55.0). Expression <em>name</em> resolution landed in v0.54.0.</td>
+<td><code>*</code>/<code>/</code> dimension derivation (<code>mass * speed → ForceValue</code> inference) not yet implemented (Phase D); <code>+</code>/<code>-</code> dimension equality and operand-category checks are complete (v0.55.0).</td>
 </tr>
 </tbody>
 </table>
@@ -2118,7 +2118,7 @@ Test files: <strong>123 <code>.sysml</code> files</strong> under <code>tests/sys
 </tr>
 <tr>
 <td>Unit + grammar + integration tests</td>
-<td>696 passing</td>
+<td>836 passing</td>
 </tr>
 <tr>
 <td>Grammar round-trip tests passing</td>
@@ -2142,7 +2142,7 @@ Test files: <strong>123 <code>.sysml</code> files</strong> under <code>tests/sys
 </tr>
 <tr>
 <td>Semantic analysis tests</td>
-<td><strong>136 passing</strong></td>
+<td><strong>153 passing</strong></td>
 </tr>
 <tr>
 <td>Storage backend tests</td>

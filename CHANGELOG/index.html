@@ -431,6 +431,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0550-2026-08-31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.55.0 (2026-08-31)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.55.0 (2026-08-31)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#balance_scale-phase-c-expression-type-checking-unit-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :balance_scale: Phase C — Expression Type Checking &amp; Unit Safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0540-2026-08-30" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2530,6 +2558,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0550-2026-08-31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.55.0 (2026-08-31)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.55.0 (2026-08-31)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#balance_scale-phase-c-expression-type-checking-unit-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :balance_scale: Phase C — Expression Type Checking &amp; Unit Safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0540-2026-08-30" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4588,6 +4644,47 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0550-2026-08-31">v0.55.0 (2026-08-31)<a class="headerlink" href="#v0550-2026-08-31" title="Permanent link">&para;</a></h2>
+<h3 id="balance_scale-phase-c-expression-type-checking-unit-safety">:balance_scale: Phase C — Expression Type Checking &amp; Unit Safety<a class="headerlink" href="#balance_scale-phase-c-expression-type-checking-unit-safety" title="Permanent link">&para;</a></h3>
+<p>Operator operand-type compatibility and pint unit-dimension safety now
+run as analyzer step 4c (<code>SemanticAnalyzer._check_expression_types</code>):</p>
+<ul>
+<li><strong>Operator rules</strong> — <code>OPERAND_TYPE_MISMATCH</code> errors for:</li>
+<li>logical (<code>and</code>/<code>or</code>/<code>xor</code>/<code>implies</code>/<code>not</code>) with non-boolean operands</li>
+<li>relational (<code>&lt; &gt; &lt;= &gt;=</code>) with unordered (boolean) operands</li>
+<li>equality (<code>==</code>/<code>!=</code>) comparing boolean with non-boolean</li>
+<li>arithmetic with string/boolean mismatches (<code>"a" + 5</code>, <code>flag * 2</code>)</li>
+<li><strong>Unit dimensions</strong> — <code>UNIT_DIMENSION_MISMATCH</code> errors when <code>+</code>/<code>-</code>
+  combine different ISO-80000 dimensions (adding <code>[m]</code> to <code>[kg]</code>).
+  Dimensionless <code>+ quantity</code> and <code>*</code>/<code>/</code> of any dimensions are allowed.
+  Dimensions are extracted from the bundled ISQ library's
+  <code>quantity dimension:</code> annotations (~560 value/unit types indexed,
+  alias-aware).</li>
+<li><strong>Constant folding</strong> — new <code>const_fold(expr_dict)</code> utility statically
+  reduces deterministic literal expressions (<code>2 + 3 * 4</code> → <code>14</code>,
+  <code>2 ** 10</code> → <code>1024</code>, <code>-(2-5)</code> → <code>3</code>) with a restricted safe arithmetic
+  evaluator for parenthesized text forms; non-numeric operands return
+  <code>None</code>.</li>
+</ul>
+<p>Structured boolean-keyword emission (prerequisite fix): <code>and</code>, <code>or</code>,
+<code>xor</code>, <code>implies</code> operators were previously collapsed to glued text
+(<code>aandb</code>) by the visitor — they now emit structured
+<code>And/Or/Xor/Implies-Operand</code> dicts and the grammar classes render them
+on round-trip (<code>a and b</code>, <code>a or (b and c)</code> survive
+parse→dump→parse). <code>**</code>/<code>^</code> exponentiation now also splits instead of
+gluing text. Boolean literals <code>true</code>/<code>false</code> capture as
+<code>LiteralBoolean</code> primary nodes (new grammar class) so type checking can
+classify them.</p>
+<p>Operand typing resolves each identifier to its declared type
+(<code>ScalarValues::Integer</code>, <code>ISQ::MassValue</code>, …) through the Phase B
+scope machinery; comparison chains (<code>n &gt; 3 and n &lt; 10</code>) classify as
+boolean results.</p>
+<p>Scope notes: <code>*</code>/<code>/</code> dimension derivation (e.g. <code>mass * speed !=
+ForceValue</code> inference) and unit-conversion folding are Phase D scope;
+multiplication is only checked for non-numeric operand categories.</p>
+<p>17 new tests in <code>tests/semantic_test.py</code> (153 total).
+Full suite: <strong>836 passed</strong> (incl. 143 grammar round-trip + 123
+conformance).</p>
 <h2 id="v0540-2026-08-30">v0.54.0 (2026-08-30)<a class="headerlink" href="#v0540-2026-08-30" title="Permanent link">&para;</a></h2>
 <h3 id="mag-phase-b-name-resolution-on-structured-expressions">:mag: Phase B — Name Resolution on Structured Expressions<a class="headerlink" href="#mag-phase-b-name-resolution-on-structured-expressions" title="Permanent link">&para;</a></h3>
 <p>The semantic analyzer now walks the structured expression ASTs captured
