@@ -1,6 +1,6 @@
 # sysmlpy — Master Development Plan & Roadmap
 
-> **Current Version:** v0.53.0 (August 2026)  
+> **Current Version:** v0.53.1 (August 2026)  
 > **Repository:** https://github.com/mycr0ft/sysmlpy  
 > **Upstream Grammar PR:** [daltskin/sysml-v2-grammar#12](https://github.com/daltskin/sysml-v2-grammar/pull/12)
 
@@ -10,9 +10,11 @@
 
 `sysmlpy` is a Python library for parsing, manipulating, and validating SysML v2.0 models using an ANTLR4-based parser, a rich AST of grammar classes, and a semantic analysis engine.
 
-### Current Health & Metrics (v0.53.0)
+### Current Health & Metrics (v0.53.1)
 - **Fast Test Suite:** 684/684 passed (100%) across grammar round-trips, public API classes, navigation, semantic analysis, import resolution, and PlantUML renderings.
 - **Grammar Round-Trip Suite:** 143/143 passed (100%).
+- **XPect Parse Conformance:** 123/123 (100%) — `Import_Visibility_Valid.error` now matches the grammar's enforced import-visibility syntax error.
+- **Grammar Class Integrity:** 358/358 classes implement `get_definition()` (reflection-audited; 36 added in v0.53.1).
 - **Upstream Grammar Conformance:** 310/310 official OMG specification fixture files parse cleanly via the corrected grammar in `daltskin/sysml-v2-grammar#12`.
 - **Expression Engine:** Structured, per-precedence AST capture active for binary, unary, invocation, and feature-chain expressions (replacing legacy collapse-to-text).
 
@@ -30,19 +32,24 @@
 - Postfix operators (`meta`, `@@`, `@`) and `all` extent expressions restored at correct precedence.
 - Import visibility rules aligned with normative OMG spec (explicit visibility required).
 
+### Phase A: Grammar Class Integrity & 100% Parse Conformance (v0.53.1) ✅
+- `get_definition()` added to the final 36 missing grammar classes (reflection audit: 358/358 complete), including `AssignmentNode`, `AdditiveOperand`, the `Trigger*` family, and the expression-member chain.
+- Fixed `ReturnParameterMember.get_definition()` list-vs-dict shape bug that broke `loads()` on calc `return` members.
+- XPect conformance reached 123/123 by updating `Import_Visibility_Valid.error` to expect the enforced bare-import syntax error.
+
 ---
 
 ## 3. Active & Upcoming Development Phases
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│ Phase A: Grammar Class Integrity & 100% Conformance Suite (v0.53.1)      │
-│   - Fix missing get_definition() across all ~354 grammar classes         │
-│   - Bring 123-file XPect parse conformance to 100%                       │
+│ Phase A: Grammar Class Integrity & 100% Conformance Suite (v0.53.1) ✅  │
+│   - Fix missing get_definition() across all ~354 grammar classes       │
+│   - Bring 123-file XPect parse conformance to 100%                     │
 └────────────────────────────────────┬─────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼─────────────────────────────────────┐
-│ Phase B: Name Resolution on Structured Expressions (v0.54.0)             │
+│ Phase B: Name Resolution on Structured Expressions (v0.54.0) ← NEXT     │
 │   - Resolve FeatureReferenceExpression / FeatureChain against SymbolTable│
 │   - Identify unbound variables, scoped attributes, and imported symbols  │
 │   - Emit SemanticIssues for unresolved expression identifiers            │
@@ -66,41 +73,16 @@
 
 ## 4. Detailed Phase Specifications
 
-### Phase A: Grammar Class Integrity & 100% Parse Conformance (Immediate / v0.53.1)
+### Phase A: Grammar Class Integrity & 100% Parse Conformance (COMPLETE / v0.53.1)
 
-#### Problem
-In `src/sysmlpy/grammar/classes.py`, certain grammar classes implement `__init__` and `dump()` but lack `get_definition()`. When `loads()` or `_ensure_body()` serializes the grammar tree, missing methods cause `AttributeError: '<Class>' object has no attribute 'get_definition'`.
+#### Resolution
+All items complete as of v0.53.1:
+- `get_definition()` added to all 36 missing classes (audit found more than the 5 originally identified). Full list in `CHANGELOG.md` v0.53.1.
+- Reflection audit confirms **358/358** classes implement `get_definition()`.
+- `ReturnParameterMember.get_definition()` shape bug fixed (list vs dict for `ownedRelatedElement`).
+- `Import_Visibility_Valid.error` updated to the enforced bare-import syntax error; **XPect conformance 123/123 (100%)**.
 
-#### Identified Targets
-1. **`AdditiveOperand`** (`src/sysmlpy/grammar/classes.py:5925`):
-   ```python
-   def get_definition(self):
-       return {
-           "name": self.__class__.__name__,
-           "operator": self.operator,
-           "operand": self.operand.get_definition(),
-       }
-   ```
-2. **`AssignmentNode`** (`src/sysmlpy/grammar/classes.py:1349`):
-   ```python
-   def get_definition(self):
-       return {
-           "name": self.__class__.__name__,
-           "prefix": self.prefix.get_definition() if self.prefix else None,
-           "declaration": self.declaration.get_definition() if self.declaration else None,
-           "body": self.body.get_definition() if self.body else None,
-       }
-   ```
-3. **`TriggerValuePart`**, **`TriggerFeatureValue`**, **`TriggerExpression`** (`src/sysmlpy/grammar/classes.py:2402-2460`):
-   Add reciprocal `get_definition()` implementations for transition triggers.
-4. **Comprehensive Class Audit:**
-   Audit all ~354 classes in `src/sysmlpy/grammar/classes.py` via automated reflection to verify every class implements `get_definition()` and `children`.
-5. **XPect Conformance Suite Verification:**
-   Update `tests/sysmlv2/validation/valid/Import_Visibility_Valid.error` to match the expected syntax error on bare `import`, bringing the 123-file XPect suite to 123/123 (100%) passing.
-
----
-
-### Phase B: Name Resolution on Structured Expressions (v0.54.0)
+### Phase B: Name Resolution on Structured Expressions (v0.54.0) — NEXT
 
 #### Goal
 Now that expressions are captured as structured AST nodes rather than collapsed text strings, the semantic analyzer can walk expression trees and validate identifiers against the `SymbolTable`.

@@ -1,6 +1,8 @@
 # sysmlpy
 [![PyPI version](https://badge.fury.io/py/sysmlpy.svg)](https://badge.fury.io/py/sysmlpy)[![PyPI status](https://img.shields.io/pypi/status/sysmlpy.svg)](https://pypi.python.org/pypi/sysmlpy/)[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
 
+![Lines of Code Over Time](loc_history.svg)
+
 ## Description
 sysmlpy is an open source pure Python library for constructing python-based
 classes consistent with the [SysML v2.0 standard](https://github.com/Systems-Modeling/SysML-v2-Release).
@@ -12,45 +14,21 @@ and dropped the textX parser in favor of [an ANTLR4 parser grammar](https://gith
 changed our unit library to pint.
 The project had diverged so much from sysml2py that a new name, sysmlpy, was selected.
 
-![Lines of Code Over Time](loc_history.svg)
+> **⚠️ Constraints are changing.** Upcoming releases (v0.54+) overhaul how
+> constraint, calc, and expression bodies are validated: names inside
+> expressions will be **resolved against the symbol table** (v0.54.0),
+> followed by operand type checking and unit-dimension compatibility via
+> pint (v0.55.0). Models that parse cleanly today may start producing
+> semantic errors once this lands. Track progress in
+> [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md).
 
-**v0.42.0:** Two deep fixes in the specialization layer. (1) `satisfy R : T by p;` and `assert someConstraint : CType;` crashed with `NameError` — the makers called a helper that was never defined; all three sites now use `_build_full_specialization_from_fsp`. (2) Chained re-declarations (`attribute :> base.x;`) dropped every segment after the first, at both visitor and grammar layers — new visitor helpers emit one Owned* dict per source chain (head + `OwnedFeatureChain`), grammar classes keep both parts, `redefined_name` resolves to the leaf segment, and the semantic analyzer now reports/resolves full dotted names (`Undefined symbol 'missing.chain'`). 14 tests in `tests/redefined_name_test.py`.
+> **Scope reminder** — a green parse result means the file **parsed
+> syntactically**. Names inside constraint bodies and other OCL-style
+> expressions are not yet resolved by the semantic analyzer, so a
+> document that names an undefined symbol inside an `assert constraint
+> { ... }` will still parse cleanly. See [STATUS.md §Known Issues](STATUS.md#known-issues).
 
-**v0.41.0:** Full-specialization capture across all usage kinds — v0.40.0 fixed `attributeUsage` only; actions, calculations, constraints, requirements, use cases, interfaces and nested occurrences still dropped `:>`, `:>>`, `::>` specializations. New `_full_specialization_for_ctx` helper walks any usage-like context to its featureSpecializationPart; twelve visitor sites now use it (typed-by kept as fallback). `Action.load_from_grammar` captures all four kinds and the hand-rolled dumps on Action/Interface/UseCase/Requirement render them (`action a2 ::> RefType;`). `Usage.redefined_name` now works on deeper declaration nestings too. 10 tests in `tests/redefined_name_test.py`.
-
-**v0.40.0:** `References` (`::>` / `references` keyword) implemented end-to-end — previously the grammar-side `FeatureSpecialization` had a silent "not yet implemented" stub and the visitor never emitted dicts for it, so `ref attribute ::> X;` lost its specialization on round-trip (dump emitted `attribute ;`). New `References` grammar class mirrors `Redefinitions`; visitor branches in both full-specialization builders now cover the operator and keyword forms. The top-level `attributeUsage` path was the only one still using the typed-by-only helper; it now uses `_build_full_specialization_from_ctx` so all four kinds (Typings, Subsettings, Redefinitions, References) round-trip. `redefined_name` / `display_name` already handled this case. New `test_attribute_ref_references_operator_roundtrip` in `tests/grammar_test.py`; two new cases in `tests/redefined_name_test.py`. 97/97 grammar round-trip tests pass.
-
-**v0.39.0:** Redefined-Usage name resolution — `attribute :>> exampleAttribute = ...;` previously dumped the name correctly but exposed a UUID sentinel via `attribute.name`. Two new helpers surface the user-visible identifier without changing the historical `self.name` semantics: `Usage.redefined_name` (last identifier segment of the first re-declaration chain — `Redefinitions` / `Subsettings` / `References`) and `Usage.display_name` (UUID-aware user-meaningful name). `get_value()`, `dump()`, and `get_child()` continue to work unchanged. New `tests/redefined_name_test.py` (6 tests) — the original two-package `DummyDefinitionModel` / `DummyUsageModel` round-trips and the helper properties are exercised.
-
-**v0.38.0:** Partial-parse recovery — opt-in entry points surface whatever did parse when the input has syntax errors, instead of aborting with `SysMLSyntaxError`. New `PartialParseError` exception carries `.errors`, `.partial` (the visitor dict), and `.source`. `loads_partial(text)` / `load_partial(text)` raise `PartialParseError` on errors and return cleanly on success. Strict `loads` / `load` are unchanged. Motivating case: `validation/valid/Import_Visibility_Valid.sysml` (XPECT expects the visibility-less `import ScalarValues;` to be rejected). Now round-trips the three valid imports and drops the broken one. New `tests/partial_test.py` (6 tests). 391/391 fast-suite tests passing; conformance unchanged.
-
-**v0.37.0:** Round-trip / corpus-load fixes surfaced by benchmarking against gosysml (the Go port — `github.com/mycr0ft/gosysml`). Implicit-package wrap could swallow its own closing brace when the source ended with a line comment and no trailing newline (e.g. `Subsetting_OwningType.sysml`); `AnnotatingElement` now dispatches `MetadataFeature` and `TextualRepresentation` (they were crashing on `NoneType`); three missing grammar classes (`InitialNodeMember`, `ActionTargetSuccessionMember`, `GuardedSuccessionMember`) now match the visitor's emitted dicts and round-trip `first X; then Y;` / `if c then X else Y;` / `succession S first A1 if c then A2;` chains inside action bodies; `TriggerExpression` now extracts the `WHEN argumentExpressionMember` branch and degrades gracefully on empty arguments; control-node names (`merge m`, `decide`, etc.) flow through; nested `ref action a : A;` usages keep their `ref` prefix; `BinaryInterfacePart.dump()` degrades gracefully on 0/1-end interface parts (graceful-fallback contract). Corpus parity with gosysml: **122/123** files round-trip cleanly (the lone remaining failure, `Import_Visibility_Valid.sysml`, has an XPECT header that *expects* its syntax error). Grammar round-trip suite: **96/96 passing**.
-
-**v0.36.0:** Boxes-backed state-machine visualizer — `as_state_transition_view_boxes()`, `render_state_transition_view()`, `render_state_transition_view_svg()` produce native UML `«state»` shapes, initial pseudostate, final bullseye, and orthogonal routing via the optional [`boxes`](https://github.com/mycr0ft/boxes) package. Handles `done`, guards, shorthand `accept X then Y`, dotted feature chains (`S2.S3`), composite states, `parallel` regions, entry/do/exit attributes. 19 new boxes_view tests. Also fixes the INCOSE flashlight `interface … connect … { perform …; }` parse crash in `grammar/classes.py`.
-
-**v0.31.0:** Documentation overhaul — all docs rewritten to showcase the modern public API. New Model Parsing and Model Navigation sections. Semantic Analysis updated with `AnalysisResult`. Grammar round-trip: 77/77 (100%). 211 core tests passing.
-
-**v0.32.4:** Fixed `Attribute.usage_dump()` calling `dump(child=True)` (returns str) when it should call `_get_definition(child="DefinitionBody")` (returns dict). Broke inline anonymous attribute usages with nested children.
-
-**v0.32.3:** Fixed `Model.load()` silently dropping top-level elements declared after a semicolon-terminated package (e.g. `package P;\npart def Vehicle {...}`). Also handles `UsageElement` siblings.
-
-**v0.32.2:** Added `docs/TODO.md` stub (was a dangling symlink, broke mkdocs build).
-
-**v0.32.1:** Fixed critical round-trip data loss bug — `Usage.load_from_grammar()` in `usage.py` silently dropped definition-type children (`part def`, `item def`, etc.) when mixed with usage-type children in the same body, due to an incorrect `hasattr(child, 'body')` guard. Nested structures with mixed definition/usage children now survive parse → dump → parse round-trip correctly.
-
-**v0.28.0:** Complete Gap 4 coverage — SysML v2 view types now implemented (144 PlantUML tests).
-
-**v0.27.0:** General View (GV), Package View, and three GridView specializations (Tabular View, Data Value Tabular View, Relationship Matrix View) with PlantUML, Markdown, and HTML output. 108 PlantUML tests. All 68+ `NotImplementedError` stubs in `grammar/classes.py` replaced with graceful handling.
-
-**v0.26.0:** Action Flow View, Interconnection View, and State Transition View with auto-include of connected elements. Grammar-level flow scanning. 101 PlantUML tests.
-
-**v0.19.0:** Semantic analysis engine with undefined symbol detection. Import resolution (namespace `::*`, membership, recursive `::*::**`). Symbol table with hierarchical scope resolution and qualified name lookup.
-
-**v0.17.0:** 100% test suite pass rate (487/487). Cayley graph database storage backend via HTTP API. Full grammar round-trip coverage (56/56 tests). Programmatic API consistency fixes. NetworkXStore bug fix.
-
-**v0.16.0:** 100% grammar round-trip test coverage (56/56). Analysis case usage, trade study, calculation redefinition, and case body member support. Import visibility defaults to private per SysML v2 spec.
-
-**v0.15.0:** ISQ unit validation (300+ type-to-dimension mappings), US Customary unit support (21 custom definitions), PlantUML diagram generation with stereotype-based styling, and comprehensive API documentation.
+For release history, see [CHANGELOG.md](CHANGELOG.md).
 
 ## Requirements
 sysmlpy requires the following Python packages:
@@ -78,12 +56,6 @@ Multiple installation methods are supported by sysmlpy, including:
 ## Documentation
 
 Documentation can be found [here.](https://mycr0ft.github.io/sysmlpy/)
-
-> **Scope reminder** — a green parse result means the file **parsed
-> syntactically**. Names inside constraint bodies and other OCL-style
-> expressions are not yet resolved by the semantic analyzer, so a
-> document that names an undefined symbol inside an `assert constraint
-> { ... }` will still parse cleanly. See [STATUS.md §Known Issues](STATUS.md#known-issues).
 
 ### Basic Usage
 
@@ -320,7 +292,7 @@ tree = classtree(model)
 print(tree.dump())
 ```
 
-**All 96 grammar round-trip tests pass** (100%). Covered categories: packages, parts, items, ports, interfaces, binding connectors, flow connections, all action forms (definition, shorthand, succession, decomposition), expressions, calculations, constraints, state definitions, requirements, analysis cases, control flow (if/else, while, loop, fork, join, decision, send, accept, terminate), trade studies, views, viewpoints, render states, portion usages, and annotations.
+**All 143 grammar round-trip tests pass** (100%). Covered categories: packages, parts, items, ports, interfaces, binding connectors, flow connections, all action forms (definition, shorthand, succession, decomposition), expressions, calculations, constraints, state definitions, requirements, analysis cases, control flow (if/else, while, loop, fork, join, decision, send, accept, terminate), trade studies, views, viewpoints, render states, portion usages, and annotations.
 
 ## Semantic Analysis
 
@@ -760,87 +732,6 @@ See [`docs/plantuml-examples/`](docs/plantuml-examples/) for all rendered exampl
 | 14 | Data Value Tabular View (GridView) | Data Value View |
 | 15 | Relationship Matrix (GridView) | Relationship Matrix |
 | 16 | Tabular View — Color | Tabular View (color) |
-
-## Changelog
-
-- **v0.36.3** — Fix view (and other prefixed-usage) body children being
-  dropped from the public API tree. `Package.load_from_grammar` built
-  `View` objects manually without calling `load_from_grammar`, so
-  `view.attributes` (and all other typed accessors) returned `[]` even
-  when the view body contained attributes, parts, etc. Now calls
-  `View().load_from_grammar(...)` matching `Part` and other usages.
-  Also fixes `Usage.load_from_grammar` (declaration branch) and
-  `Usage._ensure_body` to handle prefixed usages whose body lives on
-  `grammar.body` rather than `grammar.usage.completion.body.body`.
-
-- **v0.36.2** — Preserve short name, doc, and nested children in
-  `Requirement.dump()`/`load_from_grammar`. Three gaps in the public
-  `Requirement` class were dropping data the parser had captured:
-  `declaredShortName` was never propagated, `doc /* … */` nodes were
-  walked past, and `dump()` never iterated `self.children` so nested
-  `requirement` usages were omitted from output.
-
-- **v0.36.1** — Populate nested requirement children in
-  `Requirement.load_from_grammar`. Previously the body walk stubbed out
-  `DefinitionBodyItem` with `pass`, so nested requirements were parsed
-  by the grammar but dropped from the public object tree.
-
-- **v0.36.0** — Boxes-backed state-machine visualizer:
-  `as_state_transition_view_boxes()`, `render_state_transition_view()`,
-  `render_state_transition_view_svg()` produce native UML `«state»`
-  shapes, initial pseudostate, final bullseye, and orthogonal routing
-  via the optional [`boxes`](https://github.com/mycr0ft/boxes) package.
-  19 new boxes_view tests. Also fixes the INCOSE flashlight
-  `interface … connect … { perform …; }` parse crash.
-
-- **v0.32.5** — Fix double-space in dump output when `:>>` (redefinition) or
-  `: ` (typing) appears after `attribute`, `part`, or other usage keywords.
-  Root cause: `Redefinitions.keyword` and `TypedBy.keyword` had leading spaces
-  that doubled the separator in `AttributeUsage.dump()` and similar join points.
-
-- **v0.33.0** — Fix three parser issues from PARSING_ISSUES.md:
-  1. `subject` with qualified name (e.g. `subject SystemGateway::System_Driver;`) now parses and round-trips inside requirement def bodies.
-  2. `guard` keyword now accepted as alternative to `if` in transition guard expressions (e.g. `transition first A guard condition then B;`).
-  3. `render state` directives with `shape`, `color`, `show`, and `annotation` sub-directives now parse and round-trip inside `view def` and `view` bodies.
-  
-  Also: `rendering` usage now supported inside definition bodies (previously silently dropped), `RenderingUsage` dispatch added to `Package.load_from_grammar`, `ViewRenderingMember`/`ViewRenderingUsage` grammar classes added, `ViewDefinitionBody`/`ViewBody` grammar classes replace `DefinitionBody` for view contexts.
-
-- **v0.33.1** — Fix `guard` keyword preservation in round-trip: `GuardExpressionMember.get_definition()` now includes the `keyword` field so `guard` is no longer silently converted to `if` on dump.
-
-- **v0.33.2** — Fix two user-reported bugs:
-  1. `PerformedActionUsage` regression: `get_definition()` no longer references non-existent `self.keyword` and `self.children` attributes.
-  2. Double-quoted strings now accepted in `annotation` directives per SysML v2 spec (string literals use `"..."`, single quotes `'...'` are for escaped names only).
-  
-  Rejected: `interface` as unquoted identifier (use `'interface'` per spec), guard after `then` in transitions (guard must precede `then` per spec).
-
-- **v0.33.3** — Fix grid views for modern PlantUML, add two new views:
-  1. PlantUML grid views (`as_tabular_view`, `as_data_value_tabular_view`, `as_relationship_matrix_view`) replaced deprecated salt syntax with rectangle-based layout, compatible with PlantUML 1.2024.7+.
-  2. New `as_sequence_view()` — maps action flows and message passing onto PlantUML sequence diagram syntax (participant lifelines, `->` messages).
-  3. New `as_case_view()` — maps actors and use cases onto PlantUML use-case diagram syntax.
-  4. Added `docs/GUARDS.md` documenting guard condition syntax for confused users (canonical keyword is `if`, transition order is `accept` before `if` before `do` before `then`).
-
-- **v0.33.4** — Fix `timeslice`/`snapshot`/`individual` parsing and PlantUML rendering:
-  1. `portionUsage` and `individualUsage` were silently dropped from nested body definitions (visitor gaps in `_visit_nested_occurrence_usage`, `_visit_nested_usage`).
-  2. Added `PortionUsage` grammar class and dispatch in `StructureUsageElement.__init__`.
-  3. Added `_make_portion_usage_prefix()` to extract prefix info from `PortionUsageContext`.
-  4. Added `load_from_grammar` handler for `PortionUsage` in `usage.py`.
-  5. PlantUML `_get_stereotype()` now includes `individual`/`timeslice`/`snapshot` prefixes (e.g. `<<timeslice part>>`, `<<individual part>>`).
-
-- **v0.34.0** — Remove deprecated SysML v1.x diagram functions — BREAKING:
-  1. Removed `as_block_definition_view()`, `as_internal_block_diagram()`, `as_parametric_view()`, `as_requirement_view()`, `as_package_diagram_view()`.
-  2. Removed orphan helpers: `_extract_constraint_parameters()`, `_extract_requirement_relationships()`, `_extract_connection_endpoints()`.
-  3. Added `as_browser_view()` using PlantUML `@startwbs` syntax for hierarchical model tree.
-  4. Removed 34 corresponding tests.
-  5. All standard SysML v2 views remain: GV, IV, AV, STV, SV, GRV, BV, GEV.
-
-- **v0.33.6** — Fix library import resolution with custom library paths:
-  1. Threaded `lib_roots` through `build_from_model()` → `_resolve_imports()` → `_resolve_membership_import()` / `_resolve_namespace_import()` for `LibrarySymbolIndex` fallback.
-  2. `import CustomTypes::*` now resolves correctly when `CustomTypes` is in a user-provided library path.
-
-- **v0.33.5** — Fix `DefaultInterfaceEnd` keyword injection:
-  1. Removed spurious `part` keyword from interface ends without explicit `part`/`item`/`port` prefix.
-  2. Bare `end e1 : Type;` now round-trips correctly as `end e1: Type;` (no extraneous `part`).
-  3. 3 previously-failing interface round-trip grammar tests now pass.
 
 ## Conformance
 

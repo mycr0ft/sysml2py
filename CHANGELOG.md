@@ -1,5 +1,44 @@
 # CHANGELOG
 
+## v0.53.1 (2026-08-30)
+
+### :white_check_mark: Phase A — Grammar Class Integrity & 100% Parse Conformance
+
+All 358 grammar classes in `src/sysmlpy/grammar/classes.py` now implement
+`get_definition()` (verified by reflection audit — 36 were missing). The
+complete list of additions: `ActionBodyItemTarget`, `AdditiveOperand`,
+`AnnotatingMember`, `AssignmentNode`, `BodyExpression`, `ChangeExpression`,
+`ChangeExpressionMember`, `ChangeResultExpressionMember`,
+`ConjugatedPortTyping`, `DefinitionExtensionKeyword`, `DefinitionPrefix`,
+`EffectBehaviorUsage`, `EqualityExpressionMember`,
+`EqualityExpressionReference`, `ExpressionBody`, `ExpressionBodyMember`,
+`FeatureChainPrefix`, `IndividualUsage`, `ItemFeature`, `ItemFeatureMember`,
+`MultiplicitySourceEnd`, `MultiplicitySourceEndMember`, `NamedArgument`,
+`NamedArgumentList`, `NamedArgumentMember`, `OwnedExpressionMember`,
+`ParameterRedefinition`, `PayloadFeatureSpecializationPart`,
+`ReferenceTyping`, `ReturnParameterMember`, `StructureUsageMember`,
+`Succession`, `TriggerExpression`, `TriggerFeatureValue`, `TriggerValuePart`.
+
+Round-trip bugs fixed along the way:
+
+- `ReturnParameterMember.get_definition()` emitted `ownedRelatedElement`
+  as a list; `UsageElement.__init__` (and the visitor) expect a single
+  dict. `loads()` on models with calc `return` members
+  (`simpletests/AssignmentTest.sysml`) previously raised
+  `TypeError: This does not seem to be valid.`
+- `MultiplicitySourceEnd` only kept the last `OwnedMultiplicity` child;
+  now accumulates all children like its siblings.
+
+XPect parse conformance is now **123/123 (100%)**:
+
+- `Import_Visibility_Valid.error` updated to expect the
+  `extraneous input 'import'` syntax error the corrected grammar raises
+  on a bare import (imports require explicit visibility per the
+  normative OMG spec).
+
+Test results: fast suite 684/684, grammar round-trip 143/143, XPect
+conformance 123/123.
+
 ## v0.53.0 (2026-08-28)
 
 ### :sparkles: Per-precedence expression grammar + structured cascade emit

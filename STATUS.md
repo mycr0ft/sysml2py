@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.53.0** (2026-08-28)
+Current version: **v0.53.1** (2026-08-30)
 
 ---
 
@@ -195,7 +195,7 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 
 | Test file | Tests | Status |
 |---|---|---|
-| `tests/grammar_test.py` | 97 | ✅ All pass (100%) |
+| `tests/grammar_test.py` | 143 | ✅ All pass (100%) |
 | `tests/redefined_name_test.py` | 8 | ✅ All pass (100%) |
 | `tests/class_test.py` | 54 | ✅ All pass |
 | `tests/main_test.py` | 7 | ✅ All pass |
@@ -336,12 +336,12 @@ Run with: `poetry run pytest -m conformance`
 ## Summary Counts
 
 | Category | Count |
-|---|---|---|
+|---|---|
 | Public API classes (complete) | 28 |
-| Grammar classes with `get_definition()` | ~260+ of 319 |
-| Grammar classes with graceful fallback | All 319 (no more NotImplementedError crashes) |
-| Unit + grammar + integration tests | 635 passing |
-| Grammar round-trip tests passing | **97 / 97 (100%)** |
+| Grammar classes with `get_definition()` | **358 of 358 (100%, reflection-audited)** |
+| Grammar classes with graceful fallback | All 358 (no more NotImplementedError crashes) |
+| Unit + grammar + integration tests | 684 passing |
+| Grammar round-trip tests passing | **143 / 143 (100%)** |
 | Helper-property tests | 8 / 8 |
 | Grammar-side References dispatch | ✅ | | |
 | PlantUML rendering tests | **108 passing** |

@@ -6,21 +6,27 @@ See [STATUS.md](STATUS.md) and [CHANGELOG.md](CHANGELOG.md) for the current proj
 
 ---
 
-## Active Tasks (Phase A: v0.53.1)
+## Active Tasks (Phase B: v0.54.0)
 
-- [ ] **Grammar Class `get_definition()` Completeness:**
-  - [ ] Add `AdditiveOperand.get_definition()` in `src/sysmlpy/grammar/classes.py`
-  - [ ] Add `AssignmentNode.get_definition()` in `src/sysmlpy/grammar/classes.py`
-  - [ ] Add `TriggerValuePart.get_definition()`, `TriggerFeatureValue.get_definition()`, `TriggerExpression.get_definition()`
-  - [ ] Run reflection audit across all ~354 grammar classes to ensure zero missing `get_definition()` or `children` implementations
-- [ ] **XPect Conformance Suite:**
-  - [ ] Update `tests/sysmlv2/validation/valid/Import_Visibility_Valid.error` to match the expected syntax error on bare import
-  - [ ] Verify 123/123 (100%) passing conformance suite
+- [ ] **Name Resolution on Structured Expressions:**
+  - [ ] Expression AST walker (`_walk_expression_identifiers`) in `semantic.py`
+  - [ ] Symbol resolution for `FeatureReferenceExpression` / `FeatureChainMember` against `SymbolTable`
+  - [ ] Unqualified-name lookup in local scopes (calc parameters, state variables, enclosing definitions)
+  - [ ] Qualified-name lookup against package namespaces and `LibrarySymbolIndex`
+  - [ ] Emit `SemanticIssue(error)` for unresolved expression identifiers
+
+---
+
+## Recently Completed
+
+- [x] **Phase A (v0.53.1):** Grammar Class Integrity & 100% Parse Conformance
+  - [x] `get_definition()` added to all 36 missing classes (reflection audit: 358/358)
+  - [x] `ReturnParameterMember` list-vs-dict round-trip bug fixed
+  - [x] `Import_Visibility_Valid.error` updated; XPect conformance 123/123 (100%)
 
 ---
 
 ## Upcoming Milestones
 
-- [ ] **Phase B (v0.54.0):** Name resolution on structured expressions (`assert constraint`, `calc`, `constraint`, `default value`)
 - [ ] **Phase C (v0.55.0):** Semantic expression type compatibility and unit safety checking
 - [ ] **Phase D (v0.56.0+):** ANTLR SLL mode fast-path parsing & graph store query enhancements

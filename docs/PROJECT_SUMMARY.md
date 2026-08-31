@@ -1,8 +1,8 @@
 # sysmlpy — Project Work Summary
 
 > **For:** Future agents and team members
-> **Last Updated:** August 28, 2026
-> **Current Version:** v0.53.0
+> **Last Updated:** August 30, 2026
+> **Current Version:** v0.53.1
 > **Repository:** https://github.com/mycr0ft/sysmlpy
 > **Master Development Plan:** [docs/DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)
 
@@ -37,7 +37,7 @@ sysmlpy/
 │       ├── systems/         # SysML base (SysML.sysml)
 │       └── domain/          # ISQ, SI units, base quantities
 ├── tests/
-│   ├── grammar_test.py      # 96 round-trip tests (96 pass, 0 deferred)
+│   ├── grammar_test.py      # 143 round-trip tests (143 pass, 0 deferred)
 │   ├── class_test.py        # 61 programmatic API tests
 │   ├── main_test.py         # 7 integration tests
 │   ├── plantuml_test.py     # 122 PlantUML view rendering tests
@@ -75,8 +75,10 @@ SysML text → ANTLR4 Lexer/Parser → Parse Tree
 
 ### Grammar Round-Trip
 
-- **96/96 grammar round-trip tests pass** (100%)
-- Every grammar class has `dump()` and `get_definition()` for serialization
+- **143/143 grammar round-trip tests pass** (100%)
+- Every grammar class has `dump()` and `get_definition()` for serialization —
+  v0.53.1 added `get_definition()` to the final 36 missing classes and
+  verified 358/358 via reflection audit
 - All 68+ `raise NotImplementedError` stubs replaced with graceful handling (v0.27.0)
 - Missing classes added: `DefinitionBody`, `DefinitionBodyItem`, `FeatureSpecializationPart`, `SubclassificationPart`
 - `classtree()` converts Model tree back to text

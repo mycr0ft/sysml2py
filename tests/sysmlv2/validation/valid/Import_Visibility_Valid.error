@@ -1,1 +1,2 @@
-
+# XPECT errors ---> "mismatched input 'import' expecting '}'" at "import"
+Syntax error at 6:1: extraneous input 'import' expecting

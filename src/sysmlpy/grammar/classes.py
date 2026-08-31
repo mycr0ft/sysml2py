@@ -1366,6 +1366,14 @@ class AssignmentNode:
         output.append(self.body.dump())
         return "".join(output)
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "prefix": self.prefix.get_definition() if self.prefix else None,
+            "declaration": self.declaration.get_definition(),
+            "body": self.body.get_definition(),
+        }
+
 
 class AssignmentNodeDeclaration:
     #  AssignmentNodeDeclaration :
@@ -2168,6 +2176,13 @@ class EffectBehaviorUsage:
             output.append("\n}")
         return " ".join(output)
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "usage": self.usage.get_definition(),
+            "item": [x.get_definition() for x in self.children],
+        }
+
 
 class TransitionSourceMember:
     # TransitionSourceMember :
@@ -2415,6 +2430,12 @@ class TriggerValuePart:
             return self.children.dump()
         return ""
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": self.children.get_definition() if self.children else None,
+        }
+
 
 class TriggerFeatureValue:
     # TriggerFeatureValue :
@@ -2431,6 +2452,12 @@ class TriggerFeatureValue:
         if self.children:
             return self.children.dump()
         return ""
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": self.children.get_definition() if self.children else None,
+        }
 
 
 class TriggerExpression:
@@ -2466,6 +2493,16 @@ class TriggerExpression:
         if self.children is None:
             return kind
         return " ".join([kind, self.children.dump()])
+
+    def get_definition(self):
+        output = {"name": self.__class__.__name__, "kind": None, "ownedRelationship": None}
+        if isinstance(self.kind, str):
+            output["kind"] = {"name": "TimeTriggerKind", "isAt": False, "isAfter": False, "isWhen": True}
+        elif self.kind is not None:
+            output["kind"] = self.kind.get_definition()
+        if self.children is not None:
+            output["ownedRelationship"] = self.children.get_definition()
+        return output
 
 
 class TimeTriggerKind:
@@ -2503,6 +2540,12 @@ class OwnedExpressionMember:
     def dump(self):
         return self.children.dump()
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": self.children.get_definition(),
+        }
+
 
 class ChangeExpressionMember:
     # ChangeExpressionMember :
@@ -2514,6 +2557,12 @@ class ChangeExpressionMember:
 
     def dump(self):
         return self.children.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": self.children.get_definition(),
+        }
 
 
 class ChangeExpression:
@@ -2529,6 +2578,12 @@ class ChangeExpression:
     def dump(self):
         return self.children.dump()
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": self.children.get_definition(),
+        }
+
 
 class ChangeResultExpressionMember:
     # ChangeResultExpressionMember :
@@ -2540,6 +2595,12 @@ class ChangeResultExpressionMember:
 
     def dump(self):
         return self.children.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": self.children.get_definition(),
+        }
 
 
 class CalculationDefinition:
@@ -2686,6 +2747,12 @@ class ActionBodyItemTarget:
 
     def dump(self):
         return self.children.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "member": self.children.get_definition(),
+        }
 
 
 class ActionNodeMember:
@@ -3276,15 +3343,28 @@ class MultiplicitySourceEndMember:
     def dump(self):
         return self.children.dump()
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": self.children.get_definition() if self.children else None,
+        }
+
 
 class MultiplicitySourceEnd:
     def __init__(self, definition):
+        self.children = []
         if valid_definition(definition, self.__class__.__name__):
             for child in definition["ownedRelatedElement"]:
-                self.children = OwnedMultiplicity(child)
+                self.children.append(OwnedMultiplicity(child))
 
     def dump(self):
         return " ".join([x.dump() for x in self.children])
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": [x.get_definition() for x in self.children],
+        }
 
 
 class StructureUsageMember:
@@ -3306,6 +3386,13 @@ class StructureUsageMember:
             o2.append(child.dump())
         output.append("\n".join(o2))
         return "".join(output)
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "prefix": self.prefix.get_definition() if self.prefix else None,
+            "ownedRelatedElement": [x.get_definition() for x in self.children],
+        }
 
 
 class BehaviorUsageMember:
@@ -3544,6 +3631,13 @@ class ReturnParameterMember:
         for child in self.children:
             output.append(child.dump())
         return " ".join(output)
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "prefix": self.prefix.get_definition() if self.prefix else None,
+            "ownedRelatedElement": self.children[0].get_definition() if self.children else None,
+        }
 
 
 class ResultExpressionMember:
@@ -4197,6 +4291,13 @@ class DefinitionPrefix:
             output.append(keyword.dump())
         return "".join(output)
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "prefix": self.prefix.get_definition() if self.prefix else None,
+            "keyword": [x.get_definition() for x in self.keywords],
+        }
+
 
 class DefinitionExtensionKeyword:
     def __init__(self, definition):
@@ -4207,6 +4308,12 @@ class DefinitionExtensionKeyword:
 
     def dump(self):
         return "".join([child.dump() for child in self.relationships])
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": [x.get_definition() for x in self.relationships],
+        }
 
 
 class PrefixMetadataMember:
@@ -4407,6 +4514,12 @@ class AnnotatingMember:
 
     def dump(self):
         return " ".join([child.dump() for child in self.children])
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": [child.get_definition() for child in self.children],
+        }
 
 
 class AnnotatingElement:
@@ -5417,6 +5530,15 @@ class Succession:
 
         return " ".join(output)
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "prefix": self.prefix.get_definition() if self.prefix else None,
+            "declaration": self.declaration.get_definition() if self.declaration else None,
+            "ownedRelationship": [x.get_definition() for x in self.children],
+            "body": self.body.get_definition(),
+        }
+
 
 class BindingConnector:
     def __init__(self, definition=None):
@@ -5712,6 +5834,12 @@ class EqualityExpressionReference:
     def dump(self):
         return "".join([x.dump() for x in self.children])
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": self.children[0].get_definition() if self.children else None,
+        }
+
 
 class EqualityExpressionMember:
     # EqualityExpressionMember :
@@ -5724,6 +5852,12 @@ class EqualityExpressionMember:
 
     def dump(self):
         return "\n".join([x.dump() for x in self.children])
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": self.children[0].get_definition() if self.children else None,
+        }
 
 
 class AndOperand:
@@ -5930,6 +6064,13 @@ class AdditiveOperand:
     def dump(self):
         return " ".join([self.operator, self.operand.dump()])
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "operator": self.operator,
+            "operand": self.operand.get_definition(),
+        }
+
 
 class AdditiveExpression:
     def __init__(self, definition):
@@ -6093,6 +6234,12 @@ class ReferenceTyping:
     def dump(self):
         return self.child.dump()
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "type": self.child.get_definition(),
+        }
+
 
 class PrimaryExpression:
     def __init__(self, definition):
@@ -6182,6 +6329,12 @@ class BodyExpression:
     def dump(self):
         return self.children.dump()
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": self.children.get_definition() if self.children else None,
+        }
+
 
 class ExpressionBodyMember:
     def __init__(self, definition):
@@ -6192,6 +6345,12 @@ class ExpressionBodyMember:
     def dump(self):
         return self.children.dump()
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": self.children.get_definition() if self.children else None,
+        }
+
 
 class ExpressionBody:
     def __init__(self, definition):
@@ -6201,6 +6360,12 @@ class ExpressionBody:
 
     def dump(self):
         return self.children.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "body": self.children.get_definition() if self.children else None,
+        }
 
 
 class FeatureChainMember:
@@ -6434,6 +6599,12 @@ class NamedArgumentList:
     def dump(self):
         return ",".join([x.dump() for x in self.children])
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": [x.get_definition() for x in self.children],
+        }
+
 
 class NamedArgumentMember:
     def __init__(self, definition):
@@ -6443,6 +6614,12 @@ class NamedArgumentMember:
 
     def dump(self):
         return self.children.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": self.children.get_definition() if self.children else None,
+        }
 
 
 class NamedArgument:
@@ -6454,6 +6631,13 @@ class NamedArgument:
     def dump(self):
         return "".join([self.redefinition.dump(), self.value.dump()])
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "redefinition": self.redefinition.get_definition(),
+            "value": self.value.get_definition(),
+        }
+
 
 class ParameterRedefinition:
     def __init__(self, definition):
@@ -6462,6 +6646,12 @@ class ParameterRedefinition:
 
     def dump(self):
         return self.children.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "redefinedFeature": self.children.get_definition() if self.children else None,
+        }
 
 
 class FeatureReferenceExpression:
@@ -6645,6 +6835,16 @@ class IndividualUsage:
 
         return " ".join(output)
 
+    def get_definition(self):
+        output = {
+            "name": self.__class__.__name__,
+            "prefix": self.prefix.get_definition() if self.prefix else None,
+            "isIndividual": self.isIndividual,
+            "usageExtension": [x.get_definition() for x in self.children],
+            "usage": self.usage.get_definition(),
+        }
+        return output
+
 
 class UsageExtensionKeyword:
     def __init__(self, definition):
@@ -6658,6 +6858,14 @@ class UsageExtensionKeyword:
         if hasattr(self, 'keyword'):
             return self.keyword
         return self.children.dump()
+
+    def get_definition(self):
+        if hasattr(self, 'keyword'):
+            return {"name": self.__class__.__name__, "keyword": self.keyword}
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": self.children.get_definition() if self.children else None,
+        }
 
 
 class Message:
@@ -6916,6 +7124,12 @@ class ItemFeatureMember:
     def dump(self):
         return self.children.dump()
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": [self.children.get_definition()] if self.children else [],
+        }
+
 
 class ItemFeature:
     def __init__(self, definition):
@@ -6924,6 +7138,12 @@ class ItemFeature:
 
     def dump(self):
         return self.children.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": self.children.get_definition() if self.children else None,
+        }
 
 
 class PayloadFeature:
@@ -7035,6 +7255,14 @@ class PayloadFeatureSpecializationPart:
                     output.append(child.dump())
         return "".join(output)
 
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": [x.get_definition() for x in self.children],
+            "ownedRelationship2": [x.get_definition() for x in self.children2],
+            "mp": self.mp.get_definition() if self.mp else None,
+        }
+
 
 class FlowEndMember:
     def __init__(self, definition):
@@ -7111,6 +7339,12 @@ class FeatureChainPrefix:
 
     def dump(self):
         return "".join([x.dump() + "." for x in self.children])
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelationship": [x.get_definition() for x in self.children],
+        }
 
 
 class FlowFeatureMember:
@@ -8558,6 +8792,12 @@ class ConjugatedPortTyping:
 
     def dump(self):
         return self.keyword + self.name.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "conjugatedPortDefinition": self.name.get_definition(),
+        }
 
 
 class OwnedFeatureTyping:
