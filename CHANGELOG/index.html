@@ -431,6 +431,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0540-2026-08-30" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.54.0 (2026-08-30)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.54.0 (2026-08-30)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mag-phase-b-name-resolution-on-structured-expressions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :mag: Phase B — Name Resolution on Structured Expressions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0531-2026-08-30" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2502,6 +2530,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0540-2026-08-30" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.54.0 (2026-08-30)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.54.0 (2026-08-30)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mag-phase-b-name-resolution-on-structured-expressions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :mag: Phase B — Name Resolution on Structured Expressions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0531-2026-08-30" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4532,6 +4588,43 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0540-2026-08-30">v0.54.0 (2026-08-30)<a class="headerlink" href="#v0540-2026-08-30" title="Permanent link">&para;</a></h2>
+<h3 id="mag-phase-b-name-resolution-on-structured-expressions">:mag: Phase B — Name Resolution on Structured Expressions<a class="headerlink" href="#mag-phase-b-name-resolution-on-structured-expressions" title="Permanent link">&para;</a></h3>
+<p>The semantic analyzer now walks the structured expression ASTs captured
+since v0.52.0 and resolves every identifier against the symbol table.
+A new analyzer step (4b in <code>SemanticAnalyzer.analyze</code>) collects
+identifiers from expression bodies and emits
+<code>UNRESOLVED_EXPRESSION_IDENTIFIER</code> errors for names that don't resolve.</p>
+<p>Covered expression contexts: constraint / assert-constraint bodies,
+calculation result expressions, attribute / item / port / reference
+default values (<code>= expr</code>), and transition guard expressions.</p>
+<p>Resolution rules, in order:</p>
+<ul>
+<li>qualified names (<code>P::A</code>, <code>ScalarValues::Real</code>) against package
+  namespaces and the <code>LibrarySymbolIndex</code></li>
+<li>unqualified names against the local scope chain (enclosing
+  definitions, imports, inherited features)</li>
+<li>dotted feature chains (<code>wheel1.hub.mass</code>) resolved segment by
+  segment: the head must resolve as a symbol from the referencing
+  scope, and each subsequent step must exist within the previous
+  step's element subtree</li>
+<li>invocation targets (<code>size(edges)</code>) resolve like any other reference;
+  argument expressions are walked recursively</li>
+</ul>
+<p>Library index fix: <code>_DEFINITION_RE</code> now captures <code>function</code> declarations
+(<code>function size { ... }</code> in <code>CollectionFunctions.kerml</code> etc. — ~40+
+library functions newly indexed), and <code>SemanticAnalyzer._normalize_library_paths(None)</code>
+resolves to the bundled library root instead of an empty list that
+poisoned the symbol-index cache with the hardcoded fallback set.</p>
+<p>New public internals in <code>semantic.py</code>:
+<code>ExpressionIdentifierCollector</code>, <code>_walk_expression_identifiers()</code>,
+<code>_find_owned_expressions()</code>, <code>SemanticAnalyzer._check_expression_identifiers()</code>,
+<code>SemanticAnalyzer._resolve_feature_chain()</code>, <code>SemanticAnalyzer._find_member()</code>.</p>
+<p>Phase C next (v0.55.0): operand type checking and pint unit-dimension
+compatibility inside expressions — see
+<a href="docs/DEVELOPMENT_PLAN.md">docs/DEVELOPMENT_PLAN.md</a>.</p>
+<p>Test results: fast suite 696/696, grammar round-trip 143/143.
+12 new expression-resolution tests in <code>tests/semantic_test.py</code> (136 total).</p>
 <h2 id="v0531-2026-08-30">v0.53.1 (2026-08-30)<a class="headerlink" href="#v0531-2026-08-30" title="Permanent link">&para;</a></h2>
 <h3 id="white_check_mark-phase-a-grammar-class-integrity-100-parse-conformance">:white_check_mark: Phase A — Grammar Class Integrity &amp; 100% Parse Conformance<a class="headerlink" href="#white_check_mark-phase-a-grammar-class-integrity-100-parse-conformance" title="Permanent link">&para;</a></h3>
 <p>All 358 grammar classes in <code>src/sysmlpy/grammar/classes.py</code> now implement

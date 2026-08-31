@@ -514,10 +514,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#semantic-analysis-v0170-v0201" class="md-nav__link">
+  <a href="#semantic-analysis-v0170-v0540" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Semantic Analysis (v0.17.0 → v0.20.1)
+        Semantic Analysis (v0.17.0 → v0.54.0)
       
     </span>
   </a>
@@ -1018,7 +1018,7 @@
 <blockquote>
 <p><strong>For:</strong> Future agents and team members
 <strong>Last Updated:</strong> August 30, 2026
-<strong>Current Version:</strong> v0.53.1
+<strong>Current Version:</strong> v0.54.0
 <strong>Repository:</strong> https://github.com/mycr0ft/sysmlpy
 <strong>Master Development Plan:</strong> <a href="../DEVELOPMENT_PLAN/">docs/DEVELOPMENT_PLAN.md</a></p>
 </blockquote>
@@ -1036,7 +1036,7 @@
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│   │   └── antlr4/          # Generated ANTLR parser/lexer
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│   ├── definition.py        # Model, Package, RootNamespace classes
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│   ├── usage.py             # Part, Item, Attribute, Port, Action, etc.
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│   ├── semantic.py          # Semantic analysis engine (~2.3K lines)
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│   ├── semantic.py          # Semantic analysis engine (~2.7K lines)
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│   ├── project.py           # Multi-file project loading (load_files, load_project)
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   ├── store.py             # Storage backends (memory, NetworkX, Kuzu, Cayley)
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│   ├── plantuml.py          # PlantUML diagram generation
@@ -1053,7 +1053,7 @@
 <a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>│   ├── main_test.py         # 7 integration tests
 <a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│   ├── plantuml_test.py     # 122 PlantUML view rendering tests
 <a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>│   ├── boxes_view_test.py   # 19 boxes-backed state-machine visualizer tests (v0.36.0)
-<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│   ├── semantic_test.py     # 124 semantic analysis tests
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│   ├── semantic_test.py     # 136 semantic analysis tests
 <a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>│   ├── project_test.py      # 17 multi-file loading tests
 <a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>│   ├── navigate_test.py     # 42 model navigation tests
 <a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>│   ├── import_test.py       # 21 import resolution tests
@@ -1088,7 +1088,7 @@
 <li>Missing classes added: <code>DefinitionBody</code>, <code>DefinitionBodyItem</code>, <code>FeatureSpecializationPart</code>, <code>SubclassificationPart</code></li>
 <li><code>classtree()</code> converts Model tree back to text</li>
 </ul>
-<h3 id="semantic-analysis-v0170-v0201">Semantic Analysis (v0.17.0 → v0.20.1)<a class="headerlink" href="#semantic-analysis-v0170-v0201" title="Permanent link">&para;</a></h3>
+<h3 id="semantic-analysis-v0170-v0540">Semantic Analysis (v0.17.0 → v0.54.0)<a class="headerlink" href="#semantic-analysis-v0170-v0540" title="Permanent link">&para;</a></h3>
 <p>The semantic analysis engine (<code>semantic.py</code>) provides comprehensive validation:</p>
 <table>
 <thead>
@@ -1117,12 +1117,17 @@
 <tr>
 <td><strong>Library Symbol Index</strong></td>
 <td>✅ Complete</td>
-<td>Scans 88 <code>.kerml</code>/<code>.sysml</code> files (~1,417 symbols)</td>
+<td>Scans 88 <code>.kerml</code>/<code>.sysml</code> files (~1,604 symbols, incl. <code>function</code> decls)</td>
 </tr>
 <tr>
 <td><strong>Inheritance Resolution</strong></td>
 <td>✅ Complete</td>
 <td>Supertype chain traversal for subsetting/redefinition</td>
+</tr>
+<tr>
+<td><strong>Expression Name Resolution</strong></td>
+<td>✅ Complete (v0.54.0)</td>
+<td>Identifiers in constraint/calc/default/guard bodies resolve against the symbol table; segment-by-segment feature-chain resolution</td>
 </tr>
 <tr>
 <td><strong>OCL Constraints</strong></td>

@@ -456,10 +456,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#active-tasks-phase-b-v0540" class="md-nav__link">
+  <a href="#active-tasks-phase-c-v0550" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Active Tasks (Phase B: v0.54.0)
+        Active Tasks (Phase C: v0.55.0)
       
     </span>
   </a>
@@ -523,10 +523,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#active-tasks-phase-b-v0540" class="md-nav__link">
+  <a href="#active-tasks-phase-c-v0550" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Active Tasks (Phase B: v0.54.0)
+        Active Tasks (Phase C: v0.55.0)
       
     </span>
   </a>
@@ -579,19 +579,27 @@
 <p>See the comprehensive <a href="docs/DEVELOPMENT_PLAN.md">Master Development Plan</a> for architectural roadmap, active development phases, and planned milestones.</p>
 <p>See <a href="../STATUS/">STATUS.md</a> and <a href="../CHANGELOG/">CHANGELOG.md</a> for the current project status and release history.</p>
 <hr />
-<h2 id="active-tasks-phase-b-v0540">Active Tasks (Phase B: v0.54.0)<a class="headerlink" href="#active-tasks-phase-b-v0540" title="Permanent link">&para;</a></h2>
+<h2 id="active-tasks-phase-c-v0550">Active Tasks (Phase C: v0.55.0)<a class="headerlink" href="#active-tasks-phase-c-v0550" title="Permanent link">&para;</a></h2>
 <ul>
-<li>[ ] <strong>Name Resolution on Structured Expressions:</strong></li>
-<li>[ ] Expression AST walker (<code>_walk_expression_identifiers</code>) in <code>semantic.py</code></li>
-<li>[ ] Symbol resolution for <code>FeatureReferenceExpression</code> / <code>FeatureChainMember</code> against <code>SymbolTable</code></li>
-<li>[ ] Unqualified-name lookup in local scopes (calc parameters, state variables, enclosing definitions)</li>
-<li>[ ] Qualified-name lookup against package namespaces and <code>LibrarySymbolIndex</code></li>
-<li>[ ] Emit <code>SemanticIssue(error)</code> for unresolved expression identifiers</li>
+<li>[ ] <strong>Expression Type Checking &amp; Static Evaluation:</strong></li>
+<li>[ ] Operator operand type compatibility (numeric, boolean, string) on the structured expression AST</li>
+<li>[ ] Pint unit-dimension compatibility checking inside expressions (<code>[m] + [kg]</code> → error)</li>
+<li>[ ] Constant folding / static expression reduction (e.g. <code>10 [kg] * 2</code> → <code>20 [kg]</code>)</li>
 </ul>
 <hr />
 <h2 id="recently-completed">Recently Completed<a class="headerlink" href="#recently-completed" title="Permanent link">&para;</a></h2>
 <ul>
-<li>[x] <strong>Phase A (v0.53.1):</strong> Grammar Class Integrity &amp; 100% Parse Conformance</li>
+<li>[x] <strong>Phase B (v0.54.0):</strong> Name resolution on structured expressions</li>
+<li>[x] <code>_walk_expression_identifiers</code> + <code>ExpressionIdentifierCollector</code> in <code>semantic.py</code></li>
+<li>[x] Resolution for constraints, assert constraints, calc bodies, attribute defaults, guards</li>
+<li>[x] Dotted feature-chain segment resolution (<code>wheel1.hub.mass</code>)</li>
+<li>[x] <code>UNRESOLVED_EXPRESSION_IDENTIFIER</code> errors for unresolved names</li>
+<li>
+<p>[x] Library index captures <code>function</code> declarations; bundled library indexed by default</p>
+</li>
+<li>
+<p>[x] <strong>Phase A (v0.53.1):</strong> Grammar Class Integrity &amp; 100% Parse Conformance</p>
+</li>
 <li>[x] <code>get_definition()</code> added to all 36 missing classes (reflection audit: 358/358)</li>
 <li>[x] <code>ReturnParameterMember</code> list-vs-dict round-trip bug fixed</li>
 <li>[x] <code>Import_Visibility_Valid.error</code> updated; XPect conformance 123/123 (100%)</li>
@@ -599,7 +607,6 @@
 <hr />
 <h2 id="upcoming-milestones">Upcoming Milestones<a class="headerlink" href="#upcoming-milestones" title="Permanent link">&para;</a></h2>
 <ul>
-<li>[ ] <strong>Phase C (v0.55.0):</strong> Semantic expression type compatibility and unit safety checking</li>
 <li>[ ] <strong>Phase D (v0.56.0+):</strong> ANTLR SLL mode fast-path parsing &amp; graph store query enhancements</li>
 </ul>
 

@@ -453,10 +453,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#current-health-metrics-v0531" class="md-nav__link">
+  <a href="#current-health-metrics-v0540" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Current Health &amp; Metrics (v0.53.1)
+        Current Health &amp; Metrics (v0.54.0)
       
     </span>
   </a>
@@ -570,15 +570,43 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#phase-b-name-resolution-on-structured-expressions-v0540-next" class="md-nav__link">
+  <a href="#phase-b-name-resolution-on-structured-expressions-complete-v0540" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase B: Name Resolution on Structured Expressions (v0.54.0) — NEXT
+        Phase B: Name Resolution on Structured Expressions (COMPLETE / v0.54.0)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Phase B: Name Resolution on Structured Expressions (v0.54.0) — NEXT">
+    <nav class="md-nav" aria-label="Phase B: Name Resolution on Structured Expressions (COMPLETE / v0.54.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#resolution_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolution
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-c-semantic-type-compatibility-unit-safety-v0550-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase C: Semantic Type Compatibility &amp; Unit Safety (v0.55.0) — NEXT
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase C: Semantic Type Compatibility &amp; Unit Safety (v0.55.0) — NEXT">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -724,19 +752,20 @@
 
 <h1 id="sysmlpy-master-development-plan-roadmap">sysmlpy — Master Development Plan &amp; Roadmap<a class="headerlink" href="#sysmlpy-master-development-plan-roadmap" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>Current Version:</strong> v0.53.1 (August 2026)<br />
+<p><strong>Current Version:</strong> v0.54.0 (August 2026)<br />
 <strong>Repository:</strong> https://github.com/mycr0ft/sysmlpy<br />
 <strong>Upstream Grammar PR:</strong> <a href="https://github.com/daltskin/sysml-v2-grammar/pull/12">daltskin/sysml-v2-grammar#12</a></p>
 </blockquote>
 <hr />
 <h2 id="1-executive-summary-current-state">1. Executive Summary &amp; Current State<a class="headerlink" href="#1-executive-summary-current-state" title="Permanent link">&para;</a></h2>
 <p><code>sysmlpy</code> is a Python library for parsing, manipulating, and validating SysML v2.0 models using an ANTLR4-based parser, a rich AST of grammar classes, and a semantic analysis engine.</p>
-<h3 id="current-health-metrics-v0531">Current Health &amp; Metrics (v0.53.1)<a class="headerlink" href="#current-health-metrics-v0531" title="Permanent link">&para;</a></h3>
+<h3 id="current-health-metrics-v0540">Current Health &amp; Metrics (v0.54.0)<a class="headerlink" href="#current-health-metrics-v0540" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Fast Test Suite:</strong> 684/684 passed (100%) across grammar round-trips, public API classes, navigation, semantic analysis, import resolution, and PlantUML renderings.</li>
+<li><strong>Fast Test Suite:</strong> 696/696 passed (100%) across grammar round-trips, public API classes, navigation, semantic analysis, import resolution, and PlantUML renderings.</li>
 <li><strong>Grammar Round-Trip Suite:</strong> 143/143 passed (100%).</li>
 <li><strong>XPect Parse Conformance:</strong> 123/123 (100%) — <code>Import_Visibility_Valid.error</code> now matches the grammar's enforced import-visibility syntax error.</li>
 <li><strong>Grammar Class Integrity:</strong> 358/358 classes implement <code>get_definition()</code> (reflection-audited; 36 added in v0.53.1).</li>
+<li><strong>Expression Name Resolution:</strong> Identifiers inside constraint bodies, calc results, attribute defaults, and guards resolve against the symbol table; unresolved names emit <code>UNRESOLVED_EXPRESSION_IDENTIFIER</code> (v0.54.0).</li>
 <li><strong>Upstream Grammar Conformance:</strong> 310/310 official OMG specification fixture files parse cleanly via the corrected grammar in <code>daltskin/sysml-v2-grammar#12</code>.</li>
 <li><strong>Expression Engine:</strong> Structured, per-precedence AST capture active for binary, unary, invocation, and feature-chain expressions (replacing legacy collapse-to-text).</li>
 </ul>
@@ -769,14 +798,14 @@
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>└────────────────────────────────────┬─────────────────────────────────────┘
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                                     │
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>┌────────────────────────────────────▼─────────────────────────────────────┐
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│ Phase B: Name Resolution on Structured Expressions (v0.54.0) ← NEXT     │
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│ Phase B: Name Resolution on Structured Expressions (v0.54.0) ✅         │
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│   - Resolve FeatureReferenceExpression / FeatureChain against SymbolTable│
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│   - Identify unbound variables, scoped attributes, and imported symbols  │
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│   - Emit SemanticIssues for unresolved expression identifiers            │
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>└────────────────────────────────────┬─────────────────────────────────────┘
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>                                     │
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>┌────────────────────────────────────▼─────────────────────────────────────┐
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│ Phase C: Expression Type Checking &amp; Static Evaluation (v0.55.0)          │
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│ Phase C: Expression Type Checking &amp; Static Evaluation (v0.55.0) ← NEXT  │
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│   - Operator operand type compatibility (numeric, boolean, string)       │
 <a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│   - Pint unit compatibility checking inside expressions                  │
 <a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│   - Constant folding / static expression reduction                       │
@@ -797,7 +826,14 @@
 - Reflection audit confirms <strong>358/358</strong> classes implement <code>get_definition()</code>.
 - <code>ReturnParameterMember.get_definition()</code> shape bug fixed (list vs dict for <code>ownedRelatedElement</code>).
 - <code>Import_Visibility_Valid.error</code> updated to the enforced bare-import syntax error; <strong>XPect conformance 123/123 (100%)</strong>.</p>
-<h3 id="phase-b-name-resolution-on-structured-expressions-v0540-next">Phase B: Name Resolution on Structured Expressions (v0.54.0) — NEXT<a class="headerlink" href="#phase-b-name-resolution-on-structured-expressions-v0540-next" title="Permanent link">&para;</a></h3>
+<h3 id="phase-b-name-resolution-on-structured-expressions-complete-v0540">Phase B: Name Resolution on Structured Expressions (COMPLETE / v0.54.0)<a class="headerlink" href="#phase-b-name-resolution-on-structured-expressions-complete-v0540" title="Permanent link">&para;</a></h3>
+<h4 id="resolution_1">Resolution<a class="headerlink" href="#resolution_1" title="Permanent link">&para;</a></h4>
+<p>Implemented as analyzer step 4b (<code>SemanticAnalyzer._check_expression_identifiers</code>):
+- <code>ExpressionIdentifierCollector</code> walks the public-API model tree and extracts identifiers from each expression-owning element's grammar (<code>constraint</code>, <code>assert constraint</code>, <code>calc</code>, attribute/item/port/reference defaults, transition guards).
+- <code>_walk_expression_identifiers()</code> traverses the v0.52 per-precedence expression dict (Conditional → … → Primary), pulling QualifiedNames from <code>FeatureReferenceMember</code>, <code>PrimaryExpression</code> base + <code>ownedRelationship1/2</code> chains, <code>OwnedFeatureChain</code> steps, and <code>InvocationExpression</code> targets/arguments.
+- <code>SemanticIssue(severity="error", code="UNRESOLVED_EXPRESSION_IDENTIFIER")</code> emitted for unresolved names; dotted chains resolve segment-by-segment (<code>_resolve_feature_chain</code>).
+- Library fix bundled in: <code>function</code> declarations now indexed (~1604 symbols, up from ~1417) and the bundled library is the default <code>lib_roots</code> so <code>size()</code> etc. resolve without explicit <code>library=</code>.</p>
+<h3 id="phase-c-semantic-type-compatibility-unit-safety-v0550-next">Phase C: Semantic Type Compatibility &amp; Unit Safety (v0.55.0) — NEXT<a class="headerlink" href="#phase-c-semantic-type-compatibility-unit-safety-v0550-next" title="Permanent link">&para;</a></h3>
 <h4 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h4>
 <p>Now that expressions are captured as structured AST nodes rather than collapsed text strings, the semantic analyzer can walk expression trees and validate identifiers against the <code>SymbolTable</code>.</p>
 <h4 id="design">Design<a class="headerlink" href="#design" title="Permanent link">&para;</a></h4>
