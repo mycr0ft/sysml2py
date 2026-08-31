@@ -1764,3 +1764,229 @@ class TestExpressionIdentifierResolution:
             i for i in issues
             if i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER" and i.reference == "size"
         ]
+
+
+# ---------------------------------------------------------------------------
+# Expression type checking & unit safety (v0.55.0 — Phase C)
+# ---------------------------------------------------------------------------
+
+
+class TestOperatorTypeChecking:
+    """Operand type compatibility inside expression bodies."""
+
+    def test_logical_operator_rejects_numeric_operand(self):
+        model = loads("""
+            package P {
+                part def V {
+                    attribute flag : Boolean;
+                    attribute n : Integer;
+                    constraint c1 { flag and n }
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(
+            i.code == "OPERAND_TYPE_MISMATCH" and i.reference == "and"
+            for i in issues
+        )
+
+    def test_logical_operator_accepts_boolean_pair(self):
+        model = loads("""
+            package P {
+                part def V {
+                    attribute a : Boolean;
+                    attribute b : Boolean;
+                    constraint ok { a or b }
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues if i.code == "OPERAND_TYPE_MISMATCH"]
+
+    def test_equality_rejects_boolean_vs_numeric(self):
+        model = loads("""
+            package P {
+                part def V {
+                    attribute flag : Boolean;
+                    attribute n : Integer;
+                    constraint c { flag == n }
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(
+            i.code == "OPERAND_TYPE_MISMATCH" and i.reference == "=="
+            for i in issues
+        )
+
+    def test_relational_rejects_boolean_operand(self):
+        model = loads("""
+            package P {
+                part def V {
+                    attribute flag : Boolean;
+                    attribute n : Integer;
+                    constraint c { flag < n }
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(
+            i.code == "OPERAND_TYPE_MISMATCH" and i.reference == "<"
+            for i in issues
+        )
+
+    def test_arithmetic_rejects_string_plus_number(self):
+        model = loads("""
+            package P {
+                part def V {
+                    attribute s : String;
+                    attribute n : Integer;
+                    attribute joined : Integer = s + n;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(
+            i.code == "OPERAND_TYPE_MISMATCH" and i.reference == "+"
+            for i in issues
+        )
+
+    def test_unary_not_rejects_numeric(self):
+        model = loads("""
+            package P {
+                part def V {
+                    attribute n : Integer;
+                    constraint c { not n }
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(
+            i.code == "OPERAND_TYPE_MISMATCH" and i.reference == "not"
+            for i in issues
+        )
+
+    def test_numeric_arithmetic_is_clean(self):
+        model = loads("""
+            package P {
+                part def V {
+                    attribute n : Integer;
+                    attribute ok : Integer = n * 2 + 1;
+                    constraint c { n > 3 and n < 10 }
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues if i.code in ("OPERAND_TYPE_MISMATCH", "UNIT_DIMENSION_MISMATCH")]
+
+
+class TestUnitDimensionChecking:
+    """pint-backed dimension compatibility for + and -."""
+
+    def test_plus_mismatch_error(self):
+        model = loads("""
+            package P {
+                public import ISQ::*;
+                part def V {
+                    attribute mass : MassValue;
+                    attribute length : LengthValue;
+                    constraint c { mass + length > 0 }
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(
+            i.code == "UNIT_DIMENSION_MISMATCH"
+            for i in issues
+        )
+
+    def test_plus_same_dimension_ok(self):
+        model = loads("""
+            package P {
+                public import ISQ::*;
+                part def V {
+                    attribute mass1 : MassValue;
+                    attribute mass2 : MassValue;
+                    constraint c { mass1 + mass2 > 0 }
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues if i.code == "UNIT_DIMENSION_MISMATCH"]
+
+    def test_dimensionless_plus_quantity_ok(self):
+        model = loads("""
+            package P {
+                public import ISQ::*;
+                part def V {
+                    attribute mass : MassValue;
+                    constraint c { mass + 5.0 > 0 }
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues if i.code == "UNIT_DIMENSION_MISMATCH"]
+
+    def test_multiplication_any_dimension_ok(self):
+        model = loads("""
+            package P {
+                public import ISQ::*;
+                part def V {
+                    attribute mass : MassValue;
+                    attribute length : LengthValue;
+                    attribute m2 : AreaValue = mass * length;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues if i.code == "UNIT_DIMENSION_MISMATCH"]
+
+
+class TestConstantFolding:
+    """const_fold: static reduction of deterministic literal expressions."""
+
+    def test_arithmetic_precedence(self):
+        from sysmlpy import loads as _loads
+        import sysmlpy.semantic as S
+        model = _loads("package P { part def V { attribute x : Integer = 2 + 3 * 4; } }")
+        v = model.children[0].children[0]
+        exprs = S._find_owned_expressions(v.children[0].grammar.get_definition())
+        assert S.const_fold(exprs[0]) == 14
+
+    def test_division_float(self):
+        from sysmlpy import loads as _loads
+        import sysmlpy.semantic as S
+        model = _loads("package P { part def V { attribute x : Integer = 10 / 4; } }")
+        v = model.children[0].children[0]
+        exprs = S._find_owned_expressions(v.children[0].grammar.get_definition())
+        assert S.const_fold(exprs[0]) == 2.5
+
+    def test_exponentiation(self):
+        from sysmlpy import loads as _loads
+        import sysmlpy.semantic as S
+        model = _loads("package P { part def V { attribute x : Integer = 2 ** 10; } }")
+        v = model.children[0].children[0]
+        exprs = S._find_owned_expressions(v.children[0].grammar.get_definition())
+        assert S.const_fold(exprs[0]) == 1024
+
+    def test_parenthesized_unary_text(self):
+        from sysmlpy import loads as _loads
+        import sysmlpy.semantic as S
+        model = _loads("package P { part def V { attribute x : Integer = -(2-5); } }")
+        v = model.children[0].children[0]
+        exprs = S._find_owned_expressions(v.children[0].grammar.get_definition())
+        assert S.const_fold(exprs[0]) == 3
+
+    def test_non_numeric_returns_none(self):
+        from sysmlpy import loads as _loads
+        import sysmlpy.semantic as S
+        model = _loads("package P { part def V { attribute a : Integer; attribute x : Integer = a + 1; } }")
+        v = model.children[0].children[0]
+        exprs = S._find_owned_expressions(v.children[1].grammar.get_definition())
+        assert S.const_fold(exprs[0]) is None
+
+    def test_fold_text_guard_rejects_names(self):
+        import sysmlpy.semantic as S
+        assert S._fold_text("__import__('os')") is None
+        assert S._fold_text("lambda: 1") is None
+        assert S._fold_text("2 + 2") == 4

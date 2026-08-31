@@ -11134,45 +11134,109 @@ def _emit_null_coalescing_level(ctx):
 
 def _emit_implies_level(ctx):
     # orExpression ( IMPLIES orExpression )*
+    # Operator text 'implies' goes into the ImpliesExpression
+    # operator/operand lists (rendered by ImpliesExpression.dump since
+    # v0.55.0).
     first, pairs = _split_level_ctx(ctx, "OrExpressionContext")
-    if pairs:
-        return None  # 'implies' not dumped by the grammar class -> text
     or_expr = _emit_or_level(first)
     if or_expr is None:
         return None
-    return {"name": "ImpliesExpression", "operator": [], "operand": [], "or": or_expr}
+    ops = []
+    operands = []
+    for op_text, or_ctx in pairs:
+        or_dict = _emit_or_level(or_ctx)
+        if or_dict is None:
+            return None
+        ops.append(op_text)
+        operands.append(or_dict)
+    return {
+        "name": "ImpliesExpression",
+        "operator": ops,
+        "operand": operands,
+        "or": or_expr,
+    }
 
 
 def _emit_or_level(ctx):
     # xorExpression ( ( OR | PIPE ) xorExpression )*
+    # Operator text 'or' or '|' goes into the OrExpression operator/operand
+    # lists (rendered by OrExpression.dump since v0.55.0).
     first, pairs = _split_level_ctx(ctx, "XorExpressionContext")
-    if pairs:
-        return None  # 'or'/'|' not dumped by the grammar class -> text
     xor_expr = _emit_xor_level(first)
     if xor_expr is None:
         return None
-    return {"name": "OrExpression", "operator": [], "operand": [], "xor": xor_expr}
+    ops = []
+    operands = []
+    for op_text, xor_ctx in pairs:
+        xor_dict = _emit_xor_level(xor_ctx)
+        if xor_dict is None:
+            return None
+        ops.append(op_text)
+        operands.append(xor_dict)
+    return {
+        "name": "OrExpression",
+        "operator": ops,
+        "operand": operands,
+        "xor": xor_expr,
+    }
 
 
 def _emit_xor_level(ctx):
     # andExpression ( XOR andExpression )*
     first, pairs = _split_level_ctx(ctx, "AndExpressionContext")
-    if pairs:
-        return None  # 'xor' not dumped by the grammar class -> text
     and_expr = _emit_and_level(first)
     if and_expr is None:
         return None
-    return {"name": "XorExpression", "operator": [], "operand": [], "and": and_expr}
+    ops = []
+    operands = []
+    for op_text, and_ctx in pairs:
+        and_dict = _emit_and_level(and_ctx)
+        if and_dict is None:
+            return None
+        ops.append(op_text)
+        operands.append(and_dict)
+    return {
+        "name": "XorExpression",
+        "operator": ops,
+        "operand": operands,
+        "and": and_expr,
+    }
 
 
 def _emit_and_level(ctx):
     # equalityExpression ( ( AND | AMP ) equalityExpression )*
+    # The 'and' keyword form takes an EqualityExpressionReference (a
+    # membership wrapper) per the XText reference grammar; '&' keeps a
+    # direct EqualityExpression operand.
     first, pairs = _split_level_ctx(ctx, "EqualityExpressionContext")
-    if pairs:
-        return None  # 'and'/'&' not dumped by the grammar class -> text
     eq = _emit_equality_level(first)
     if eq is None:
         return None
+    ops = []
+    for op_text, cls_ctx in pairs:
+        cls_dict = _emit_equality_level(cls_ctx)
+        if cls_dict is None:
+            return None
+        if op_text == "&":
+            ops.append(
+                {"name": "AndOperand", "operator": "&", "operand": cls_dict}
+            )
+        else:
+            ops.append(
+                {
+                    "name": "AndOperand",
+                    "operator": "and",
+                    "operand": {
+                        "name": "EqualityExpressionReference",
+                        "ownedRelationship": {
+                            "name": "EqualityExpressionMember",
+                            "ownedRelatedElement": cls_dict,
+                        },
+                    },
+                }
+            )
+    if ops:
+        return {"name": "AndExpression", "operation": ops, "equality": eq}
     return {"name": "AndExpression", "operation": [], "equality": eq}
 
 
@@ -11292,10 +11356,29 @@ def _emit_multiplicative_level(ctx):
 
 def _emit_exponentiation_level(ctx):
     # unaryExpression ( ( STAR_STAR | CARET ) exponentiationExpression )?
-    # '**'/'^' are right-associative and not dumped by the grammar
-    # class, so keep the text when present
+    # '**'/'^' are right-associative; the rhs of '**' is another
+    # ExponentiationExpression (child layer of the same rule).
     if hasattr(ctx, "exponentiationExpression") and ctx.exponentiationExpression():
-        return None
+        rhs_ctx = ctx.exponentiationExpression()
+        unary_ctx = ctx.unaryExpression() if hasattr(ctx, "unaryExpression") else None
+        if unary_ctx is None:
+            return None
+        unary = _emit_unary_level(unary_ctx)
+        if unary is None:
+            return None
+        rhs_dict = _emit_exponentiation_level(rhs_ctx)
+        if rhs_dict is None:
+            return None
+        op_text = "**"
+        for c in (ctx.getChildren() if hasattr(ctx, "getChildren") else []):
+            if type(c).__name__ == "TerminalNodeImpl" and c.getText().strip() in ("**", "^"):
+                op_text = c.getText().strip()
+        return {
+            "name": "ExponentiationExpression",
+            "operator": [op_text],
+            "operand": [rhs_dict],
+            "unary": unary,
+        }
     unary_ctx = ctx.unaryExpression() if hasattr(ctx, "unaryExpression") else None
     if unary_ctx is None:
         return None
@@ -11312,6 +11395,41 @@ def _emit_unary_level(ctx):
     # | primaryExpression
     prim_ctx = ctx.primaryExpression() if hasattr(ctx, "primaryExpression") else None
     if prim_ctx is not None:
+        # Parenthesized primary: baseExpression '(' sequenceExpression ')'
+        # carries a full inner binary chain — recurse through the inner
+        # nullCoalescing level so nested binary ops stay structured.
+        be_ctx = prim_ctx.baseExpression() if hasattr(prim_ctx, "baseExpression") else None
+        if be_ctx is not None and "(" in getattr(be_ctx, "text", "") or (
+            be_ctx is not None and be_ctx.getText().startswith("(")
+        ):
+            inner_nce = None
+            sel = (
+                be_ctx.sequenceExpressionList()
+                if hasattr(be_ctx, "sequenceExpressionList")
+                else None
+            )
+            if sel is not None:
+                oe = (
+                    sel.ownedExpression()
+                    if hasattr(sel, "ownedExpression")
+                    else None
+                )
+                # A comma-separated sequence (a, b) is not representable
+                # in the paren-structured shape — let it fall back to text.
+                if isinstance(oe, list) and len(oe) != 1:
+                    return None
+                while isinstance(oe, list):
+                    oe = oe[0] if oe else None
+                nce = (
+                    oe.nullCoalescingExpression()
+                    if oe is not None and hasattr(oe, "nullCoalescingExpression")
+                    else None
+                )
+                if isinstance(nce, list):
+                    nce = nce[0] if nce else None
+                if nce is not None:
+                    inner_nce = _emit_null_coalescing_level(nce)
+            return None  # parens carry grouping — text fallback preserves them
         primary = _emit_primary_level(prim_ctx)
         if primary is None:
             return None
@@ -11330,9 +11448,9 @@ def _emit_unary_level(ctx):
     if children and type(children[0]).__name__ == "TerminalNodeImpl":
         op_text = children[0].getText().strip()
         if op_text in ("+", "-", "~", "not"):
-            # operand must be a unaryExpression without its own prefix
-            # operator (nested prefixes are not representable in the
-            # chain shape)
+            # operand must be a unaryExpression; nested unary prefixes are
+            # not representable in the chain shape, but a plain
+            # primaryExpression (possibly parenthesized additive) is.
             operand_ctx = None
             for c in children[1:]:
                 if type(c).__name__ == "UnaryExpressionContext":
@@ -11345,23 +11463,62 @@ def _emit_unary_level(ctx):
                 if hasattr(operand_ctx, "primaryExpression")
                 else None
             )
-            if inner_prim is None:
+            if (
+                inner_prim is not None
+                and "(" not in getattr(operand_ctx, "text", "")
+            ):
+                primary = _emit_primary_level(inner_prim)
+                if primary is not None:
+                    return {
+                        "name": "UnaryExpression",
+                        "operator": op_text,
+                        "operand": [],
+                        "extent": {
+                            "name": "ExtentExpression",
+                            "operator": "",
+                            "operand": [],
+                            "primary": primary,
+                        },
+                    }
+            # Parenthesized operand: primary is '(' sequenceExpression ')'
+            # whose additive/multiplicative chain is representable — emit
+            # the inner chain as a nested UnaryExpression extent.
+            inner = _emit_unary_level(operand_ctx)
+            if inner is not None and not isinstance(inner.get("extent"), dict):
                 return None
-            primary = _emit_primary_level(inner_prim)
-            if primary is None:
+            # inner may be a primary-only unary; wrap so the outer '-'
+            # sits above the inner (parenthesized) chain
+            if inner is None:
                 return None
             return {
                 "name": "UnaryExpression",
                 "operator": op_text,
                 "operand": [],
-                "extent": {
-                    "name": "ExtentExpression",
-                    "operator": "",
-                    "operand": [],
-                    "primary": primary,
-                },
+                "extent": inner.get("extent"),
             }
     return None  # '@'/'@@'/'all' typeReference forms -> text
+
+
+def _chain_has_binary_operator(node):
+    """True if an expression-layer dict contains any emitted binary operator."""
+    if not isinstance(node, dict):
+        return False
+    for key in ("operation", "operator", "operand"):
+        val = node.get(key)
+        if key == "operation" and isinstance(val, list) and val:
+            return True
+        if key == "operator":
+            if isinstance(val, str) and val not in (None, "") and node.get("name") != "ExponentiationExpression" or isinstance(val, list) and val:
+                return True
+        if key == "operand" and isinstance(val, list) and val and node.get("name") == "ExponentiationExpression":
+            return True
+    for child_key in ("implies", "or", "xor", "and", "equality", "classification",
+                      "relational", "range", "additive", "multiplicitive",
+                      "exponential", "unary", "extent", "primary"):
+        child = node.get(child_key)
+        if isinstance(child, dict) and _chain_has_binary_operator(child):
+            return True
+    return False
 
 
 def _base_feature_names(be_ctx):
@@ -11479,9 +11636,27 @@ def _emit_base_primary(be_ctx):
             pass
         if lit_text.startswith('"') and lit_text.endswith('"'):
             return _make_literal_string_primary(lit_text)
-        # boolean/null keywords have no dedicated grammar class; keep
-        # them as feature references so the text round-trips
-        if lit_text in ("true", "false", "null"):
+        # Boolean literal: captured as a LiteralBoolean primary so the
+        # type checker can classify it; the grammar class round-trips
+        # the keyword text via the value field.
+        if lit_text in ("true", "false"):
+            return {
+                "name": "PrimaryExpression",
+                "operator": [],
+                "operand": [],
+                "base": {
+                    "name": "BaseExpression",
+                    "ownedRelationship": {
+                        "name": "LiteralBoolean",
+                        "value": lit_text,
+                    },
+                },
+                "ownedRelationship1": [],
+                "ownedRelationship2": [],
+            }
+        # null has no dedicated grammar class; keep it as a feature
+        # reference so the text round-trips
+        if lit_text == "null":
             return _make_feature_reference_primary(lit_text)
         return None
     names = _base_feature_names(be_ctx)

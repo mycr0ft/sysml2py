@@ -5754,6 +5754,18 @@ class ImpliesExpression:
             self.operator = definition.get("operator", [])
 
     def dump(self):
+        if self.orexpression is not None and self.operator and self.operand:
+            output = [self.orexpression.dump()]
+            for op, rhs in zip(self.operator, self.operand):
+                output.append(op)
+                if isinstance(rhs, dict):
+                    try:
+                        output.append(OrExpression(rhs).dump())
+                    except Exception:
+                        output.append(str(rhs))
+                else:
+                    output.append(str(rhs))
+            return " ".join(output)
         if self.orexpression is not None:
             return self.orexpression.dump()
         return ""
@@ -5781,6 +5793,18 @@ class OrExpression:
             self.operator = definition.get("operator", [])
 
     def dump(self):
+        if self.xor is not None and self.operator and self.operand:
+            output = [self.xor.dump()]
+            for op, rhs in zip(self.operator, self.operand):
+                output.append(op)
+                if isinstance(rhs, dict):
+                    try:
+                        output.append(XorExpression(rhs).dump())
+                    except Exception:
+                        output.append(str(rhs))
+                else:
+                    output.append(str(rhs))
+            return " ".join(output)
         if self.xor is not None:
             return self.xor.dump()
         return ""
@@ -5808,13 +5832,27 @@ class XorExpression:
             self.operator = definition.get("operator", [])
 
     def dump(self):
-        return self.andexpression.dump()
+        if self.andexpression is not None and self.operator and self.operand:
+            output = [self.andexpression.dump()]
+            for op, rhs in zip(self.operator, self.operand):
+                output.append(op)
+                if isinstance(rhs, dict):
+                    try:
+                        output.append(AndExpression(rhs).dump())
+                    except Exception:
+                        output.append(str(rhs))
+                else:
+                    output.append(str(rhs))
+            return " ".join(output)
+        if self.andexpression is not None:
+            return self.andexpression.dump()
+        return ""
 
     def get_definition(self):
         output = {
             "name": self.__class__.__name__,
-            "operator": [],
-            "operand": [],
+            "operator": self.operator,
+            "operand": self.operand,
             "and": self.andexpression.get_definition(),
         }
         return output
@@ -6149,6 +6187,18 @@ class ExponentiationExpression:
             self.operator = definition.get("operator", [])
 
     def dump(self):
+        if self.unary is not None and self.operator and self.operand:
+            output = [self.unary.dump()]
+            for op, rhs in zip(self.operator, self.operand):
+                output.append(op)
+                if isinstance(rhs, dict):
+                    try:
+                        output.append(ExponentiationExpression(rhs).dump())
+                    except Exception:
+                        output.append(str(rhs))
+                else:
+                    output.append(str(rhs))
+            return " ".join(output)
         if self.unary is not None:
             return self.unary.dump()
         return ""
@@ -6200,15 +6250,21 @@ class UnaryExpression:
 class ExtentExpression:
     def __init__(self, definition):
         self.primary = None
+        self.nested = None
         self.operator = ""
         if valid_definition(definition, self.__class__.__name__):
-            if definition["primary"] is not None:
+            if definition.get("primary") is not None:
                 self.primary = PrimaryExpression(definition["primary"])
+            nested = definition.get("ownedRelationship")
+            if isinstance(nested, dict):
+                self.nested = globals()[nested["name"]](nested)
             self.operator = definition.get("operator", "")
 
     def dump(self):
         if self.primary is not None:
             return self.primary.dump()
+        if self.nested is not None:
+            return self.nested.dump()
         return ""
 
     def get_definition(self):
@@ -6219,7 +6275,8 @@ class ExtentExpression:
         }
         if self.primary is not None:
             output["primary"] = self.primary.get_definition()
-        output["ownedRelationship"] = []
+        if self.nested is not None:
+            output["ownedRelationship"] = self.nested.get_definition()
         return output
 
 
@@ -6455,6 +6512,8 @@ class BaseExpression:
                 self.relationship = LiteralString(definition["ownedRelationship"])
             elif definition["ownedRelationship"]["name"] == "LiteralReal":
                 self.relationship = LiteralReal(definition["ownedRelationship"])
+            elif definition["ownedRelationship"]["name"] == "LiteralBoolean":
+                self.relationship = LiteralBoolean(definition["ownedRelationship"])
             elif definition["ownedRelationship"]["name"] == "SequenceExpression":
                 self.relationship = SequenceExpression(definition["ownedRelationship"])
             elif definition["ownedRelationship"]["name"] == "InvocationExpression":
@@ -8426,6 +8485,18 @@ class MultiplicityRelatedElement:
 
 
 class LiteralString:
+    def __init__(self, definition):
+        if valid_definition(definition, self.__class__.__name__):
+            self.element = definition["value"]
+
+    def dump(self):
+        return self.element
+
+    def get_definition(self):
+        return {"name": self.__class__.__name__, "value": self.element}
+
+
+class LiteralBoolean:
     def __init__(self, definition):
         if valid_definition(definition, self.__class__.__name__):
             self.element = definition["value"]

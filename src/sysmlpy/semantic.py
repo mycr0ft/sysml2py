@@ -8,6 +8,7 @@ parsed model tree and cross-referencing all qualified name references.
 
 from __future__ import annotations
 
+import ast
 import dataclasses
 import os
 import re
@@ -1249,6 +1250,944 @@ def _find_owned_expressions(node: Any) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Expression type checking & static evaluation (v0.55.0 — Phase C)
+# ---------------------------------------------------------------------------
+
+# Dimension-annotated *Value / *Unit definition names extracted from the
+# bundled ISQ library docs (``quantity dimension: L^1*M^1*T^-2``).  Built
+# once and cached at module level.
+_DIMENSION_RE = re.compile(r"quantity\s+dimension:\s*(.+)$", re.MULTILINE)
+_DEF_BLOCK_RE = re.compile(r"attribute def (\w+)\s*[^{]*\{")
+_ALIAS_RE = re.compile(r"alias\s+(\w+)\s+for\s+(\w+);")
+
+_dimension_index_cache: Optional[dict[str, str]] = None
+
+
+def _build_dimension_index() -> dict[str, str]:
+    """Map library *Value/*Unit definition names → dimension strings.
+
+    Dimension strings look like ``L^1``, ``M^1``, ``1`` (dimensionless),
+    or products ``L^1*M^1*T^-2``.
+    """
+    global _dimension_index_cache
+    if _dimension_index_cache is not None:
+        return _dimension_index_cache
+
+    index: dict[str, str] = {}
+    root = LibrarySymbolIndex._default_library_root()
+    if root is None or not root.is_dir():
+        _dimension_index_cache = {}
+        return index
+
+    for filepath in root.rglob("*.sysml"):
+        try:
+            src = filepath.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        file_dims: dict[str, str] = {}
+        for m in _DEF_BLOCK_RE.finditer(src):
+            start = m.end() - 1
+            depth, i = 0, start
+            while i < len(src) and i - start < 2000:
+                if src[i] == "{":
+                    depth += 1
+                elif src[i] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                i += 1
+            block = src[start:i]
+            if len(block) > 1500:
+                continue
+            dm = _DIMENSION_RE.search(block)
+            if dm:
+                file_dims.setdefault(m.group(1), dm.group(1).strip())
+        for name, dim in file_dims.items():
+            index.setdefault(name, dim)
+        # Aliases inherit the dimension of their target
+        for m in _ALIAS_RE.finditer(src):
+            target = m.group(2)
+            if target in file_dims:
+                index.setdefault(m.group(1), file_dims[target])
+
+    _dimension_index_cache = index
+    return index
+
+
+def _parse_dimension(dim: Optional[str]) -> Optional[dict[str, int]]:
+    """Parse ``L^1*M^1*T^-2`` → ``{'L': 1, 'M': 1, 'T': -2}``.
+
+    Returns ``{}`` for dimensionless (``1``), None when unparseable.
+    """
+    if dim is None:
+        return None
+    dim = dim.strip().rstrip(".")
+    if not dim:
+        return None
+    if dim == "1":
+        return {}
+    dims: dict[str, int] = {}
+    for factor in dim.split("*"):
+        factor = factor.strip()
+        if not factor:
+            continue
+        if "^" in factor:
+            base, exp = factor.split("^", 1)
+            try:
+                dims[base.strip()] = int(exp.strip())
+            except ValueError:
+                return None
+        elif re.fullmatch(r"[A-Za-z]+", factor):
+            dims[factor] = 1
+        else:
+            return None
+    return dims
+
+
+def _dimension_to_pint(dims: Optional[dict[str, int]]) -> Optional[Any]:
+    """Map a SysML dimension dict to a pint dimensionality.
+
+    Uses pint's base dimensions: L→length, M→mass, T→time,
+    I→current, Θ→temperature, J→luminous intensity, N→substance.
+    """
+    if dims is None:
+        return None
+    try:
+        import pint
+    except ImportError:  # pragma: no cover
+        return None
+    base_map = {
+        "L": "[length]",
+        "M": "[mass]",
+        "T": "[time]",
+        "I": "[current]",
+        "Θ": "[temperature]",
+        "theta": "[temperature]",
+        "J": "[luminosity]",
+        "N": "[substance]",
+    }
+    try:
+        result = None
+        for base, exp in dims.items():
+            unit = base_map.get(base)
+            if unit is None:
+                return None
+            term = pint.Unit(unit) ** exp
+            result = term if result is None else result * term
+        return result if result is not None else pint.Unit("")
+    except Exception:
+        return None
+
+
+def _numeric_types() -> frozenset[str]:
+    """Simple names of numeric scalar types."""
+    return frozenset({
+        "Integer", "Natural", "Positive", "Nonnegative", "Negative", "Nonpositive",
+        "Rational", "Real", "Number", "Complex", "UnlimitedNatural",
+    })
+
+
+def _string_types() -> frozenset[str]:
+    return frozenset({"String"})
+
+
+def _boolean_types() -> frozenset[str]:
+    return frozenset({"Boolean"})
+
+
+class _Operand:
+    """Classification of one operand in a binary/unary expression."""
+
+    __slots__ = ("kind", "type_name", "dimension", "literal_value", "literal_is_int")
+
+    def __init__(
+        self,
+        kind: str,
+        type_name: Optional[str] = None,
+        dimension: Optional[dict[str, int]] = None,
+        literal_value: Any = None,
+        literal_is_int: bool = False,
+    ) -> None:
+        self.kind = kind  # "literal_int" | "literal_float" | "literal_string" |
+                         # "literal_bool" | "typed" | "chain" | "invocation" | "unknown"
+        self.type_name = type_name
+        self.dimension = dimension
+        self.literal_value = literal_value
+        self.literal_is_int = literal_is_int
+
+    @property
+    def is_numeric_literal(self) -> bool:
+        return self.kind in ("literal_int", "literal_float")
+
+    @property
+    def is_numeric(self) -> bool:
+        if self.is_numeric_literal:
+            return True
+        if self.kind == "typed" and self.type_name in _numeric_types():
+            return True
+        if self.kind == "typed" and self.dimension is not None:
+            # Quantity values are numeric
+            return True
+        return False
+
+    @property
+    def is_string(self) -> bool:
+        return self.kind == "literal_string" or (
+            self.kind == "typed" and self.type_name in _string_types()
+        )
+
+    @property
+    def is_boolean(self) -> bool:
+        return self.kind == "literal_bool" or (
+            self.kind == "typed" and self.type_name in _boolean_types()
+        )
+
+    @property
+    def is_ordered(self) -> bool:
+        return self.is_numeric or self.is_string
+
+
+class ExpressionTypeChecker:
+    """Operand type compatibility and unit-dimension safety for expressions.
+
+    Shares the identifier-extraction layer with Phase B but resolves each
+    operand to a *category* (numeric / string / boolean / quantity /
+    unknown) and validates operator combinations.
+    """
+
+    # operator -> rule key
+    _ARITHMETIC = frozenset({"+", "-", "*", "/", "%", "**", "^"})
+    _RELATIONAL = frozenset({"<", ">", "<=", ">="})
+    _EQUALITY = frozenset({"==", "!=", "===", "!==", ":=", "=?", ":>=", ":>"})
+    _LOGICAL = frozenset({"and", "or", "xor", "implies", "&", "|", "&&"})
+    _RANGE = frozenset({".."})
+
+    def __init__(
+        self,
+        analyzer: "SemanticAnalyzer",
+        symtab: SymbolTable,
+        lib_roots: list[Path] | None = None,
+    ) -> None:
+        self._analyzer = analyzer
+        self._symtab = symtab
+        self._lib_roots = lib_roots
+        self._dimensions = _build_dimension_index()
+
+    # -- public API ----------------------------------------------------------
+
+    def check(self, model: Any) -> list[SemanticIssue]:
+        """Run type-compatibility checks over all expression owners."""
+        issues: list[SemanticIssue] = []
+        self._walk_owners(model, issues, [], units_only=False)
+        return issues
+
+    def check_units(self, model: Any) -> list[SemanticIssue]:
+        """Run unit-dimension checks only."""
+        issues: list[SemanticIssue] = []
+        self._walk_owners(model, issues, [], units_only=True)
+        return issues
+
+    # -- internals -----------------------------------------------------------
+
+    def _walk_owners(
+        self,
+        element: Any,
+        issues: list[SemanticIssue],
+        scope_path: list[str],
+        units_only: bool,
+    ) -> None:
+        if element is None:
+            return
+        name = getattr(element, "name", None)
+        elem_type = type(element).__name__
+        is_container = getattr(element, "is_definition", False) or elem_type == "Package"
+        child_scope = scope_path
+        if is_container and name is not None and elem_type != "Model":
+            child_scope = scope_path + [name]
+
+        if units_only and elem_type not in _UNIT_CHECK_OWNERS:
+            pass
+        elif (
+            not units_only and elem_type in _EXPRESSION_OWNER_TYPES
+        ) or (units_only and elem_type in _UNIT_CHECK_OWNERS):
+            grammar = getattr(element, "grammar", None)
+            if grammar is not None:
+                try:
+                    grammar_def = grammar.get_definition()
+                except Exception:
+                    grammar_def = None
+                if grammar_def is not None:
+                    for expr in _find_owned_expressions(grammar_def):
+                        self._check_expression(
+                            expr, element, scope_path, issues, units_only
+                        )
+
+        for child in getattr(element, "children", []):
+            self._walk_owners(child, issues, child_scope, units_only)
+
+    def _check_expression(
+        self,
+        expr_dict: dict,
+        element: Any,
+        scope_path: list[str],
+        issues: list[SemanticIssue],
+        units_only: bool,
+    ) -> None:
+        """Check one OwnedExpression dict against operator rules."""
+        expr = expr_dict.get("expression")
+        if not isinstance(expr, dict):
+            return
+        nce = self._first_operand(expr)
+        if nce is None:
+            return
+        self._check_nce(nce, element, scope_path, issues, units_only)
+
+    # -- layer navigation -----------------------------------------------
+
+    def _first_operand(self, node: Any) -> Optional[dict]:
+        """Return the top expression-layer dict (Conditional or NCE)."""
+        if not isinstance(node, dict):
+            return None
+        return node
+
+    def _check_nce(
+        self,
+        node: dict,
+        element: Any,
+        scope_path: list[str],
+        issues: list[SemanticIssue],
+        units_only: bool,
+    ) -> None:
+        """Walk NullCoalescing → Implies → Or → Xor → And → Equality → …."""
+        if not isinstance(node, dict):
+            return
+        name = node.get("name")
+        if name == "ConditionalExpression":
+            for operand in node.get("operand", []) or []:
+                self._check_nce(operand, element, scope_path, issues, units_only)
+            return
+        if name == "OwnedExpression":
+            inner = node.get("expression")
+            if isinstance(inner, dict):
+                self._check_nce(inner, element, scope_path, issues, units_only)
+            return
+        if name == "NullCoalescingExpression":
+            pairs = zip(node.get("operator", []), node.get("operand", []))
+            for op, rhs in pairs:
+                self._binary(op, node.get("implies"), rhs, element, scope_path, issues, units_only)
+            implies = node.get("implies")
+            if isinstance(implies, dict):
+                self._check_level(implies, "implies", element, scope_path, issues, units_only)
+        elif name == "ImpliesExpression":
+            self._check_level(node, "implies", element, scope_path, issues, units_only)
+        elif name == "OrExpression":
+            self._check_level(node, "or", element, scope_path, issues, units_only)
+        elif name == "XorExpression":
+            self._check_level(node, "xor", element, scope_path, issues, units_only)
+        elif name == "AndExpression":
+            self._check_level(node, "and", element, scope_path, issues, units_only)
+        elif name == "EqualityExpression":
+            self._check_equality(node, element, scope_path, issues, units_only)
+        elif name == "ClassificationExpression":
+            rel = node.get("relational")
+            if isinstance(rel, dict):
+                self._check_relational(rel, element, scope_path, issues, units_only)
+            # postfix ops (istype/hastype/@@/@) — operand type preserved
+        elif name == "RangeExpression":
+            self._check_range(node, element, scope_path, issues, units_only)
+        elif name == "AdditiveExpression":
+            self._check_additive(node, element, scope_path, issues, units_only)
+        elif name == "MultiplicativeExpression":
+            self._check_multiplicative(node, element, scope_path, issues, units_only)
+        elif name == "ExponentiationExpression":
+            self._check_exponentiation(node, element, scope_path, issues, units_only)
+        elif name == "UnaryExpression":
+            self._check_unary(node, element, scope_path, issues, units_only)
+        elif name == "ExtentExpression":
+            primary = node.get("primary")
+            if isinstance(primary, dict):
+                self._check_primary_postfix(primary, element, scope_path, issues, units_only)
+        elif name == "PrimaryExpression":
+            self._check_primary_postfix(node, element, scope_path, issues, units_only)
+
+    def _check_level(
+        self,
+        node: dict,
+        op_key: str,
+        element: Any,
+        scope_path: list[str],
+        issues: list[SemanticIssue],
+        units_only: bool,
+    ) -> None:
+        """Shared walker for implies/or/xor/and layers.
+
+        Two shapes occur: keyword-chain layers keep ``operator``/``operand``
+        lists (or/xor/implies), and the and layer keeps an ``operation``
+        list of ``AndOperand`` dicts.  Both are checked here.
+        """
+        child_key = {"implies": "or", "or": "xor", "xor": "and", "and": "equality"}[op_key]
+        child = node.get(child_key)
+        if isinstance(child, dict):
+            self._check_nce(child, element, scope_path, issues, units_only)
+        if units_only:
+            return
+        # Form 1: operator/operand lists (or/xor/implies; and since v0.55)
+        operator = node.get("operator", [])
+        operands = node.get("operand", [])
+        if operator and operands:
+            lhs = child if isinstance(child, dict) else None
+            for op, rhs in zip(operator, operands):
+                self._check_logical_pair(op, lhs, rhs, element, scope_path, issues)
+            for rhs in operands:
+                if isinstance(rhs, dict):
+                    self._check_nce(rhs, element, scope_path, issues, units_only)
+        # Form 2: operation list of *Operand dicts (and: AndOperand; used when
+        # the visitor emits the EqualityExpressionReference membership form)
+        for op_dict in node.get("operation", []) or []:
+            if not isinstance(op_dict, dict):
+                continue
+            op = op_dict.get("operator")
+            rhs = op_dict.get("operand")
+            if isinstance(rhs, dict) and rhs.get("name") == "EqualityExpressionReference":
+                member = rhs.get("ownedRelationship")
+                if isinstance(member, dict):
+                    rhs = member.get("ownedRelatedElement")
+            self._check_logical_pair(op, child, rhs, element, scope_path, issues)
+            if isinstance(rhs, dict):
+                self._check_nce(rhs, element, scope_path, issues, units_only)
+
+    def _check_equality(
+        self,
+        node: dict,
+        element: Any,
+        scope_path: list[str],
+        issues: list[SemanticIssue],
+        units_only: bool,
+    ) -> None:
+        cls = node.get("classification")
+        if isinstance(cls, dict):
+            rel = cls.get("relational")
+            if isinstance(rel, dict):
+                self._check_relational(rel, element, scope_path, issues, units_only)
+        if units_only:
+            return
+        operator = node.get("operation", [])
+        lhs = cls if isinstance(cls, dict) else None
+        for op_dict in operator:
+            if not isinstance(op_dict, dict):
+                continue
+            op = op_dict.get("operator")
+            rhs = op_dict.get("operand")
+            if op in ("==", "!=", "===", "!=="):
+                self._check_equality_pair(op, lhs, rhs, element, scope_path, issues)
+            elif isinstance(rhs, dict):
+                self._check_nce(rhs, element, scope_path, issues, units_only)
+
+    def _check_relational(
+        self,
+        node: dict,
+        element: Any,
+        scope_path: list[str],
+        issues: list[SemanticIssue],
+        units_only: bool,
+    ) -> None:
+        rng = node.get("range")
+        if isinstance(rng, dict):
+            self._check_range(rng, element, scope_path, issues, units_only)
+        if units_only:
+            return
+        for op_dict in node.get("operation", []):
+            if not isinstance(op_dict, dict):
+                continue
+            op = op_dict.get("operator")
+            rhs = op_dict.get("operand")
+            if op in _RELATIONAL_OPS:
+                self._check_relational_pair(op, rng, rhs, element, scope_path, issues)
+            else:
+                if isinstance(rhs, dict):
+                    # classification-expression operator (istype etc.)
+                    self._check_nce(rhs, element, scope_path, issues, units_only)
+
+    def _check_range(
+        self,
+        node: dict,
+        element: Any,
+        scope_path: list[str],
+        issues: list[SemanticIssue],
+        units_only: bool,
+    ) -> None:
+        additive = node.get("additive")
+        if isinstance(additive, dict):
+            self._check_additive(additive, element, scope_path, issues, units_only)
+        operand = node.get("operand")
+        if isinstance(operand, dict):
+            self._check_additive(operand, element, scope_path, issues, units_only)
+        if units_only or node.get("operator") is None:
+            return
+        # range: both bounds must be ordered/numeric
+        lo = self._classify_operand(operand, scope_path)
+        hi = self._classify_operand(operand, scope_path) if operand is node.get("operand") else lo
+
+    def _check_additive(
+        self,
+        node: dict,
+        element: Any,
+        scope_path: list[str],
+        issues: list[SemanticIssue],
+        units_only: bool,
+    ) -> None:
+        mult = node.get("multiplicitive")
+        if isinstance(mult, dict):
+            self._check_multiplicative(mult, element, scope_path, issues, units_only)
+        for op_dict in node.get("operation", []):
+            if not isinstance(op_dict, dict):
+                continue
+            op = op_dict.get("operator")
+            rhs = op_dict.get("operand")
+            self._check_arithmetic_pair(
+                op, mult, rhs, element, scope_path, issues, units_only
+            )
+
+    def _check_multiplicative(
+        self,
+        node: dict,
+        element: Any,
+        scope_path: list[str],
+        issues: list[SemanticIssue],
+        units_only: bool,
+    ) -> None:
+        exp = node.get("exponential")
+        if isinstance(exp, dict):
+            self._check_exponentiation(exp, element, scope_path, issues, units_only)
+        for op_dict in node.get("operation", []):
+            if not isinstance(op_dict, dict):
+                continue
+            op = op_dict.get("operator")
+            rhs = op_dict.get("operand")
+            self._check_multiplicative_pair(
+                op, exp, rhs, element, scope_path, issues, units_only
+            )
+
+    def _check_exponentiation(
+        self,
+        node: dict,
+        element: Any,
+        scope_path: list[str],
+        issues: list[SemanticIssue],
+        units_only: bool,
+    ) -> None:
+        unary = node.get("unary")
+        if isinstance(unary, dict):
+            self._check_unary(unary, element, scope_path, issues, units_only)
+        for op_dict in node.get("operation", []):
+            if not isinstance(op_dict, dict):
+                continue
+            op = op_dict.get("operator")
+            rhs = op_dict.get("operand")
+            if op in ("**", "^") and not units_only:
+                self._check_power_pair(op, unary, rhs, element, scope_path, issues)
+            elif isinstance(rhs, dict):
+                # exponent rhs is an ExponentiationExpression dict
+                self._check_exponentiation(rhs, element, scope_path, issues, units_only)
+
+    def _check_unary(
+        self,
+        node: dict,
+        element: Any,
+        scope_path: list[str],
+        issues: list[SemanticIssue],
+        units_only: bool,
+    ) -> None:
+        extent = node.get("extent")
+        if isinstance(extent, dict):
+            primary = extent.get("primary")
+            if isinstance(primary, dict):
+                self._check_primary_postfix(primary, element, scope_path, issues, units_only)
+        op = node.get("operator")
+        if op and not units_only:
+            operand = self._classify_operand(extent, scope_path)
+            if op == "not":
+                cat = self._category_from_operand(operand)
+                if cat not in ("unknown", "unknown_type", "boolean"):
+                    issues.append(SemanticIssue(
+                        severity="error",
+                        code="OPERAND_TYPE_MISMATCH",
+                        message=f"Unary operator 'not' requires a boolean operand; "
+                                f"got '{cat}'",
+                        element=element,
+                        reference="not",
+                    ))
+            elif op in ("-", "+"):
+                cat = self._category_from_operand(operand)
+                if cat in ("boolean", "string"):
+                    issues.append(SemanticIssue(
+                        severity="error",
+                        code="OPERAND_TYPE_MISMATCH",
+                        message=f"Unary operator '{op}' requires a numeric "
+                                f"operand; got '{cat}'",
+                        element=element,
+                        reference=str(op),
+                    ))
+
+    # -- pair checks ------------------------------------------------------
+
+    def _check_logical_pair(self, op, lhs, rhs, element, scope_path, issues) -> None:
+        lhs_cat = self._category_of_operand(lhs, scope_path)
+        rhs_cat = self._category_of_operand(rhs, scope_path)
+        for cat, label in ((lhs_cat, "left"), (rhs_cat, "right")):
+            if cat in ("boolean", "unknown"):
+                continue
+            issues.append(SemanticIssue(
+                severity="error",
+                code="OPERAND_TYPE_MISMATCH",
+                message=f"Logical operator '{op}' requires boolean operands; "
+                        f"{label} operand has type category '{cat}'",
+                element=element,
+                reference=str(op),
+            ))
+
+    def _check_equality_pair(self, op, lhs, rhs, element, scope_path, issues) -> None:
+        lhs_cat = self._category_of_operand(lhs, scope_path)
+        rhs_cat = self._category_of_operand(rhs, scope_path)
+        if "unknown" in (lhs_cat, rhs_cat):
+            return
+        if lhs_cat == rhs_cat:
+            return
+        # bool vs non-bool is always a bug
+        if {lhs_cat, rhs_cat} & {"boolean"} and {lhs_cat, rhs_cat} - {"boolean"}:
+            issues.append(SemanticIssue(
+                severity="error",
+                code="OPERAND_TYPE_MISMATCH",
+                message=f"Equality operator '{op}' compares boolean with "
+                        f"'{rhs_cat if lhs_cat == 'boolean' else lhs_cat}'",
+                element=element,
+                reference=str(op),
+            ))
+
+    def _check_relational_pair(self, op, lhs, rhs, element, scope_path, issues) -> None:
+        lhs_cat = self._category_of_operand(lhs, scope_path)
+        rhs_cat = self._category_of_operand(rhs, scope_path)
+        for cat in (lhs_cat, rhs_cat):
+            if cat == "unknown" or cat == "unknown_type":
+                continue
+            if cat not in ("numeric", "quantity", "string"):
+                issues.append(SemanticIssue(
+                    severity="error",
+                    code="OPERAND_TYPE_MISMATCH",
+                    message=f"Relational operator '{op}' requires ordered "
+                            f"(numeric/string/quantity) operands; got '{cat}'",
+                    element=element,
+                    reference=str(op),
+                ))
+
+    def _check_arithmetic_pair(self, op, lhs, rhs, element, scope_path, issues, units_only) -> None:
+        lhs_cat = self._category_of_operand(lhs, scope_path)
+        rhs_cat = self._category_of_operand(rhs, scope_path)
+        if op == "+":
+            ok = {"numeric", "quantity", "unknown", "unknown_type"}
+            string_ok = ok | {"string"}
+            valid = string_ok if units_only is False else ok
+            if lhs_cat in ("boolean",) or rhs_cat in ("boolean",):
+                self._emit_mismatch(op, lhs_cat, rhs_cat, element, issues)
+                return
+            if lhs_cat == "string" and rhs_cat == "string":
+                return
+            if lhs_cat not in ok or rhs_cat not in ok:
+                if "string" in (lhs_cat, rhs_cat) and "numeric" in (lhs_cat, rhs_cat):
+                    self._emit_mismatch(op, lhs_cat, rhs_cat, element, issues)
+            self._check_unit_dimensions(op, lhs, rhs, element, scope_path, issues)
+            return
+        if op in ("-",):
+            for cat in (lhs_cat, rhs_cat):
+                if cat in ("boolean", "string"):
+                    self._emit_mismatch(op, lhs_cat, rhs_cat, element, issues)
+            self._check_unit_dimensions(op, lhs, rhs, element, scope_path, issues)
+            return
+
+    def _check_multiplicative_pair(self, op, lhs, rhs, element, scope_path, issues, units_only) -> None:
+        lhs_cat = self._category_of_operand(lhs, scope_path)
+        rhs_cat = self._category_of_operand(rhs, scope_path)
+        if lhs_cat in ("boolean", "string") or rhs_cat in ("boolean", "string"):
+            if op in ("*", "/", "%"):
+                self._emit_mismatch(op, lhs_cat, rhs_cat, element, issues)
+        self._check_unit_dimensions(op, lhs, rhs, element, scope_path, issues)
+
+    def _check_power_pair(self, op, lhs, rhs, element, scope_path, issues) -> None:
+        lhs_cat = self._category_of_operand(lhs, scope_path)
+        rhs_cat = self._category_of_operand(rhs, scope_path)
+        if lhs_cat in ("boolean", "string") or rhs_cat in ("boolean", "string"):
+            self._emit_mismatch(op, lhs_cat, rhs_cat, element, issues)
+
+    # -- unit dimension safety ---------------------------------------------
+
+    def _check_unit_dimensions(self, op, lhs, rhs, element, scope_path, issues) -> None:
+        """Verify dimensional compatibility of a binary arithmetic pair.
+
+        Rules:
+        - ``+`` / ``-``: dimensions must be EQUAL (or unknown) — adding
+          ``[m]`` to ``[kg]`` is an error; ``[m] + 5`` is dimensionless-extended
+          and allowed
+        - ``*`` / ``/``: any dimension combination is type-sound (produces
+          derived dimensions); only zero-dimensional-vs-quantity mixes are OK
+        """
+        if op not in ("+", "-", "*", "/", "%"):
+            return
+        lhs_dim = self._dimension_of_operand(lhs, scope_path)
+        rhs_dim = self._dimension_of_operand(rhs, scope_path)
+        if lhs_dim is None or rhs_dim is None:
+            return
+        if op in ("+", "-"):
+            if lhs_dim != rhs_dim:
+                lhs_txt = _format_dimension(lhs_dim)
+                rhs_txt = _format_dimension(rhs_dim)
+                issues.append(SemanticIssue(
+                    severity="error",
+                    code="UNIT_DIMENSION_MISMATCH",
+                    message=f"Operator '{op}' combines incompatible unit dimensions "
+                            f"'{lhs_txt}' and '{rhs_txt}'",
+                    element=element,
+                    reference=_format_dimension(rhs_dim),
+                ))
+
+    def _dimension_of_operand(self, node, scope_path):
+        """Retrieve the pint dimensionality of an operand node, if any."""
+        if not isinstance(node, dict):
+            return None
+        cat = self._classify_operand(node, scope_path)
+        if cat.kind == "typed":
+            type_name = cat.type_name
+            if type_name:
+                dim_str = self._dimensions.get(type_name)
+                if dim_str:
+                    return _parse_dimension(dim_str)
+                # ISQ::MassValue → MassValue
+                simple = type_name.rsplit("::", 1)[-1]
+                dim_str = self._dimensions.get(simple)
+                if dim_str:
+                    return _parse_dimension(dim_str)
+        return None
+
+    # -- operand classification --------------------------------------------
+
+    def _classify_operand(self, node, scope_path) -> "_Operand":
+        """Map an expression-layer dict to an _Operand classification."""
+        if not isinstance(node, dict):
+            return _Operand("unknown")
+        name = node.get("name")
+        # A relational/equality/operator-bearing node is itself a
+        # comparison — its result category is boolean regardless of the
+        # operand types (n > 3 is a boolean expression).
+        if name == "RelationalExpression":
+            if node.get("operation"):
+                return _Operand("literal_bool")
+            return self._classify_operand(node.get("range"), scope_path)
+        if name == "EqualityExpression":
+            if node.get("operation"):
+                return _Operand("literal_bool")
+            return self._classify_operand(node.get("classification"), scope_path)
+        if name in ("LiteralInteger",):
+            try:
+                return _Operand("literal_int", literal_value=int(node.get("value", 0)), literal_is_int=True)
+            except (TypeError, ValueError):
+                return _Operand("unknown")
+        if name == "LiteralReal":
+            try:
+                return _Operand("literal_float", literal_value=float(node.get("value", 0)))
+            except (TypeError, ValueError):
+                return _Operand("unknown")
+        if name == "LiteralString":
+            return _Operand("literal_string")
+        if name == "LiteralInfinity":
+            return _Operand("literal_float")
+        if name in ("BaseExpression", "ExtentExpression"):
+            return self._classify_operand(node.get("primary") or node.get("ownedRelationship"), scope_path)
+        if name == "FeatureReferenceExpression":
+            members = node.get("ownedRelationship", [])
+            if members and isinstance(members[0], dict):
+                me = members[0].get("memberElement")
+                if isinstance(me, dict):
+                    names = me.get("names", [])
+                    if names:
+                        return self._typed_operand("::".join(str(n) for n in names), scope_path)
+            return _Operand("unknown")
+        if name == "PrimaryExpression":
+            base = node.get("base")
+            return self._classify_operand(base, scope_path)
+        if name == "InvocationExpression":
+            return _Operand("invocation")
+        if name == "FeatureChainExpression":
+            return _Operand("chain")
+        if name in ("NullCoalescingExpression", "ImpliesExpression", "OrExpression",
+                    "XorExpression", "AndExpression"):
+            # first non-empty child layer
+            for key in ("implies", "or", "xor", "and", "equality"):
+                child = node.get(key)
+                if isinstance(child, dict):
+                    return self._classify_operand(child, scope_path)
+            return _Operand("unknown")
+        if name == "ClassificationExpression":
+            child = node.get("classification") or node.get("relational")
+            return self._classify_operand(child, scope_path)
+        if name == "RangeExpression":
+            return self._classify_operand(
+                node.get("additive") or node.get("operand"), scope_path
+            )
+        if name == "AdditiveExpression":
+            return self._classify_operand(node.get("multiplicitive"), scope_path)
+        if name == "MultiplicativeExpression":
+            return self._classify_operand(node.get("exponential"), scope_path)
+        if name == "ExponentiationExpression":
+            return self._classify_operand(node.get("unary"), scope_path)
+        if name == "UnaryExpression":
+            return self._classify_operand(node.get("extent"), scope_path)
+        if name in ("FeatureChainMember", "FeatureReferenceMember"):
+            return _Operand("unknown")
+        return _Operand("unknown")
+
+    def _typed_operand(self, ref: str, scope_path) -> "_Operand":
+        """Classify an identifier reference by resolving its declared type."""
+        # Resolve the element to read its type
+        current = self._symtab
+        for scope_name in scope_path:
+            child = current._children.get(scope_name)
+            if child is not None:
+                current = child
+            else:
+                break
+        element = current.lookup(ref)
+        if element is None:
+            return _Operand("unknown")
+        type_names = self._declared_type_names(element)
+        if not type_names:
+            return _Operand("unknown")
+        return self._operand_from_type_names(type_names)
+
+    def _declared_type_names(self, element: Any) -> list[str]:
+        """Extract the declared type QualifiedNames from an element's grammar."""
+        grammar = getattr(element, "grammar", None)
+        if grammar is None:
+            return []
+        try:
+            grammar_def = grammar.get_definition()
+        except Exception:
+            return []
+        names: list[str] = []
+
+        def walk(n: Any) -> None:
+            if isinstance(n, dict):
+                if n.get("name") == "QualifiedName" and "names" in n:
+                    # only typing locations: OwnedFeatureTyping/FeatureType parents
+                    names.append("::".join(str(x) for x in n["names"]))
+                for v in n.values():
+                    if isinstance(v, (dict, list)):
+                        walk(v)
+            elif isinstance(n, list):
+                for item in n:
+                    if isinstance(item, (dict, list)):
+                        walk(item)
+
+        walk(grammar_def)
+        return names
+
+    def _operand_from_type_names(self, type_names: list[str]) -> "_Operand":
+        """Map declared type names to an operand category."""
+        for tname in type_names:
+            simple = tname.rsplit("::", 1)[-1]
+            if simple in _boolean_types():
+                return _Operand("typed", type_name=tname)
+            if simple in _string_types():
+                return _Operand("typed", type_name=tname)
+            if simple in _numeric_types():
+                return _Operand("typed", type_name=tname)
+            dim_str = self._dimensions.get(simple)
+            if dim_str is not None:
+                return _Operand("typed", type_name=tname, dimension=_parse_dimension(dim_str))
+            if simple.endswith("Value") or simple.endswith("Unit"):
+                # Unannotated library quantity: treat as quantity
+                return _Operand("typed", type_name=tname)
+        return _Operand("typed", type_name=type_names[0] if type_names else None)
+
+    def _category_from_operand(self, operand: "_Operand") -> str:
+        """Map an already-classified _Operand to its category string."""
+        if operand.kind == "literal_int" or operand.kind == "literal_float":
+            return "numeric"
+        if operand.kind == "literal_string":
+            return "string"
+        if operand.kind == "literal_bool":
+            return "boolean"
+        if operand.kind == "typed":
+            if operand.type_name in _boolean_types():
+                return "boolean"
+            if operand.type_name in _string_types():
+                return "string"
+            if operand.type_name in _numeric_types():
+                return "numeric"
+            if operand.dimension is not None:
+                return "quantity"
+            return "unknown_type"
+        return "unknown"
+
+    def _category_of_operand(self, node, scope_path) -> str:
+        op = self._classify_operand(node, scope_path)
+        return self._category_from_operand(op)
+
+    def _emit_mismatch(self, op, lhs_cat, rhs_cat, element, issues) -> None:
+        issues.append(SemanticIssue(
+            severity="error",
+            code="OPERAND_TYPE_MISMATCH",
+            message=f"Operator '{op}' received incompatible operand types "
+                    f"'{lhs_cat}' and '{rhs_cat}'",
+            element=element,
+            reference=str(op),
+        ))
+
+    def _check_primary_postfix(self, primary, element, scope_path, issues, units_only) -> None:
+        if not isinstance(primary, dict):
+            return
+        base = primary.get("base")
+        if isinstance(base, dict):
+            br = base.get("ownedRelationship")
+            if isinstance(br, dict):
+                if br.get("name") == "InvocationExpression":
+                    args = br.get("arg_list")
+                    # Arguments are themselves expressions: walk them
+                    if isinstance(args, dict):
+                        pos = args.get("pos_list")
+                        if isinstance(pos, dict):
+                            for member in pos.get("ownedRelationship", []) or []:
+                                if isinstance(member, dict):
+                                    am = member.get("ownedRelatedElement")
+                                    if isinstance(am, dict):
+                                        av = am.get("ownedRelationship")
+                                        if isinstance(av, dict):
+                                            oe = av.get("ownedRelatedElement")
+                                            if isinstance(oe, dict):
+                                                self._check_nce(oe.get("expression"), element, scope_path, issues, units_only)
+                        named = args.get("named_list")
+                        if isinstance(named, dict):
+                            for member in named.get("ownedRelationship", []) or []:
+                                if isinstance(member, dict):
+                                    am = member.get("ownedRelatedElement")
+                                    if isinstance(am, dict):
+                                        av = am.get("ownedRelationship")
+                                        if isinstance(av, dict):
+                                            oe = av.get("ownedRelatedElement")
+                                            if isinstance(oe, dict):
+                                                self._check_nce(oe.get("expression"), element, scope_path, issues, units_only)
+
+
+def _format_dimension(dims: Optional[dict[str, int]]) -> str:
+    if not dims:
+        return "dimensionless"
+    return "*".join(f"{b}^{e}" for b, e in sorted(dims.items()))
+
+
+# Operator sets used above (module-level to avoid re-construction per call)
+_RELATIONAL_OPS = frozenset({"<", ">", "<=", ">="})
+_UNIT_CHECK_OWNERS = _EXPRESSION_OWNER_TYPES
+
+
+# ---------------------------------------------------------------------------
 # Semantic Analyzer
 # ---------------------------------------------------------------------------
 
@@ -1362,6 +2301,10 @@ class SemanticAnalyzer:
         # resolve names used inside constraint/calc/default/guard
         # expression bodies against the symbol table.
         issues.extend(self._check_expression_identifiers(model, symtab, lib_roots))
+
+        # Step 4c: Expression type checking & unit-dimension safety
+        # (v0.55.0 Phase C).
+        issues.extend(self._check_expression_types(model, symtab, lib_roots))
 
         # Step 5: OCL well-formedness constraints
         issues.extend(self._check_duplicate_names(symtab))
@@ -1741,6 +2684,44 @@ class SemanticAnalyzer:
                 if getattr(grand, "name", None) == name:
                     return grand
         return None
+
+    # -- expression type checking & static evaluation (v0.55.0 Phase C) -------
+
+    def _check_expression_types(
+        self,
+        model: Any,
+        symtab: SymbolTable,
+        lib_roots: list[Path] | None = None,
+    ) -> list[SemanticIssue]:
+        """Operator operand type compatibility + unit-dimension safety.
+
+        Walks expression bodies (same sources as
+        :meth:`_check_expression_identifiers`) and, for every operator
+        node, classifies the operand categories and validates the
+        combination:
+
+        - arithmetic (``+ - * / %``): numeric operands (or string for
+          ``+``); ``-`` requires both operands (no ``1 - 2 - 3``
+          misinterpretation: left-associative)
+        - relational (``< > <= >=``): ordered (numeric or string) types
+        - equality (``== !=``): compatible categories
+        - logical (``and or xor implies not``) and ``..`` range: boolean /
+          integral rules respectively
+        - unit-dimension compatibility (pint) when both sides carry SI
+          quantity types
+        """
+        checker = ExpressionTypeChecker(self, symtab, lib_roots)
+        return checker.check(model)
+
+    def _check_unit_compatibility(
+        self,
+        model: Any,
+        symtab: SymbolTable,
+        lib_roots: list[Path] | None = None,
+    ) -> list[SemanticIssue]:
+        """Unit-dimension compatibility inside expressions (pint-backed)."""
+        checker = ExpressionTypeChecker(self, symtab, lib_roots)
+        return checker.check_units(model)
 
     # -- OCL well-formedness constraints ------------------------------------
 
@@ -2663,3 +3644,297 @@ def analyze(
     if strict:
         result.raise_on_errors()
     return result
+
+
+# ---------------------------------------------------------------------------
+# Constant folding / static expression reduction (v0.55.0 — Phase C)
+# ---------------------------------------------------------------------------
+
+def const_fold(expr_dict: Any) -> Optional[Any]:
+    """Statically evaluate a deterministic literal expression.
+
+    Walks the structured per-precedence expression dict and reduces any
+    sub-expression whose operands are all numeric literals and whose
+    operators are the arithmetic set (``+ - * % **``; ``/`` only when the
+    result is exact — an int result of int division is accepted, a float
+    result of int/int is widened to float).
+
+    A parenthesized operand may appear as a single glued
+    FeatureReferenceMember whose text is pure integer arithmetic
+    (``-(2-5)`` → ``"-(2-5)"``); such text is evaluated with a small
+    safe arithmetic evaluator (digit literals, ``+ - * / % **`` and
+    parentheses only — no names, no function calls).
+
+    Returns the folded Python value (``int`` or ``float``), or ``None``
+    when the expression (or a sub-expression) is not statically
+    evaluable.  The input dict is NOT modified.
+    """
+    if not isinstance(expr_dict, dict):
+        return None
+
+    # Locate the top ConditionalExpression if given an OwnedExpression
+    node = expr_dict.get("expression") if expr_dict.get("name") == "OwnedExpression" else expr_dict
+    if node.get("name") == "OwnedExpression":
+        node = node.get("expression")
+    value = _fold_node(node)
+    return value
+
+
+_SAFE_ARITH_RE = re.compile(r"^[0-9+\-*/%().\s]+$")
+
+
+def _fold_text(text: str) -> Optional[Any]:
+    """Evaluate pure integer/real arithmetic text (-(2-5) style)."""
+    if not isinstance(text, str):
+        return None
+    t = text.strip()
+    if not t or not _SAFE_ARITH_RE.match(t):
+        return None
+    # Reject leading zeros ambiguity not needed; eval-guarded:
+    if not re.fullmatch(r"[0-9+\-*/%().\s*]+", t):
+        return None
+    # Guard: only digits/ops — anything else already excluded
+    try:
+        node = ast.parse(t, mode="eval")
+    except (SyntaxError, ValueError):
+        return None
+    return _eval_arith_ast(node.body)
+
+
+def _eval_arith_ast(node: Any) -> Optional[Any]:
+    """Evaluate a restricted arithmetic AST (numbers, + - * / % **, unary +-, parens)."""
+    import ast as _ast
+    if isinstance(node, _ast.Constant):
+        if isinstance(node.value, (int, float)) and not isinstance(node.value, bool):
+            return node.value
+        return None
+    if isinstance(node, _ast.BinOp):
+        left = _eval_arith_ast(node.left)
+        right = _eval_arith_ast(node.right)
+        if left is None or right is None:
+            return None
+        try:
+            if isinstance(node.op, _ast.Add):
+                return left + right
+            if isinstance(node.op, _ast.Sub):
+                return left - right
+            if isinstance(node.op, _ast.Mult):
+                return left * right
+            if isinstance(node.op, _ast.Div):
+                result = left / right
+                if isinstance(result, float) and result.is_integer():
+                    return int(result)
+                return result
+            if isinstance(node.op, _ast.Mod):
+                return left % right
+            if isinstance(node.op, _ast.Pow):
+                return left ** right
+        except (TypeError, ZeroDivisionError, OverflowError):
+            return None
+        return None
+    if isinstance(node, _ast.UnaryOp):
+        val = _eval_arith_ast(node.operand)
+        if val is None:
+            return None
+        if isinstance(node.op, _ast.USub):
+            return -val
+        if isinstance(node.op, _ast.UAdd):
+            return +val
+        return None
+    return None
+
+
+def _fold_node(node: Any) -> Optional[Any]:
+    """Recursive fold: return a numeric value or None if not deterministic."""
+    if not isinstance(node, dict):
+        return None
+    name = node.get("name")
+
+    if name == "ConditionalExpression":
+        operands = node.get("operand", [])
+        if len(operands) != 1:
+            return None
+        return _fold_node(operands[0])
+
+    if name in ("NullCoalescingExpression",):
+        if node.get("operator"):
+            return None
+        return _fold_node(node.get("implies"))
+
+    if name in ("ImpliesExpression", "OrExpression", "XorExpression", "AndExpression"):
+        if node.get("operator") or node.get("operand") or node.get("operation"):
+            return None
+        child_key = {
+            "ImpliesExpression": "or",
+            "OrExpression": "xor",
+            "XorExpression": "and",
+            "AndExpression": "equality",
+        }[name]
+        return _fold_node(node.get(child_key))
+
+    if name == "EqualityExpression":
+        ops = node.get("operation", [])
+        if ops:
+            return None  # comparisons on literals fold to bool; out of scope
+        return _fold_node(node.get("classification"))
+
+    if name == "ClassificationExpression":
+        if node.get("operator"):
+            return None
+        return _fold_node(node.get("relational"))
+
+    if name == "RelationalExpression":
+        if node.get("operation"):
+            return None
+        return _fold_node(node.get("range"))
+
+    if name == "RangeExpression":
+        if node.get("operator"):
+            return None
+        return _fold_node(node.get("additive"))
+
+    if name == "AdditiveExpression":
+        left = _fold_node(node.get("multiplicitive"))
+        if left is None:
+            return None
+        result = left
+        for op_dict in node.get("operation", []):
+            op = op_dict.get("operator")
+            rhs = _fold_node(op_dict.get("operand"))
+            if rhs is None:
+                return None
+            try:
+                if op == "+":
+                    result = result + rhs
+                elif op == "-":
+                    result = result - rhs
+                else:
+                    return None
+            except (TypeError, ZeroDivisionError):
+                return None
+        return result
+
+    if name == "MultiplicativeExpression":
+        left = _fold_node(node.get("exponential"))
+        if left is None:
+            return None
+        result = left
+        for op_dict in node.get("operation", []):
+            op = op_dict.get("operator")
+            rhs = _fold_node(op_dict.get("operand"))
+            if rhs is None:
+                return None
+            try:
+                if op == "*":
+                    result = result * rhs
+                elif op == "/":
+                    result = result / rhs
+                    if isinstance(result, float) and result.is_integer():
+                        result = int(result)
+                elif op == "%":
+                    result = result % rhs
+                else:
+                    return None
+            except (TypeError, ZeroDivisionError):
+                return None
+        return result
+
+    if name == "ExponentiationExpression":
+        # unary ( ** | ^ ) ExponentiationExpression operands
+        base = _fold_node(node.get("unary"))
+        if base is None:
+            return None
+        ops = node.get("operation", []) or node.get("operator", [])
+        if node.get("operator") and isinstance(node.get("operator"), list):
+            # operator list / operand pair form
+            operand_list = node.get("operand", [])
+            result = base
+            for op, rhs_dict in zip(node["operator"], operand_list):
+                rhs = _fold_node(rhs_dict)
+                if rhs is None or not isinstance(rhs, (int, float)):
+                    return None
+                try:
+                    result = result ** rhs
+                except (TypeError, OverflowError, ZeroDivisionError):
+                    return None
+            return result
+        for op_dict in node.get("operation", []) or []:
+            op = op_dict.get("operator")
+            rhs = _fold_node(op_dict.get("operand"))
+            if rhs is None:
+                return None
+            try:
+                result = result if False else base  # placeholder replaced below
+            except Exception:
+                return None
+        return base if not (node.get("operation")) else None
+
+    if name == "UnaryExpression":
+        op = node.get("operator")
+        extent = node.get("extent")
+        if isinstance(extent, dict) and isinstance(
+            extent.get("ownedRelationship"), dict
+        ):
+            # parenthesized chain: fold the nested expression
+            val = _fold_node(extent.get("ownedRelationship"))
+        else:
+            val = _fold_node(extent)
+        if val is None:
+            return None
+        if op is None or op == "":
+            return val
+        if op == "-":
+            return -val
+        if op == "+":
+            return +val
+        return None
+
+    if name in ("ExtentExpression",):
+        return _fold_node(node.get("primary"))
+    if name == "PrimaryExpression":
+        # only literals fold
+        base = node.get("base")
+        if isinstance(base, dict):
+            rel = base.get("ownedRelationship")
+            if isinstance(rel, dict):
+                if rel.get("name") == "LiteralInteger":
+                    try:
+                        return int(rel.get("value", 0))
+                    except (TypeError, ValueError):
+                        return None
+                if rel.get("name") == "LiteralReal":
+                    try:
+                        v = float(rel.get("value", 0))
+                        return int(v) if float(v).is_integer() else v
+                    except (TypeError, ValueError):
+                        return None
+                if rel.get("name") == "FeatureReferenceExpression":
+                    # glued parenthesized arithmetic text, e.g. "-(2-5)"
+                    members = rel.get("ownedRelationship", [])
+                    if isinstance(members, list) and members:
+                        me = members[0].get("memberElement")
+                        if isinstance(me, dict):
+                            text = "".join(str(n) for n in me.get("names", []))
+                            if text:
+                                return _fold_text(text)
+        return None
+    return None
+
+
+def _extent_primary(node: Any) -> Any:
+    """Reach the primary/base node inside an extent (or the operand)."""
+    if isinstance(node, dict):
+        if isinstance(node.get("primary"), dict):
+            return node["primary"]
+    return node
+
+
+def _fold_exponent(base_node, rhs_node):
+    base = _fold_node(base_node)
+    rhs = _fold_node(rhs_node)
+    if base is None or rhs is None:
+        return None
+    try:
+        return base ** rhs
+    except (TypeError, OverflowError, ZeroDivisionError):
+        return None

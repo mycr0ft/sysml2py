@@ -1,8 +1,8 @@
 # sysmlpy — Project Work Summary
 
 > **For:** Future agents and team members
-> **Last Updated:** August 30, 2026
-> **Current Version:** v0.54.0
+> **Last Updated:** August 31, 2026
+> **Current Version:** v0.55.0
 > **Repository:** https://github.com/mycr0ft/sysmlpy
 > **Master Development Plan:** [docs/DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)
 
@@ -42,7 +42,7 @@ sysmlpy/
 │   ├── main_test.py         # 7 integration tests
 │   ├── plantuml_test.py     # 122 PlantUML view rendering tests
 │   ├── boxes_view_test.py   # 19 boxes-backed state-machine visualizer tests (v0.36.0)
-│   ├── semantic_test.py     # 136 semantic analysis tests
+│   ├── semantic_test.py     # 153 semantic analysis tests
 │   ├── project_test.py      # 17 multi-file loading tests
 │   ├── navigate_test.py     # 42 model navigation tests
 │   ├── import_test.py       # 21 import resolution tests
@@ -95,6 +95,7 @@ The semantic analysis engine (`semantic.py`) provides comprehensive validation:
 | **Library Symbol Index** | ✅ Complete | Scans 88 `.kerml`/`.sysml` files (~1,604 symbols, incl. `function` decls) |
 | **Inheritance Resolution** | ✅ Complete | Supertype chain traversal for subsetting/redefinition |
 | **Expression Name Resolution** | ✅ Complete (v0.54.0) | Identifiers in constraint/calc/default/guard bodies resolve against the symbol table; segment-by-segment feature-chain resolution |
+| **Expression Type Checking** | ✅ Complete (v0.55.0) | Operand-category rules (`OPERAND_TYPE_MISMATCH`) + `+`/`-` unit-dimension safety via pint (`UNIT_DIMENSION_MISMATCH`); `const_fold()` static reduction |
 | **OCL Constraints** | ✅ 8 of 8 | See table below |
 
 ### Multi-File Projects (v0.21.0)

@@ -6,16 +6,24 @@ See [STATUS.md](STATUS.md) and [CHANGELOG.md](CHANGELOG.md) for the current proj
 
 ---
 
-## Active Tasks (Phase C: v0.55.0)
+## Active Tasks (Phase D: v0.56.0+)
 
-- [ ] **Expression Type Checking & Static Evaluation:**
-  - [ ] Operator operand type compatibility (numeric, boolean, string) on the structured expression AST
-  - [ ] Pint unit-dimension compatibility checking inside expressions (`[m] + [kg]` → error)
-  - [ ] Constant folding / static expression reduction (e.g. `10 [kg] * 2` → `20 [kg]`)
+- [ ] **High-Performance Parsing & Graph Store Integration:**
+  - [ ] ANTLR SLL fast-path prediction for large models (SLL → LL fallback)
+  - [ ] `*`/`/` dimension derivation (e.g. `mass * speed` vs `ForceValue` inference)
+  - [ ] Kùzu Cypher structural graph query extensions
+  - [ ] NetworkX path queries / centrality analysis extensions
 
 ---
 
 ## Recently Completed
+
+- [x] **Phase C (v0.55.0):** Expression type checking & unit safety
+  - [x] `OPERAND_TYPE_MISMATCH` for logical/relational/equality/arithmetic rules
+  - [x] `UNIT_DIMENSION_MISMATCH` for `+`/`-` on differing ISQ dimensions (pint-backed)
+  - [x] `const_fold()` static reduction incl. safe parenthesized-text arithmetic
+  - [x] Structured boolean-keyword emission (`and`/`or`/`xor`/`implies`) + round-trip
+  - [x] `**`/`^` exponentiation split; `true`/`false` as `LiteralBoolean` primaries
 
 - [x] **Phase B (v0.54.0):** Name resolution on structured expressions
   - [x] `_walk_expression_identifiers` + `ExpressionIdentifierCollector` in `semantic.py`
@@ -33,4 +41,4 @@ See [STATUS.md](STATUS.md) and [CHANGELOG.md](CHANGELOG.md) for the current proj
 
 ## Upcoming Milestones
 
-- [ ] **Phase D (v0.56.0+):** ANTLR SLL mode fast-path parsing & graph store query enhancements
+- (none — Phase D is the final planned phase; see docs/DEVELOPMENT_PLAN.md)

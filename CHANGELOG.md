@@ -1,5 +1,52 @@
 # CHANGELOG
 
+## v0.55.0 (2026-08-31)
+
+### :balance_scale: Phase C — Expression Type Checking & Unit Safety
+
+Operator operand-type compatibility and pint unit-dimension safety now
+run as analyzer step 4c (`SemanticAnalyzer._check_expression_types`):
+
+- **Operator rules** — `OPERAND_TYPE_MISMATCH` errors for:
+  - logical (`and`/`or`/`xor`/`implies`/`not`) with non-boolean operands
+  - relational (`< > <= >=`) with unordered (boolean) operands
+  - equality (`==`/`!=`) comparing boolean with non-boolean
+  - arithmetic with string/boolean mismatches (`"a" + 5`, `flag * 2`)
+- **Unit dimensions** — `UNIT_DIMENSION_MISMATCH` errors when `+`/`-`
+  combine different ISO-80000 dimensions (adding `[m]` to `[kg]`).
+  Dimensionless `+ quantity` and `*`/`/` of any dimensions are allowed.
+  Dimensions are extracted from the bundled ISQ library's
+  `quantity dimension:` annotations (~560 value/unit types indexed,
+  alias-aware).
+- **Constant folding** — new `const_fold(expr_dict)` utility statically
+  reduces deterministic literal expressions (`2 + 3 * 4` → `14`,
+  `2 ** 10` → `1024`, `-(2-5)` → `3`) with a restricted safe arithmetic
+  evaluator for parenthesized text forms; non-numeric operands return
+  `None`.
+
+Structured boolean-keyword emission (prerequisite fix): `and`, `or`,
+`xor`, `implies` operators were previously collapsed to glued text
+(`aandb`) by the visitor — they now emit structured
+`And/Or/Xor/Implies-Operand` dicts and the grammar classes render them
+on round-trip (`a and b`, `a or (b and c)` survive
+parse→dump→parse). `**`/`^` exponentiation now also splits instead of
+gluing text. Boolean literals `true`/`false` capture as
+`LiteralBoolean` primary nodes (new grammar class) so type checking can
+classify them.
+
+Operand typing resolves each identifier to its declared type
+(`ScalarValues::Integer`, `ISQ::MassValue`, …) through the Phase B
+scope machinery; comparison chains (`n > 3 and n < 10`) classify as
+boolean results.
+
+Scope notes: `*`/`/` dimension derivation (e.g. `mass * speed !=
+ForceValue` inference) and unit-conversion folding are Phase D scope;
+multiplication is only checked for non-numeric operand categories.
+
+17 new tests in `tests/semantic_test.py` (153 total).
+Full suite: **836 passed** (incl. 143 grammar round-trip + 123
+conformance).
+
 ## v0.54.0 (2026-08-30)
 
 ### :mag: Phase B — Name Resolution on Structured Expressions

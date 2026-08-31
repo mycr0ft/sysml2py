@@ -14,20 +14,20 @@ and dropped the textX parser in favor of [an ANTLR4 parser grammar](https://gith
 changed our unit library to pint.
 The project had diverged so much from sysml2py that a new name, sysmlpy, was selected.
 
-> **⚠️ Constraints are changing.** As of v0.54.0, names inside
-> constraint / calc / default-value / guard expressions are **resolved
-> against the symbol table** — unresolved identifiers now produce
-> `UNRESOLVED_EXPRESSION_IDENTIFIER` errors from `analyze()`. Coming
-> next (v0.55.0): operand **type checking** and pint
-> **unit-dimension compatibility** inside expressions, which may turn
-> more currently-clean models into semantic errors. Track progress in
-> [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md).
+> **⚠️ Constraints are changing.** As of v0.55.0, `analyze()` performs
+> full expression validation: identifiers are **resolved against the
+> symbol table** (v0.54.0) and operators are **type- and
+> unit-checked** — `flag and n`, `"a" + 5`, and `[m] + [kg]` all raise
+> `OPERAND_TYPE_MISMATCH` / `UNIT_DIMENSION_MISMATCH` errors. Deterministic
+> literal expressions can be reduced with `const_fold()`. Coming next
+> (Phase D): parsing performance and graph-store query extensions.
+> Track progress in [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md).
 
 > **Scope reminder** — a green parse result means the file **parsed
-> syntactically**. Expression identifiers are only checked when you run
-> `analyze(model)` explicitly, and operand type / unit checking inside
-> expressions is not yet implemented, so a constraint with mismatched
-> units will currently pass analysis. See
+> syntactically**. Expression validation (name resolution, type and
+> unit checks) runs only when you call `analyze(model)` explicitly.
+> Multiplication/division dimension *derivation* (inferring
+> `[N]` from `[kg] * [m/s^2]`) is not yet implemented. See
 > [STATUS.md §Known Issues](STATUS.md#known-issues).
 
 For release history, see [CHANGELOG.md](CHANGELOG.md).
