@@ -1017,8 +1017,8 @@
 <h1 id="sysmlpy-project-work-summary">sysmlpy — Project Work Summary<a class="headerlink" href="#sysmlpy-project-work-summary" title="Permanent link">&para;</a></h1>
 <blockquote>
 <p><strong>For:</strong> Future agents and team members
-<strong>Last Updated:</strong> August 28, 2026
-<strong>Current Version:</strong> v0.53.0
+<strong>Last Updated:</strong> August 30, 2026
+<strong>Current Version:</strong> v0.53.1
 <strong>Repository:</strong> https://github.com/mycr0ft/sysmlpy
 <strong>Master Development Plan:</strong> <a href="../DEVELOPMENT_PLAN/">docs/DEVELOPMENT_PLAN.md</a></p>
 </blockquote>
@@ -1048,7 +1048,7 @@
 <a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>│       ├── systems/         # SysML base (SysML.sysml)
 <a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>│       └── domain/          # ISQ, SI units, base quantities
 <a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>├── tests/
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>│   ├── grammar_test.py      # 96 round-trip tests (96 pass, 0 deferred)
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>│   ├── grammar_test.py      # 143 round-trip tests (143 pass, 0 deferred)
 <a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>│   ├── class_test.py        # 61 programmatic API tests
 <a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>│   ├── main_test.py         # 7 integration tests
 <a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│   ├── plantuml_test.py     # 122 PlantUML view rendering tests
@@ -1080,8 +1080,10 @@
 </ul>
 <h3 id="grammar-round-trip">Grammar Round-Trip<a class="headerlink" href="#grammar-round-trip" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>96/96 grammar round-trip tests pass</strong> (100%)</li>
-<li>Every grammar class has <code>dump()</code> and <code>get_definition()</code> for serialization</li>
+<li><strong>143/143 grammar round-trip tests pass</strong> (100%)</li>
+<li>Every grammar class has <code>dump()</code> and <code>get_definition()</code> for serialization —
+  v0.53.1 added <code>get_definition()</code> to the final 36 missing classes and
+  verified 358/358 via reflection audit</li>
 <li>All 68+ <code>raise NotImplementedError</code> stubs replaced with graceful handling (v0.27.0)</li>
 <li>Missing classes added: <code>DefinitionBody</code>, <code>DefinitionBodyItem</code>, <code>FeatureSpecializationPart</code>, <code>SubclassificationPart</code></li>
 <li><code>classtree()</code> converts Model tree back to text</li>

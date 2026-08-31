@@ -456,10 +456,21 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#active-tasks-phase-a-v0531" class="md-nav__link">
+  <a href="#active-tasks-phase-b-v0540" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Active Tasks (Phase A: v0.53.1)
+        Active Tasks (Phase B: v0.54.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recently-completed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recently Completed
       
     </span>
   </a>
@@ -512,10 +523,21 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#active-tasks-phase-a-v0531" class="md-nav__link">
+  <a href="#active-tasks-phase-b-v0540" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Active Tasks (Phase A: v0.53.1)
+        Active Tasks (Phase B: v0.54.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recently-completed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recently Completed
       
     </span>
   </a>
@@ -557,21 +579,26 @@
 <p>See the comprehensive <a href="docs/DEVELOPMENT_PLAN.md">Master Development Plan</a> for architectural roadmap, active development phases, and planned milestones.</p>
 <p>See <a href="../STATUS/">STATUS.md</a> and <a href="../CHANGELOG/">CHANGELOG.md</a> for the current project status and release history.</p>
 <hr />
-<h2 id="active-tasks-phase-a-v0531">Active Tasks (Phase A: v0.53.1)<a class="headerlink" href="#active-tasks-phase-a-v0531" title="Permanent link">&para;</a></h2>
+<h2 id="active-tasks-phase-b-v0540">Active Tasks (Phase B: v0.54.0)<a class="headerlink" href="#active-tasks-phase-b-v0540" title="Permanent link">&para;</a></h2>
 <ul>
-<li>[ ] <strong>Grammar Class <code>get_definition()</code> Completeness:</strong></li>
-<li>[ ] Add <code>AdditiveOperand.get_definition()</code> in <code>src/sysmlpy/grammar/classes.py</code></li>
-<li>[ ] Add <code>AssignmentNode.get_definition()</code> in <code>src/sysmlpy/grammar/classes.py</code></li>
-<li>[ ] Add <code>TriggerValuePart.get_definition()</code>, <code>TriggerFeatureValue.get_definition()</code>, <code>TriggerExpression.get_definition()</code></li>
-<li>[ ] Run reflection audit across all ~354 grammar classes to ensure zero missing <code>get_definition()</code> or <code>children</code> implementations</li>
-<li>[ ] <strong>XPect Conformance Suite:</strong></li>
-<li>[ ] Update <code>tests/sysmlv2/validation/valid/Import_Visibility_Valid.error</code> to match the expected syntax error on bare import</li>
-<li>[ ] Verify 123/123 (100%) passing conformance suite</li>
+<li>[ ] <strong>Name Resolution on Structured Expressions:</strong></li>
+<li>[ ] Expression AST walker (<code>_walk_expression_identifiers</code>) in <code>semantic.py</code></li>
+<li>[ ] Symbol resolution for <code>FeatureReferenceExpression</code> / <code>FeatureChainMember</code> against <code>SymbolTable</code></li>
+<li>[ ] Unqualified-name lookup in local scopes (calc parameters, state variables, enclosing definitions)</li>
+<li>[ ] Qualified-name lookup against package namespaces and <code>LibrarySymbolIndex</code></li>
+<li>[ ] Emit <code>SemanticIssue(error)</code> for unresolved expression identifiers</li>
+</ul>
+<hr />
+<h2 id="recently-completed">Recently Completed<a class="headerlink" href="#recently-completed" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <strong>Phase A (v0.53.1):</strong> Grammar Class Integrity &amp; 100% Parse Conformance</li>
+<li>[x] <code>get_definition()</code> added to all 36 missing classes (reflection audit: 358/358)</li>
+<li>[x] <code>ReturnParameterMember</code> list-vs-dict round-trip bug fixed</li>
+<li>[x] <code>Import_Visibility_Valid.error</code> updated; XPect conformance 123/123 (100%)</li>
 </ul>
 <hr />
 <h2 id="upcoming-milestones">Upcoming Milestones<a class="headerlink" href="#upcoming-milestones" title="Permanent link">&para;</a></h2>
 <ul>
-<li>[ ] <strong>Phase B (v0.54.0):</strong> Name resolution on structured expressions (<code>assert constraint</code>, <code>calc</code>, <code>constraint</code>, <code>default value</code>)</li>
 <li>[ ] <strong>Phase C (v0.55.0):</strong> Semantic expression type compatibility and unit safety checking</li>
 <li>[ ] <strong>Phase D (v0.56.0+):</strong> ANTLR SLL mode fast-path parsing &amp; graph store query enhancements</li>
 </ul>

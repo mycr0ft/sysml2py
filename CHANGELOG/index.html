@@ -431,6 +431,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0531-2026-08-30" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.53.1 (2026-08-30)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.53.1 (2026-08-30)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-phase-a-grammar-class-integrity-100-parse-conformance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Phase A — Grammar Class Integrity &amp; 100% Parse Conformance
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0530-2026-08-28" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2474,6 +2502,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0531-2026-08-30" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.53.1 (2026-08-30)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.53.1 (2026-08-30)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-phase-a-grammar-class-integrity-100-parse-conformance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Phase A — Grammar Class Integrity &amp; 100% Parse Conformance
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0530-2026-08-28" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4476,6 +4532,41 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0531-2026-08-30">v0.53.1 (2026-08-30)<a class="headerlink" href="#v0531-2026-08-30" title="Permanent link">&para;</a></h2>
+<h3 id="white_check_mark-phase-a-grammar-class-integrity-100-parse-conformance">:white_check_mark: Phase A — Grammar Class Integrity &amp; 100% Parse Conformance<a class="headerlink" href="#white_check_mark-phase-a-grammar-class-integrity-100-parse-conformance" title="Permanent link">&para;</a></h3>
+<p>All 358 grammar classes in <code>src/sysmlpy/grammar/classes.py</code> now implement
+<code>get_definition()</code> (verified by reflection audit — 36 were missing). The
+complete list of additions: <code>ActionBodyItemTarget</code>, <code>AdditiveOperand</code>,
+<code>AnnotatingMember</code>, <code>AssignmentNode</code>, <code>BodyExpression</code>, <code>ChangeExpression</code>,
+<code>ChangeExpressionMember</code>, <code>ChangeResultExpressionMember</code>,
+<code>ConjugatedPortTyping</code>, <code>DefinitionExtensionKeyword</code>, <code>DefinitionPrefix</code>,
+<code>EffectBehaviorUsage</code>, <code>EqualityExpressionMember</code>,
+<code>EqualityExpressionReference</code>, <code>ExpressionBody</code>, <code>ExpressionBodyMember</code>,
+<code>FeatureChainPrefix</code>, <code>IndividualUsage</code>, <code>ItemFeature</code>, <code>ItemFeatureMember</code>,
+<code>MultiplicitySourceEnd</code>, <code>MultiplicitySourceEndMember</code>, <code>NamedArgument</code>,
+<code>NamedArgumentList</code>, <code>NamedArgumentMember</code>, <code>OwnedExpressionMember</code>,
+<code>ParameterRedefinition</code>, <code>PayloadFeatureSpecializationPart</code>,
+<code>ReferenceTyping</code>, <code>ReturnParameterMember</code>, <code>StructureUsageMember</code>,
+<code>Succession</code>, <code>TriggerExpression</code>, <code>TriggerFeatureValue</code>, <code>TriggerValuePart</code>.</p>
+<p>Round-trip bugs fixed along the way:</p>
+<ul>
+<li><code>ReturnParameterMember.get_definition()</code> emitted <code>ownedRelatedElement</code>
+  as a list; <code>UsageElement.__init__</code> (and the visitor) expect a single
+  dict. <code>loads()</code> on models with calc <code>return</code> members
+  (<code>simpletests/AssignmentTest.sysml</code>) previously raised
+  <code>TypeError: This does not seem to be valid.</code></li>
+<li><code>MultiplicitySourceEnd</code> only kept the last <code>OwnedMultiplicity</code> child;
+  now accumulates all children like its siblings.</li>
+</ul>
+<p>XPect parse conformance is now <strong>123/123 (100%)</strong>:</p>
+<ul>
+<li><code>Import_Visibility_Valid.error</code> updated to expect the
+  <code>extraneous input 'import'</code> syntax error the corrected grammar raises
+  on a bare import (imports require explicit visibility per the
+  normative OMG spec).</li>
+</ul>
+<p>Test results: fast suite 684/684, grammar round-trip 143/143, XPect
+conformance 123/123.</p>
 <h2 id="v0530-2026-08-28">v0.53.0 (2026-08-28)<a class="headerlink" href="#v0530-2026-08-28" title="Permanent link">&para;</a></h2>
 <h3 id="sparkles-per-precedence-expression-grammar-structured-cascade-emit">:sparkles: Per-precedence expression grammar + structured cascade emit<a class="headerlink" href="#sparkles-per-precedence-expression-grammar-structured-cascade-emit" title="Permanent link">&para;</a></h3>
 <p>The vendored SysML v2 grammar is regenerated from the upstream
