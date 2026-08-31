@@ -431,6 +431,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0560-2026-08-31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.56.0 (2026-08-31)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.56.0 (2026-08-31)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rocket-phase-d-high-performance-parsing-graph-store-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :rocket: Phase D — High-Performance Parsing &amp; Graph Store Queries
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0550-2026-08-31" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2558,6 +2586,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0560-2026-08-31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.56.0 (2026-08-31)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.56.0 (2026-08-31)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rocket-phase-d-high-performance-parsing-graph-store-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :rocket: Phase D — High-Performance Parsing &amp; Graph Store Queries
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0550-2026-08-31" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4644,6 +4700,45 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0560-2026-08-31">v0.56.0 (2026-08-31)<a class="headerlink" href="#v0560-2026-08-31" title="Permanent link">&para;</a></h2>
+<h3 id="rocket-phase-d-high-performance-parsing-graph-store-queries">:rocket: Phase D — High-Performance Parsing &amp; Graph Store Queries<a class="headerlink" href="#rocket-phase-d-high-performance-parsing-graph-store-queries" title="Permanent link">&para;</a></h3>
+<p><strong>Two-stage SLL → LL parsing</strong> (<code>/antlr_parser.py</code>): <code>parse()</code> now runs
+the ANTLR prediction in fast <strong>SLL</strong> mode first and falls back to the
+full-context <strong>LL</strong> pass only when the SLL attempt fails.  For valid
+input the tree is produced in a single parser build; for invalid input
+the fallback reproduces the error at the same source position (message
+wording can differ between prediction modes — e.g. "missing '}' at
+'<EOF>'" vs "extraneous input '<EOF>' expecting {...}").  New
+<code>prediction_mode=</code> parameter: <code>"sll"</code> (default, two-stage), <code>"ll"</code>
+(force full-context), <code>"sll_only"</code> (no fallback).</p>
+<p>Benchmark (6,000-element model, warmed DFA cache): parse-only time
+<strong>4.92 s (SLL) vs 7.89 s (LL) — 38&nbsp;% faster</strong>.  Cold first parse
+also carries a one-time ANTLR DFA-construction cost (~5 s) shared
+across all subsequent parses in the process.  End-to-end <code>loads()</code> on
+a 4,002-element model: 9.0 s.</p>
+<p><strong>Graph query extensions</strong> (<code>store.py</code>):</p>
+<ul>
+<li><code>NetworkXStore.all_paths(src, dst, rel_type=None, max_paths=20)</code> —
+  enumerates simple paths for impact/routing analysis</li>
+<li><code>NetworkXStore.descendants_depth_limited(root, max_depth)</code> —
+  hierarchy-level queries ("direct children of this level")</li>
+<li><code>NetworkXStore.neighborhood(id, radius)</code> — ego-graph in both
+  directions</li>
+<li><code>NetworkXStore.impact_analysis(id, rel_types, direction)</code> —
+  transitive downstream/upstream blast-radius</li>
+<li><code>NetworkXStore.in_degree_centrality / out_degree_centrality</code> —
+  hub detection per direction</li>
+<li><code>KuzuStore.execute_cypher(query)</code> — raw Cypher passthrough returning
+  rows as dicts (node values flattened to id/name/sysml_type;
+  path node lists flattened to id lists)</li>
+<li><code>KuzuStore.shortest_path_between_named(a, b)</code> — hop-by-hop expand
+  (Kùzu has no <code>shortestPath()</code> builtin)</li>
+<li><code>KuzuStore.siblings(id)</code> — structural siblings</li>
+<li><code>KuzuStore.hub_elements(min_degree, direction)</code> — outgoing/incoming/
+  both degree hubs</li>
+</ul>
+<p>19 new tests (<code>tests/two_stage_parse_test.py</code> 7, <code>tests/store_test.py</code>
++12).  Full suite: <strong>809 fast + 123 conformance passed.</strong></p>
 <h2 id="v0550-2026-08-31">v0.55.0 (2026-08-31)<a class="headerlink" href="#v0550-2026-08-31" title="Permanent link">&para;</a></h2>
 <h3 id="balance_scale-phase-c-expression-type-checking-unit-safety">:balance_scale: Phase C — Expression Type Checking &amp; Unit Safety<a class="headerlink" href="#balance_scale-phase-c-expression-type-checking-unit-safety" title="Permanent link">&para;</a></h3>
 <p>Operator operand-type compatibility and pint unit-dimension safety now

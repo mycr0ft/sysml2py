@@ -456,10 +456,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#active-tasks-phase-d-v0560" class="md-nav__link">
+  <a href="#active-tasks-post-phase-d-candidates" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Active Tasks (Phase D: v0.56.0+)
+        Active Tasks (Post-Phase-D candidates)
       
     </span>
   </a>
@@ -523,10 +523,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#active-tasks-phase-d-v0560" class="md-nav__link">
+  <a href="#active-tasks-post-phase-d-candidates" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Active Tasks (Phase D: v0.56.0+)
+        Active Tasks (Post-Phase-D candidates)
       
     </span>
   </a>
@@ -579,18 +579,29 @@
 <p>See the comprehensive <a href="docs/DEVELOPMENT_PLAN.md">Master Development Plan</a> for architectural roadmap, active development phases, and planned milestones.</p>
 <p>See <a href="../STATUS/">STATUS.md</a> and <a href="../CHANGELOG/">CHANGELOG.md</a> for the current project status and release history.</p>
 <hr />
-<h2 id="active-tasks-phase-d-v0560">Active Tasks (Phase D: v0.56.0+)<a class="headerlink" href="#active-tasks-phase-d-v0560" title="Permanent link">&para;</a></h2>
+<h2 id="active-tasks-post-phase-d-candidates">Active Tasks (Post-Phase-D candidates)<a class="headerlink" href="#active-tasks-post-phase-d-candidates" title="Permanent link">&para;</a></h2>
+<p>Phases A–D from the <a href="docs/DEVELOPMENT_PLAN.md">Master Development Plan</a>
+are complete.  Candidate follow-up work:</p>
 <ul>
-<li>[ ] <strong>High-Performance Parsing &amp; Graph Store Integration:</strong></li>
-<li>[ ] ANTLR SLL fast-path prediction for large models (SLL → LL fallback)</li>
-<li>[ ] <code>*</code>/<code>/</code> dimension derivation (e.g. <code>mass * speed</code> vs <code>ForceValue</code> inference)</li>
-<li>[ ] Kùzu Cypher structural graph query extensions</li>
-<li>[ ] NetworkX path queries / centrality analysis extensions</li>
+<li>[ ] <code>*</code>/<code>/</code> unit-dimension derivation (e.g. <code>mass * speed</code> vs <code>ForceValue</code> inference)</li>
+<li>[ ] SLL error-message parity (align ANTLR wording between prediction modes)</li>
+<li>[ ] Persistent DFA cache serialization to eliminate cold-start parse cost</li>
+<li>[ ] Visitor performance profiling (<code>parse_to_dict</code> dominates end-to-end time)</li>
+<li>[ ] CayleyStore query extensions (parity with NetworkX/Kùzu)</li>
 </ul>
 <hr />
 <h2 id="recently-completed">Recently Completed<a class="headerlink" href="#recently-completed" title="Permanent link">&para;</a></h2>
 <ul>
-<li>[x] <strong>Phase C (v0.55.0):</strong> Expression type checking &amp; unit safety</li>
+<li>[x] <strong>Phase D (v0.56.0):</strong> High-performance parsing &amp; graph store queries</li>
+<li>[x] Two-stage SLL → LL parse with single-build fast path (38% faster parse)</li>
+<li>[x] <code>prediction_mode=</code> parameter (sll / ll / sll_only)</li>
+<li>[x] NetworkX: <code>all_paths</code>, <code>descendants_depth_limited</code>, <code>neighborhood</code>, <code>impact_analysis</code>, in/out-degree centrality</li>
+<li>
+<p>[x] Kùzu: <code>execute_cypher</code> passthrough, <code>shortest_path_between_named</code>, <code>siblings</code>, <code>hub_elements</code></p>
+</li>
+<li>
+<p>[x] <strong>Phase C (v0.55.0):</strong> Expression type checking &amp; unit safety</p>
+</li>
 <li>[x] <code>OPERAND_TYPE_MISMATCH</code> for logical/relational/equality/arithmetic rules</li>
 <li>[x] <code>UNIT_DIMENSION_MISMATCH</code> for <code>+</code>/<code>-</code> on differing ISQ dimensions (pint-backed)</li>
 <li>[x] <code>const_fold()</code> static reduction incl. safe parenthesized-text arithmetic</li>

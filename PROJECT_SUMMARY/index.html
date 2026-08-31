@@ -1018,7 +1018,7 @@
 <blockquote>
 <p><strong>For:</strong> Future agents and team members
 <strong>Last Updated:</strong> August 31, 2026
-<strong>Current Version:</strong> v0.55.0
+<strong>Current Version:</strong> v0.56.0
 <strong>Repository:</strong> https://github.com/mycr0ft/sysmlpy
 <strong>Master Development Plan:</strong> <a href="../DEVELOPMENT_PLAN/">docs/DEVELOPMENT_PLAN.md</a></p>
 </blockquote>
@@ -1029,7 +1029,7 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>sysmlpy/
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── src/sysmlpy/
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│   ├── __init__.py          # Public API: loads(), load(), analyze(), load_files(), load_project()
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   ├── antlr_parser.py      # ANTLR4 lexer/parser setup
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   ├── antlr_parser.py      # ANTLR4 lexer/parser — two-stage SLL→LL (v0.56.0)
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│   ├── antlr_visitor.py     # ~12.3K lines: parse tree → internal dict
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   ├── grammar/
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│   │   ├── classes.py       # ~9.7K lines: grammar class hierarchy (no NotImplementedError)
@@ -1038,7 +1038,7 @@
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│   ├── usage.py             # Part, Item, Attribute, Port, Action, etc.
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│   ├── semantic.py          # Semantic analysis engine (~2.7K lines)
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│   ├── project.py           # Multi-file project loading (load_files, load_project)
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   ├── store.py             # Storage backends (memory, NetworkX, Kuzu, Cayley)
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   ├── store.py             # Storage backends + query extensions (paths/impact/Cypher)
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│   ├── plantuml.py          # PlantUML diagram generation
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│   ├── boxes_view.py        # Optional boxes-backed state-machine visualizer (v0.36.0)
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│   ├── formatting.py        # classtree() for round-trip serialization

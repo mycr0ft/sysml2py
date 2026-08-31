@@ -1210,7 +1210,7 @@
 
 
 <h1 id="sysmlpy-project-status">sysmlpy — Project Status<a class="headerlink" href="#sysmlpy-project-status" title="Permanent link">&para;</a></h1>
-<p>Current version: <strong>v0.55.0</strong> (2026-08-31)</p>
+<p>Current version: <strong>v0.56.0</strong> (2026-08-31)</p>
 <hr />
 <h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
 <h3 id="public-api-classes">Public API Classes<a class="headerlink" href="#public-api-classes" title="Permanent link">&para;</a></h3>
@@ -1832,6 +1832,11 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 <td>✅ All pass</td>
 </tr>
 <tr>
+<td><code>tests/two_stage_parse_test.py</code></td>
+<td>7</td>
+<td>✅ All pass</td>
+</tr>
+<tr>
 <td><code>tests/navigate_test.py</code></td>
 <td>33</td>
 <td>✅ All pass</td>
@@ -1952,7 +1957,11 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><code>semantic.py</code></td>
-<td><code>*</code>/<code>/</code> dimension derivation (<code>mass * speed → ForceValue</code> inference) not yet implemented (Phase D); <code>+</code>/<code>-</code> dimension equality and operand-category checks are complete (v0.55.0).</td>
+<td><code>*</code>/<code>/</code> dimension derivation (<code>mass * speed → ForceValue</code> inference) not yet implemented (future); <code>+</code>/<code>-</code> dimension equality and operand-category checks are complete (v0.55.0).</td>
+</tr>
+<tr>
+<td><code>antlr_parser.py</code></td>
+<td>SLL error <em>wording</em> may differ from LL wording (<code>missing '}' at '&lt;EOF&gt;'</code> vs <code>extraneous input '&lt;EOF&gt;' ...</code>); source position always matches (v0.56.0).</td>
 </tr>
 </tbody>
 </table>
@@ -2118,7 +2127,7 @@ Test files: <strong>123 <code>.sysml</code> files</strong> under <code>tests/sys
 </tr>
 <tr>
 <td>Unit + grammar + integration tests</td>
-<td>836 passing</td>
+<td>809 passing</td>
 </tr>
 <tr>
 <td>Grammar round-trip tests passing</td>
@@ -2146,7 +2155,7 @@ Test files: <strong>123 <code>.sysml</code> files</strong> under <code>tests/sys
 </tr>
 <tr>
 <td>Storage backend tests</td>
-<td><strong>46 passing</strong> (optional deps skipped if missing)</td>
+<td><strong>97 passing</strong> (optional deps skipped if missing)</td>
 </tr>
 <tr>
 <td>Bundled standard library files</td>
