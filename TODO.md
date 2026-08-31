@@ -6,17 +6,26 @@ See [STATUS.md](STATUS.md) and [CHANGELOG.md](CHANGELOG.md) for the current proj
 
 ---
 
-## Active Tasks (Phase D: v0.56.0+)
+## Active Tasks (Post-Phase-D candidates)
 
-- [ ] **High-Performance Parsing & Graph Store Integration:**
-  - [ ] ANTLR SLL fast-path prediction for large models (SLL → LL fallback)
-  - [ ] `*`/`/` dimension derivation (e.g. `mass * speed` vs `ForceValue` inference)
-  - [ ] Kùzu Cypher structural graph query extensions
-  - [ ] NetworkX path queries / centrality analysis extensions
+Phases A–D from the [Master Development Plan](docs/DEVELOPMENT_PLAN.md)
+are complete.  Candidate follow-up work:
+
+- [ ] `*`/`/` unit-dimension derivation (e.g. `mass * speed` vs `ForceValue` inference)
+- [ ] SLL error-message parity (align ANTLR wording between prediction modes)
+- [ ] Persistent DFA cache serialization to eliminate cold-start parse cost
+- [ ] Visitor performance profiling (`parse_to_dict` dominates end-to-end time)
+- [ ] CayleyStore query extensions (parity with NetworkX/Kùzu)
 
 ---
 
 ## Recently Completed
+
+- [x] **Phase D (v0.56.0):** High-performance parsing & graph store queries
+  - [x] Two-stage SLL → LL parse with single-build fast path (38% faster parse)
+  - [x] `prediction_mode=` parameter (sll / ll / sll_only)
+  - [x] NetworkX: `all_paths`, `descendants_depth_limited`, `neighborhood`, `impact_analysis`, in/out-degree centrality
+  - [x] Kùzu: `execute_cypher` passthrough, `shortest_path_between_named`, `siblings`, `hub_elements`
 
 - [x] **Phase C (v0.55.0):** Expression type checking & unit safety
   - [x] `OPERAND_TYPE_MISMATCH` for logical/relational/equality/arithmetic rules

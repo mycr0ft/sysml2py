@@ -409,3 +409,138 @@ class TestNetworkXSpecific:
         assert sub.has(e1)
         assert sub.has(e2)
         assert not sub.has(e3)
+
+
+# ---------------------------------------------------------------------------
+# Phase D (v0.56.0): graph query extensions
+# ---------------------------------------------------------------------------
+
+class TestNetworkXQueryExtensions:
+    """all_paths, depth-limited descendants, neighborhoods, impact analysis."""
+
+    def _build_chain(self):
+        from sysmlpy.store import NetworkXStore
+        st = NetworkXStore()
+        st.put("A", {"name": "A", "sysml_type": "part"})
+        st.put("B", {"name": "B", "sysml_type": "part"}, parent_id="A")
+        st.put("C", {"name": "C", "sysml_type": "part"}, parent_id="B")
+        st.put("D", {"name": "D", "sysml_type": "part"}, parent_id="C")
+        return st
+
+    def test_all_paths_linear(self):
+        st = self._build_chain()
+        paths = st.all_paths("A", "D")
+        assert paths == [["A", "B", "C", "D"]]
+
+    def test_all_paths_multiple(self):
+        from sysmlpy.store import NetworkXStore
+        st = NetworkXStore()
+        st.put("A", {"name": "A"})
+        st.put("B1", {"name": "B1"}, parent_id="A")
+        st.put("B2", {"name": "B2"}, parent_id="A")
+        st.put("C", {"name": "C"}, parent_id="B1")
+        st.put("C", {"name": "C2"}, parent_id="B2")
+        paths = st.all_paths("A", "C")
+        assert len(paths) == 2
+
+    def test_all_paths_missing_endpoint(self):
+        st = self._build_chain()
+        assert st.all_paths("A", "NOPE") == []
+        assert st.all_paths("NOPE", "A") == []
+
+    def test_max_paths_cap(self):
+        from sysmlpy.store import NetworkXStore
+        st = self._build_chain()
+        # linear graph — no explosion; cap respected via diamond below
+        st.put("B2", {"name": "B2"}, parent_id="A")
+        st.put("C", {"name": "CX"}, parent_id="B2")
+        paths = st.all_paths("A", "C")
+        assert len(paths) <= 20
+
+    def test_descendants_depth_limited(self):
+        st = self._build_chain()
+        assert st.descendants_depth_limited("A", max_depth=1) == ["B"]
+        assert st.descendants_depth_limited("A", max_depth=2) == ["B", "C"]
+        assert st.descendants_depth_limited("A", max_depth=3) == ["B", "C", "D"]
+
+    def test_neighborhood(self):
+        st = self._build_chain()
+        nb = st.neighborhood("B", radius=1)
+        assert nb == {"A", "B", "C"}
+
+    def test_impact_downstream(self):
+        st = self._build_chain()
+        assert st.impact_analysis("A", direction="downstream") == {"B", "C", "D"}
+        # Change to C only affects D
+        assert st.impact_analysis("C", direction="downstream") == {"D"}
+
+    def test_impact_upstream(self):
+        st = self._build_chain()
+        assert st.impact_analysis("D", direction="upstream") == {"A", "B", "C"}
+
+    def test_in_out_degree_centrality(self):
+        st = self._build_chain()
+        out_c = st.out_degree_centrality()
+        in_c = st.in_degree_centrality()
+        assert out_c["A"] > 0
+        assert in_c["D"] > 0
+        assert in_c["A"] == 0.0
+
+
+class TestKuzuQueryExtensions:
+    """Cypher passthrough and convenience queries."""
+
+    def _kuzu(self):
+        pytest.importorskip("kuzu")
+        from sysmlpy.store import KuzuStore
+        return KuzuStore()
+
+    def test_execute_cypher_raw(self):
+        st = self._kuzu()
+        st.put("a", {"name": "A"})
+        st.put("b", {"name": "B"}, parent_id="a")
+        rows = st.execute_cypher("MATCH (e:Element) RETURN e.id AS id ORDER BY id")
+        assert [r["id"] for r in rows] == ["a", "b"]
+
+    def test_siblings(self):
+        st = self._kuzu()
+        st.put("a", {"name": "A"})
+        st.put("b", {"name": "B"}, parent_id="a")
+        st.put("c", {"name": "C"}, parent_id="a")
+        st.put("d", {"name": "D"}, parent_id="a")
+        sibs = set(st.siblings("b"))
+        assert sibs == {"c", "d"}
+
+    def test_hub_elements_outgoing(self):
+        st = self._kuzu()
+        st.put("a", {"name": "A"})
+        st.put("b", {"name": "B"}, parent_id="a")
+        st.put("c", {"name": "C"}, parent_id="a")
+        st.put("d", {"name": "D"}, parent_id="a")
+        hubs = st.hub_elements(3, direction="outgoing")
+        assert hubs == [("a", 3)]
+
+    def test_hub_elements_incoming(self):
+        st = self._kuzu()
+        # b, c, d all point INTO a (reverse edges)
+        st.put("a", {"name": "A"})
+        st.put("b", {"name": "B"}, parent_id="a")
+        st.put("c", {"name": "C"}, parent_id="a")
+        st.put("d", {"name": "D"}, parent_id="a")
+        # incoming into b/c/d is 1; nothing >= 2
+        hubs = st.hub_elements(2, direction="incoming")
+        assert hubs == []
+
+    def test_shortest_path_between_named(self):
+        st = self._kuzu()
+        st.put("n1", {"name": "A"})
+        st.put("n2", {"name": "B"}, parent_id="n1")
+        st.put("n3", {"name": "C"}, parent_id="n2")
+        path = st.shortest_path_between_named("A", "C")
+        assert path == ["n1", "n2", "n3"]
+
+    def test_shortest_path_none_when_disconnected(self):
+        st = self._kuzu()
+        st.put("x1", {"name": "X1"})
+        st.put("x2", {"name": "X2"})
+        assert st.shortest_path_between_named("X1", "X2") is None

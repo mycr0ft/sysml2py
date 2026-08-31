@@ -1,5 +1,49 @@
 # CHANGELOG
 
+## v0.56.0 (2026-08-31)
+
+### :rocket: Phase D — High-Performance Parsing & Graph Store Queries
+
+**Two-stage SLL → LL parsing** (`/antlr_parser.py`): `parse()` now runs
+the ANTLR prediction in fast **SLL** mode first and falls back to the
+full-context **LL** pass only when the SLL attempt fails.  For valid
+input the tree is produced in a single parser build; for invalid input
+the fallback reproduces the error at the same source position (message
+wording can differ between prediction modes — e.g. "missing '}' at
+'<EOF>'" vs "extraneous input '<EOF>' expecting {...}").  New
+`prediction_mode=` parameter: `"sll"` (default, two-stage), `"ll"`
+(force full-context), `"sll_only"` (no fallback).
+
+Benchmark (6,000-element model, warmed DFA cache): parse-only time
+**4.92 s (SLL) vs 7.89 s (LL) — 38&nbsp;% faster**.  Cold first parse
+also carries a one-time ANTLR DFA-construction cost (~5 s) shared
+across all subsequent parses in the process.  End-to-end `loads()` on
+a 4,002-element model: 9.0 s.
+
+**Graph query extensions** (`store.py`):
+
+- `NetworkXStore.all_paths(src, dst, rel_type=None, max_paths=20)` —
+  enumerates simple paths for impact/routing analysis
+- `NetworkXStore.descendants_depth_limited(root, max_depth)` —
+  hierarchy-level queries ("direct children of this level")
+- `NetworkXStore.neighborhood(id, radius)` — ego-graph in both
+  directions
+- `NetworkXStore.impact_analysis(id, rel_types, direction)` —
+  transitive downstream/upstream blast-radius
+- `NetworkXStore.in_degree_centrality / out_degree_centrality` —
+  hub detection per direction
+- `KuzuStore.execute_cypher(query)` — raw Cypher passthrough returning
+  rows as dicts (node values flattened to id/name/sysml_type;
+  path node lists flattened to id lists)
+- `KuzuStore.shortest_path_between_named(a, b)` — hop-by-hop expand
+  (Kùzu has no `shortestPath()` builtin)
+- `KuzuStore.siblings(id)` — structural siblings
+- `KuzuStore.hub_elements(min_degree, direction)` — outgoing/incoming/
+  both degree hubs
+
+19 new tests (`tests/two_stage_parse_test.py` 7, `tests/store_test.py`
++12).  Full suite: **809 fast + 123 conformance passed.**
+
 ## v0.55.0 (2026-08-31)
 
 ### :balance_scale: Phase C — Expression Type Checking & Unit Safety

@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.55.0** (2026-08-31)
+Current version: **v0.56.0** (2026-08-31)
 
 ---
 
@@ -201,6 +201,7 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 | `tests/main_test.py` | 7 | ✅ All pass |
 | `tests/plantuml_test.py` | 108 | ✅ All pass |
 | `tests/semantic_test.py` | 153 | ✅ All pass |
+| `tests/two_stage_parse_test.py` | 7 | ✅ All pass |
 | `tests/navigate_test.py` | 33 | ✅ All pass |
 | `tests/import_test.py` | 16 | ✅ All pass |
 | `tests/validator_test.py` | 34 | ✅ All pass |
@@ -277,7 +278,8 @@ All private underscore-prefixed mutation methods given public aliases:
 | `antlr_visitor.py` ~line 9558 | Top-level attribute multiplicity not captured (nested attributes work) |
 | `definition.py` | Dead code — duplicate `elif inner_class == "ActionUsage"` block |
 | `usage.py` | Type relationships (`: TypeName`) not preserved in `load_from_grammar()` |
-| `semantic.py` | `*`/`/` dimension derivation (`mass * speed → ForceValue` inference) not yet implemented (Phase D); `+`/`-` dimension equality and operand-category checks are complete (v0.55.0). |
+| `semantic.py` | `*`/`/` dimension derivation (`mass * speed → ForceValue` inference) not yet implemented (future); `+`/`-` dimension equality and operand-category checks are complete (v0.55.0). |
+| `antlr_parser.py` | SLL error *wording* may differ from LL wording (`missing '}' at '<EOF>'` vs `extraneous input '<EOF>' ...`); source position always matches (v0.56.0). |
 
 ---
 
@@ -340,14 +342,14 @@ Run with: `poetry run pytest -m conformance`
 | Public API classes (complete) | 28 |
 | Grammar classes with `get_definition()` | **358 of 358 (100%, reflection-audited)** |
 | Grammar classes with graceful fallback | All 358 (no more NotImplementedError crashes) |
-| Unit + grammar + integration tests | 836 passing |
+| Unit + grammar + integration tests | 809 passing |
 | Grammar round-trip tests passing | **143 / 143 (100%)** |
 | Helper-property tests | 8 / 8 |
 | Grammar-side References dispatch | ✅ | | |
 | PlantUML rendering tests | **108 passing** |
 | Conformance tests (2026-03 XPect suite) | **123 / 123 (100%)** |
 | Semantic analysis tests | **153 passing** |
-| Storage backend tests | **46 passing** (optional deps skipped if missing) |
+| Storage backend tests | **97 passing** (optional deps skipped if missing) |
 | Bundled standard library files | 88 (kernel `.kerml` + systems `.sysml` + domain `.sysml`) |
 | Library symbols indexed | ~1,604 (incl. library `function` declarations, v0.54.0) |
 | PlantUML view functions | 10 (GV, PV, AFV, IV, STV, SV, CV, Tabular, DataValue, RelMatrix) |

@@ -2,7 +2,7 @@
 
 > **For:** Future agents and team members
 > **Last Updated:** August 31, 2026
-> **Current Version:** v0.55.0
+> **Current Version:** v0.56.0
 > **Repository:** https://github.com/mycr0ft/sysmlpy
 > **Master Development Plan:** [docs/DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)
 
@@ -18,7 +18,7 @@
 sysmlpy/
 ├── src/sysmlpy/
 │   ├── __init__.py          # Public API: loads(), load(), analyze(), load_files(), load_project()
-│   ├── antlr_parser.py      # ANTLR4 lexer/parser setup
+│   ├── antlr_parser.py      # ANTLR4 lexer/parser — two-stage SLL→LL (v0.56.0)
 │   ├── antlr_visitor.py     # ~12.3K lines: parse tree → internal dict
 │   ├── grammar/
 │   │   ├── classes.py       # ~9.7K lines: grammar class hierarchy (no NotImplementedError)
@@ -27,7 +27,7 @@ sysmlpy/
 │   ├── usage.py             # Part, Item, Attribute, Port, Action, etc.
 │   ├── semantic.py          # Semantic analysis engine (~2.7K lines)
 │   ├── project.py           # Multi-file project loading (load_files, load_project)
-│   ├── store.py             # Storage backends (memory, NetworkX, Kuzu, Cayley)
+│   ├── store.py             # Storage backends + query extensions (paths/impact/Cypher)
 │   ├── plantuml.py          # PlantUML diagram generation
 │   ├── boxes_view.py        # Optional boxes-backed state-machine visualizer (v0.36.0)
 │   ├── formatting.py        # classtree() for round-trip serialization

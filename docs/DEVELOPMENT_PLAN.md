@@ -1,6 +1,6 @@
 # sysmlpy — Master Development Plan & Roadmap
 
-> **Current Version:** v0.55.0 (August 2026)  
+> **Current Version:** v0.56.0 (August 2026)  
 > **Repository:** https://github.com/mycr0ft/sysmlpy  
 > **Upstream Grammar PR:** [daltskin/sysml-v2-grammar#12](https://github.com/daltskin/sysml-v2-grammar/pull/12)
 
@@ -10,14 +10,14 @@
 
 `sysmlpy` is a Python library for parsing, manipulating, and validating SysML v2.0 models using an ANTLR4-based parser, a rich AST of grammar classes, and a semantic analysis engine.
 
-### Current Health & Metrics (v0.55.0)
-- **Full Test Suite:** 836/836 passed (fast + grammar + XPect conformance).
+### Current Health & Metrics (v0.56.0)
+- **Full Test Suite:** 809 fast-suite + 123 XPect conformance pass (932 total, 0 failures).
 - **Grammar Round-Trip Suite:** 143/143 passed (100%).
 - **XPect Parse Conformance:** 123/123 (100%).
 - **Grammar Class Integrity:** 358/358 classes implement `get_definition()` (reflection-audited in v0.53.1).
-- **Expression Name Resolution:** Identifiers inside constraint bodies, calc results, attribute defaults, and guards resolve against the symbol table (v0.54.0).
-- **Expression Type Safety:** Operand-category rules and pint unit-dimension checks emit `OPERAND_TYPE_MISMATCH` / `UNIT_DIMENSION_MISMATCH`; `const_fold()` reduces deterministic literals (v0.55.0).
-- **Expression Engine:** Structured per-precedence capture now covers boolean keyword operators (`and`/`or`/`xor`/`implies`) and `**` exponentiation (previously glued text).
+- **Expression Validation Pipeline:** name resolution (v0.54.0) → operand-type rules + unit-dimension safety + `const_fold()` (v0.55.0).
+- **Parsing Performance:** two-stage SLL → LL — parse-only **38 % faster** (4.92 s vs 7.89 s on a 6,000-element model, warmed), identical error positions on fallback (v0.56.0).
+- **Graph Queries:** NetworkX path/impact/degree extensions; Kùzu raw Cypher passthrough with named-path/sibling/hub queries (v0.56.0).
 - **Upstream Grammar Conformance:** 310/310 official OMG specification fixture files parse cleanly via the corrected grammar in `daltskin/sysml-v2-grammar#12`.
 
 ---
@@ -65,7 +65,7 @@
 └────────────────────────────────────┬─────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼─────────────────────────────────────┐
-│ Phase D: High-Performance Parsing & Graph Store (v0.56.0+) ← NEXT       │
+│ Phase D: High-Performance Parsing & Graph Store (v0.56.0) ✅            │
 │   - ANTLR SLL fast-path prediction optimization for large models         │
 │   - NetworkX and Kùzu graph query extensions                             │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -104,54 +104,39 @@ Implemented as analyzer step 4c (`SemanticAnalyzer._check_expression_types`) bac
 - `const_fold()` static reduction including a restricted AST-evaluator for parenthesized text arithmetic (`-(2-5)` → 3).
 - Prerequisite: structured emission of boolean keyword operators (`and`/`or`/`xor`/`implies`) and `**` exponentiation with `LiteralBoolean` primaries; grammar classes round-trip them.
 
-### Phase D: Storage Engine & Scale Optimizations (v0.56.0+) — NEXT
+### Phase D: Storage Engine & Scale Optimizations — Legacy Design Note (SUPERSEDED by the COMPLETE section below)
 
-#### Goal
-Now that expressions are captured as structured AST nodes rather than collapsed text strings, the semantic analyzer can walk expression trees and validate identifiers against the `SymbolTable`.
-
-#### Design
-1. **Expression AST Walker (`semantic.py`):**
-   - Create `_walk_expression_identifiers(expr_dict)` to recursively traverse `OwnedExpression` chains.
-   - At each `FeatureReferenceExpression` / `FeatureReferenceMember`, extract the target `QualifiedName`.
-   - At each `FeatureChainMember`, record the base target and successive navigation steps (`wheel1.mass`).
-2. **Symbol Resolution:**
-   - Look up unqualified names in local scope (`CalculationUsage` parameters, `StateUsage` variables, enclosing `PartDefinition` attributes).
-   - Look up qualified names against package namespaces and `LibrarySymbolIndex` (e.g. `ScalarValues::Real`, `ISQ::mass`).
-3. **Diagnostics:**
-   - Emit `SemanticIssue(severity="error", message=f"Unresolved identifier '{name}' in expression", element=...)`.
-   - Track resolution status on the AST node.
+(Original Phase B design notes retained for history — see the v0.54.0 changelog for the delivered implementation.)
 
 ---
 
-### Phase C: Semantic Type Compatibility & Unit Safety (v0.55.0)
+### Phase C: Semantic Type Compatibility & Unit Safety — Legacy Design Note (SUPERSEDED by the COMPLETE section above)
 
-#### Goal
-Verify type safety and unit consistency inside expressions.
-
-#### Features
-1. **Operator Type Checking:**
-   - Arithmetic (`+`, `-`, `*`, `/`, `%`, `**`): operands must resolve to `ScalarValues::Real`, `ScalarValues::Integer`, or compatible unit dimensions.
-   - Relational (`<`, `>`, `<=`, `>=`): operands must have ordered types.
-   - Logical (`and`, `or`, `xor`, `implies`, `not`): operands must resolve to `ScalarValues::Boolean`.
-   - Equality (`==`, `!=`): operands must have compatible classifier types.
-2. **Unit Dimension Compatibility:**
-   - Use `pint` integration to verify dimensional consistency (e.g. adding `[m]` to `[kg]` raises a dimensional mismatch error).
-3. **Static Evaluation:**
-   - Constant-fold deterministic literal expressions (e.g. `10 [kg] * 2` → `20 [kg]`).
+#### Original Goal (v0.55.0 — delivered)
+Operator type rules, pint unit-dimension checks, and constant folding — all delivered; see the v0.55.0 changelog and the COMPLETE section above.
 
 ---
 
-### Phase D: Storage Engine & Scale Optimizations (v0.56.0+)
+### Phase D: Storage Engine & Scale Optimizations (COMPLETE / v0.56.0)
 
-#### Goal
-Optimize parsing throughput on large system models (10,000+ elements) and enhance graph query capabilities.
+#### Resolution
+Implemented in v0.56.0:
+- **Two-stage parsing** (`antlr_parser.py`): SLL `BailErrorStrategy` fast path; on
+  any failure the source is re-parsed once under full LL with the default error
+  strategy — identical trees for valid input, identical error *positions* for
+  invalid input.  `prediction_mode=` parameter (`sll` default / `ll` / `sll_only`).
+- **NetworkX extensions**: `all_paths` (capped simple-path enumeration),
+  `descendants_depth_limited`, `neighborhood` (ego graph), `impact analysis`
+  (transitive down/upstream), `in_degree_centrality` / `out_degree_centrality`.
+- **Kùzu extensions**: `execute_cypher` (raw passthrough with node flattening),
+  `shortest_path_between_named` (hop-expanding; Kùzu lacks `shortestPath()`),
+  `siblings`, `hub_elements` (outgoing/incoming/both degree hubs).
 
-#### Features
-1. **ANTLR Two-Stage Parsing (SLL → LL Fallback):**
-   - Configure ANTLR `PredictionMode.SLL` for fast initial parsing, falling back to full `PredictionMode.LL` only on syntax ambiguity. Significantly accelerates large file parsing.
-2. **Graph Backend Extensions:**
-   - Support Cypher queries on `KuzuStore` for structural graph traversal.
-   - Support path queries and centrality analysis on `NetworkXStore`.
+---
+## Project Plan Complete
+
+All four planned phases (A–D) are implemented.  Follow-up candidates are
+tracked in [TODO.md](../TODO.md).
 
 ---
 

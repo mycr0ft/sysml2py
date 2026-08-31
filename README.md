@@ -19,9 +19,11 @@ The project had diverged so much from sysml2py that a new name, sysmlpy, was sel
 > symbol table** (v0.54.0) and operators are **type- and
 > unit-checked** — `flag and n`, `"a" + 5`, and `[m] + [kg]` all raise
 > `OPERAND_TYPE_MISMATCH` / `UNIT_DIMENSION_MISMATCH` errors. Deterministic
-> literal expressions can be reduced with `const_fold()`. Coming next
-> (Phase D): parsing performance and graph-store query extensions.
-> Track progress in [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md).
+> literal expressions can be reduced with `const_fold()` (v0.55.0).
+> v0.56.0 adds two-stage SLL→LL parsing (38% faster on large models)
+> and graph query extensions (`all_paths`, `impact_analysis`,
+> `execute_cypher`, …). Track progress in
+> [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md).
 
 > **Scope reminder** — a green parse result means the file **parsed
 > syntactically**. Expression validation (name resolution, type and

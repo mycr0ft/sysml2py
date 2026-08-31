@@ -833,6 +833,153 @@ class NetworkXStore(Store):
             "avg_degree": sum(dict(self._graph.degree()).values()) / max(self._graph.number_of_nodes(), 1),
         }
 
+    # ── Phase D query extensions (v0.56.0) ──────────────────────────────
+
+    def all_paths(self, source_id: str, target_id: str,
+                  rel_type: Optional[str] = None,
+                  max_paths: int = 20) -> list[list[str]]:
+        """Find up to *max_paths* simple paths between two elements.
+
+        Useful for impact analysis: every route a flow/connection can
+        take between two parts.
+
+        Parameters
+        ----------
+        source_id, target_id : str
+            Endpoint node IDs.
+        rel_type : str, optional
+            Restrict traversal to edges of this relationship type.
+        max_paths : int
+            Safety cap on returned paths (default 20 — path enumeration
+            is exponential in dense graphs).
+
+        Returns
+        -------
+        list[list[str]]
+            Each path is a list of node IDs from source to target.
+            Empty list when either endpoint is missing or unconnected.
+        """
+        if not self._graph.has_node(source_id) or not self._graph.has_node(target_id):
+            return []
+        graph = self._filtered_graph(rel_type)
+        try:
+            count = 0
+            paths = []
+            for p in self._nx.all_simple_paths(graph, source_id, target_id):
+                paths.append(list(p))
+                count += 1
+                if count >= max_paths:
+                    break
+            return paths
+        except self._nx.NetworkXNoPath:
+            return []
+        except self._nx.NodeNotFound:
+            return []
+
+    def in_degree_centrality(self, rel_type: Optional[str] = None) -> dict[str, float]:
+        """Compute in-degree centrality (how many elements reference *me*).
+
+        High in-degree = hub element that many others depend on.
+
+        Returns
+        -------
+        dict[str, float]
+            Mapping of node ID to in-degree fraction (0.0–1.0).
+        """
+        graph = self._filtered_graph(rel_type)
+        return self._nx.in_degree_centrality(graph)
+
+    def out_degree_centrality(self, rel_type: Optional[str] = None) -> dict[str, float]:
+        """Compute out-degree centrality (how many elements *I* reference)."""
+        graph = self._filtered_graph(rel_type)
+        return self._nx.out_degree_centrality(graph)
+
+    def descendants_depth_limited(self, root_id: str, max_depth: int = 3,
+                                  rel_type: str = REL_PARENT_CHILD) -> list[str]:
+        """Return descendants within *max_depth* levels of *root_id*.
+
+        Useful for "direct children of this hierarchy level" queries.
+        """
+        if not self._graph.has_node(root_id):
+            return []
+        result: list[str] = []
+        frontier = {root_id}
+        visited = {root_id}
+        for _ in range(max_depth):
+            nxt: set[str] = set()
+            for node in frontier:
+                for succ in self._graph.successors(node):
+                    edge_ok = any(
+                        self._graph.edges[node, succ, k].get("rel_type") == rel_type
+                        for k in self._graph[node][succ]
+                    ) if self._graph.has_edge(node, succ) else False
+                    if edge_ok and succ not in visited:
+                        nxt.add(succ)
+            visited |= nxt
+            result.extend(sorted(nxt))
+            frontier = nxt
+            if not frontier:
+                break
+        return result
+
+    def neighborhood(self, element_id: str, radius: int = 2,
+                     rel_type: Optional[str] = None) -> set[str]:
+        """Return the ego-neighborhood of *element_id* within *radius* hops
+        (following edges in both directions)."""
+        if not self._graph.has_node(element_id):
+            return set()
+        graph = self._filtered_graph(rel_type)
+        return set(self._nx.ego_graph(graph, element_id, radius=radius, undirected=True).nodes())
+
+    def _filtered_graph(self, rel_type: Optional[str]):
+        """Return a view restricted to *rel_type* edges, or the full graph."""
+        if not rel_type:
+            return self._graph
+        return self._nx.subgraph_view(
+            self._graph,
+            edge_filter=lambda e: self._graph.edges[e].get("rel_type") == rel_type,
+        )
+
+    def impact_analysis(self, element_id: str, rel_types: Optional[list[str]] = None,
+                        direction: str = "downstream") -> set[str]:
+        """Elements transitively affected by changes to *element_id*.
+
+        Follows reverse structural edges (anything that inherits from,
+        types by, or flows from *element_id* depends on it).
+
+        Parameters
+        ----------
+        element_id : str
+            Changed element.
+        rel_types : list[str], optional
+            Relationship types to consider (default: all).
+        direction : {"downstream", "upstream"}
+            ``downstream`` follows edges outward (what I affect);
+            ``upstream`` follows edges inward (what affects me).
+        """
+        if not self._graph.has_node(element_id):
+            return set()
+        if rel_types:
+            graph = self._nx.MultiDiGraph()
+            for u, v, k, d in self._graph.edges(keys=True):
+                if self._graph.edges[u, v, k].get("rel_type") in rel_types:
+                    graph.add_edge(u, v, rel_type=self._graph.edges[u, v, k].get("rel_type"))
+            for n in self._graph.nodes:
+                graph.add_node(n, **self._graph.nodes[n])
+        else:
+            graph = self._graph
+        successors = graph.successors if direction == "downstream" else graph.predecessors
+        seen = {element_id}
+        frontier = [element_id]
+        while frontier:
+            current = frontier.pop()
+            for nxt in successors(current):
+                if nxt not in seen:
+                    seen.add(nxt)
+                    frontier.append(nxt)
+        seen.discard(element_id)
+        return seen
+
 
 # ── Kuzu Store ──────────────────────────────────────────────────────────────
 
@@ -1399,6 +1546,127 @@ class KuzuStore(Store):
             "density": density,
             "avg_degree": (2 * e) / n if n > 0 else 0,
         }
+
+    # ── Phase D query extensions (v0.56.0) ──────────────────────────────
+
+    def execute_cypher(self, query: str) -> list[dict]:
+        """Run a raw Cypher query and return rows as dicts.
+
+        Escape user data before interpolating into the query string
+        (``_escape``) or better, keep property matches static as in the
+        built-in methods.
+
+        Parameters
+        ----------
+        query : str
+            A Cypher query against the Element/Relationship schema.
+
+        Returns
+        -------
+        list[dict]
+            One dict per row, keyed by the RETURN column names.
+        """
+        result = self._conn.execute(query)
+        names = result.get_column_names()
+        rows = []
+        while result.has_next():
+            raw = result.get_next()
+            row = {}
+            for i, name in enumerate(names):
+                value = raw[i]
+                # Node/table objects: extract id + common properties
+                if hasattr(value, "get"):
+                    try:
+                        value = {
+                            "id": value["id"],
+                            "name": value["name"],
+                            "sysml_type": value["sysml_type"],
+                        }
+                    except Exception:
+                        pass
+                # lists of node values (variable-length paths)
+                if isinstance(value, list):
+                    value = [
+                        item["id"] if hasattr(item, "get") else item
+                        for item in value
+                    ]
+                row[name] = value
+            rows.append(row)
+        return rows
+
+    def shortest_path_between_named(self, source_name: str, target_name: str,
+                                    max_hops: int = 10) -> Optional[list[str]]:
+        """Shortest structural path between two named elements via Cypher.
+
+        Convenience wrapper over :meth:`execute_cypher` for the common
+        "how is A connected to B" question.
+
+        Notes
+        -----
+        Kùzu (as of 0.4.x) has no ``shortestPath()`` function; this method
+        enumerates variable-length paths ordered by length and returns
+        the shortest.
+        """
+        sid = self._escape(source_name)
+        tid = self._escape(target_name)
+        # Ordered by hop count: expand one hop length at a time until found
+        for hops in range(1, max_hops + 1):
+            try:
+                rows = self.execute_cypher(
+                    f'MATCH p = (s:Element {{name: "{sid}"}})-[:Relationship*{hops}..{hops}]->(t:Element {{name: "{tid}"}}) '
+                    f'RETURN nodes(p) AS ns '
+                )
+            except Exception:
+                return None
+            if rows:
+                return list(rows[0].get("ns", []))
+        return None
+
+    def siblings(self, element_id: str) -> list[str]:
+        """Elements sharing a parent with *element_id* (structural siblings)."""
+        eid = self._escape(element_id)
+        rows = self.execute_cypher(
+            f'MATCH (parent:Element)-[:Relationship {{rel_type: "parent_child"}}]->(me:Element {{id: "{eid}"}}) '
+            f'MATCH (parent)-[:Relationship {{rel_type: "parent_child"}}]->(sib:Element) '
+            f'WHERE sib.id <> me.id '
+            f'RETURN DISTINCT sib.id AS sibling'
+        )
+        return [r["sibling"] for r in rows]
+
+    def hub_elements(self, min_degree: int = 3,
+                     direction: str = "outgoing") -> list[tuple[str, int]]:
+        """Elements with high reference degree (many relationships).
+
+        Parameters
+        ----------
+        min_degree : int
+            Minimum degree to qualify as a hub (default 3).
+        direction : {"outgoing", "incoming", "both"}
+            Which edge direction to count.  ``outgoing`` finds elements
+            that own/contain many others (structural hubs); ``incoming``
+            finds heavily-referenced (dependency sinks).  Default
+            ``outgoing``.
+
+        Returns
+        -------
+        list[tuple[str, int]]
+            (element_id, degree) pairs with degree ≥ *min_degree*,
+            sorted by degree descending.
+        """
+        min_degree = int(min_degree)
+        if direction == "outgoing":
+            pattern = "MATCH (hub:Element)-[r:Relationship]->() WITH hub, count(r) AS deg"
+        elif direction == "incoming":
+            pattern = "MATCH ()-[r:Relationship]->(hub:Element) WITH hub, count(r) AS deg"
+        else:
+            pattern = (
+                "MATCH (hub:Element)-[r:Relationship]-() WITH hub, count(r) AS deg"
+            )
+        rows = self.execute_cypher(
+            f'{pattern} WHERE deg >= {min_degree} '
+            f'RETURN hub.id AS element_id, deg ORDER BY deg DESC'
+        )
+        return [(r["element_id"], r["deg"]) for r in rows]
 
 
 # ── Cayley Store ──────────────────────────────────────────────────────────────
