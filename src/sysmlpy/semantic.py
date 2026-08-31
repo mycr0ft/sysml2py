@@ -78,7 +78,7 @@ _DEFINITION_RE = re.compile(
     r'view\s+def|viewpoint\s+def|concern\s+def|allocation\s+def|metadata\s+def|'
     r'rendering\s+def|individual\s+def|feature\s+def|reference\s+def|'
     r'structure\s+def|behavior\s+def|occurrence\s+def|assertion\s+def|'
-    r'typedef|classifier)\s+'
+    r'typedef|classifier|function)\s+'
     r"""(['"]?\w+['"]?)""",
     re.IGNORECASE,
 )
@@ -1007,6 +1007,248 @@ def _chain_segments(child: Any) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# Expression Identifier Collection (v0.54.0 — Phase B)
+# ---------------------------------------------------------------------------
+
+# Grammar element names that own an expression body but should NOT be
+# traversed as expression-identifier sources themselves.  The collector
+# walks a model's public-API tree and pulls expressions out of each
+# element's *own* grammar (get_definition()), so nested usages inside a
+# definition body are reached via the tree walk, not by descending into
+# a definition's full grammar dict (which would duplicate identifiers).
+_EXPRESSION_OWNER_TYPES = frozenset({
+    "Constraint",      # constraint / assert constraint bodies
+    "Calculation",     # calc bodies (result expressions, return members)
+    "Action",          # action bodies with value expressions
+    "State",           # guard expressions on transitions
+    "Attribute",       # default value expressions (`= expr`)
+    "Item",            # default value expressions
+    "Port",            # default value expressions
+    "Reference",       # default value expressions
+    "Requirement",     # requirement constraint bodies
+})
+
+
+def _walk_expression_identifiers(expr_dict: Any) -> list[str]:
+    """Recursively extract identifier reference strings from an expression dict.
+
+    Walks the structured per-precedence expression AST emitted by the
+    v0.52.0 visitor (``ConditionalExpression`` → ``NullCoalescingExpression``
+    → ``ImpliesExpression`` → ``OrExpression`` → ``XorExpression`` →
+    ``AndExpression`` → ``EqualityExpression`` → ``ClassificationExpression``
+    → ``RelationalExpression`` → ``RangeExpression`` → ``AdditiveExpression``
+    → ``MultiplicativeExpression`` → ``ExponentiationExpression`` →
+    ``UnaryExpression`` → ``ExtentExpression`` → ``PrimaryExpression``).
+
+    Identifier sources:
+    - ``FeatureReferenceExpression`` members → the target QualifiedName
+    - ``PrimaryExpression.ownedRelationship1/2`` chains → ``base.step1.step2``
+    - ``InvocationExpression`` → the invoked feature name plus nested
+      argument expressions
+    - ``FeatureChainMember.ownedRelatedElement`` (OwnedFeatureChain)
+      → chained feature path
+
+    Returns fully-qualified reference strings, e.g. ``"wheel1.mass"``,
+    ``"ScalarValues::Real"``, ``"size"``.
+    """
+    names: list[str] = []
+
+    def visit(node: Any, owner_base: Optional[list[str]] = None) -> None:
+        if isinstance(node, dict):
+            node_name = node.get("name")
+
+            if node_name == "FeatureReferenceMember":
+                me = node.get("memberElement")
+                if isinstance(me, dict):
+                    qn = me.get("names", [])
+                    if qn:
+                        names.append("::".join(str(n) for n in qn))
+                return  # memberElement already visited as QualifiedName? no — leaf
+
+            if node_name == "InvocationExpression":
+                # The invoked feature is captured in ownedRelationship →
+                # OwnedFeatureTyping → FeatureType → QualifiedName
+                rel = node.get("ownedRelationship")
+                target = None
+                if isinstance(rel, dict):
+                    ft = rel.get("type")
+                    if isinstance(ft, dict):
+                        ft_qn = ft.get("type")
+                        if isinstance(ft_qn, dict):
+                            qn = ft_qn.get("names", [])
+                            if qn:
+                                target = "::".join(str(n) for n in qn)
+                if target:
+                    names.append(target)
+                # Arguments
+                arg_list = node.get("arg_list")
+                if isinstance(arg_list, dict):
+                    visit(arg_list)
+                return
+
+            if node_name == "FeatureChainMember" and owner_base is not None:
+                me = node.get("memberElement")
+                if isinstance(me, dict):
+                    qn = me.get("names", [])
+                    if qn:
+                        names.append(
+                            ".".join(
+                                ["::".join(str(n) for n in owner_base)]
+                                + [str(x) for x in qn]
+                            )
+                        )
+                    return
+                ore = node.get("ownedRelatedElement")
+                if isinstance(ore, dict) and ore.get("name") == "OwnedFeatureChain":
+                    steps: list[str] = []
+                    feature = ore.get("feature")
+                    if isinstance(feature, dict):
+                        for seg in feature.get("ownedRelationship", []):
+                            if isinstance(seg, dict):
+                                cf = seg.get("chainingFeature")
+                                if isinstance(cf, dict):
+                                    seg_qn = cf.get("names", [])
+                                    if seg_qn:
+                                        steps.append("::".join(str(n) for n in seg_qn))
+                    if steps:
+                        names.append(
+                            ".".join(["::".join(str(n) for n in owner_base)] + steps)
+                        )
+                return
+
+            # PrimaryExpression combines a base reference with chain steps
+            if node_name == "PrimaryExpression":
+                base = node.get("base")
+                base_names: list[str] = []
+                if isinstance(base, dict):
+                    base_rel = base.get("ownedRelationship")
+                    if isinstance(base_rel, dict) and base_rel.get("name") == "FeatureReferenceExpression":
+                        members = base_rel.get("ownedRelationship", [])
+                        if members and isinstance(members[0], dict):
+                            me = members[0].get("memberElement")
+                            if isinstance(me, dict):
+                                base_names = [str(n) for n in me.get("names", [])]
+                # ownedRelationship1/2 are the chain steps after the base
+                for chains in (node.get("ownedRelationship1"), node.get("ownedRelationship2")):
+                    if not isinstance(chains, list):
+                        continue
+                    for chain in chains:
+                        me = chain.get("memberElement") if isinstance(chain, dict) else None
+                        if owner_base is not None or base_names:
+                            head = owner_base if owner_base is not None else base_names
+                            if isinstance(me, dict):
+                                qn = me.get("names", [])
+                                if qn:
+                                    names.append(
+                                        ".".join(["::".join(head)] + [str(x) for x in qn])
+                                    )
+                                    continue
+                            ore = chain.get("ownedRelatedElement") if isinstance(chain, dict) else None
+                            if isinstance(ore, dict) and ore.get("name") == "OwnedFeatureChain":
+                                steps = []
+                                feature = ore.get("feature")
+                                if isinstance(feature, dict):
+                                    for seg in feature.get("ownedRelationship", []):
+                                        if isinstance(seg, dict):
+                                            cf = seg.get("chainingFeature")
+                                            if isinstance(cf, dict):
+                                                seg_qn = cf.get("names", [])
+                                                if seg_qn:
+                                                    steps.append("::".join(str(n) for n in seg_qn))
+                                if steps:
+                                    names.append(
+                                        ".".join(["::".join(head)] + steps)
+                                    )
+                # Recurse into base (handles qualified names + literals)
+                if isinstance(base, dict):
+                    visit(base)
+                # Nested expressions in operand slots (postfix ops etc.)
+                for operand in node.get("operand", []) or []:
+                    visit(operand)
+                for op in node.get("operator", []) or []:
+                    visit(op) if isinstance(op, (dict, list)) else None
+                return
+
+            # Generic recursion into child dicts/lists, passing chain context
+            # into FeatureChainMember nodes that hang off a PrimaryExpression.
+            for key, value in node.items():
+                if key in ("ownedRelationship1", "ownedRelationship2") and node_name == "PrimaryExpression":
+                    continue  # handled above
+                if isinstance(value, (dict, list)):
+                    visit(value, owner_base)
+
+        elif isinstance(node, list):
+            for item in node:
+                visit(item, owner_base)
+
+    visit(expr_dict)
+    return names
+
+
+class ExpressionIdentifierCollector:
+    """Collect identifiers referenced inside expression bodies.
+
+    Walks the public-API model tree; for every element whose grammar owns
+    an expression body (constraints, calc results, attribute defaults,
+    guards, invocation arguments), extracts identifier references via
+    :func:`_walk_expression_identifiers`.
+
+    Returns ``(qualified_ref, element, scope_path)`` tuples matching the
+    ReferenceCollector contract.
+    """
+
+    def collect(self, model: Any) -> list[tuple[str, Any, list[str]]]:
+        results: list[tuple[str, Any, list[str]]] = []
+        self._walk(model, results, [])
+        return results
+
+    def _walk(self, element: Any, results: list, scope_path: list[str]) -> None:
+        if element is None:
+            return
+
+        name = getattr(element, "name", None)
+        elem_type = type(element).__name__
+        is_container = getattr(element, "is_definition", False) or elem_type == "Package"
+        child_scope = scope_path
+        if is_container and name is not None and elem_type != "Model":
+            child_scope = scope_path + [name]
+
+        grammar = getattr(element, "grammar", None)
+        if grammar is not None and elem_type in _EXPRESSION_OWNER_TYPES:
+            try:
+                grammar_def = grammar.get_definition()
+            except Exception:
+                grammar_def = None
+            if grammar_def is not None:
+                for expr in _find_owned_expressions(grammar_def):
+                    for ref in _walk_expression_identifiers(expr):
+                        results.append((ref, element, scope_path))
+
+        for child in getattr(element, "children", []):
+            self._walk(child, results, child_scope)
+
+
+def _find_owned_expressions(node: Any) -> list[dict]:
+    """Locate every ``OwnedExpression`` dict in a grammar definition tree."""
+    out: list[dict] = []
+
+    def walk(n: Any) -> None:
+        if isinstance(n, dict):
+            if n.get("name") == "OwnedExpression":
+                out.append(n)
+            for v in n.values():
+                if isinstance(v, (dict, list)):
+                    walk(v)
+        elif isinstance(n, list):
+            for item in n:
+                if isinstance(item, (dict, list)):
+                    walk(item)
+
+    walk(node)
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Semantic Analyzer
 # ---------------------------------------------------------------------------
 
@@ -1116,6 +1358,11 @@ class SemanticAnalyzer:
                 reference=ref_str,
             ))
 
+        # Step 4b: Expression identifier resolution (v0.54.0 Phase B) —
+        # resolve names used inside constraint/calc/default/guard
+        # expression bodies against the symbol table.
+        issues.extend(self._check_expression_identifiers(model, symtab, lib_roots))
+
         # Step 5: OCL well-formedness constraints
         issues.extend(self._check_duplicate_names(symtab))
         issues.extend(self._check_cyclic_specialization(symtab))
@@ -1138,9 +1385,17 @@ class SemanticAnalyzer:
     def _normalize_library_paths(
         library: Path | Sequence[Path] | str | Sequence[str] | None,
     ) -> list[Path]:
-        """Normalize library argument to a list of Path objects."""
-        if library is None:
-            return []
+        """Normalize library argument to a list of Path objects.
+
+        An empty/None argument resolves to the bundled standard library so
+        that library function symbols (e.g. ``size``) are indexed.  Passing
+        ``[]`` explicitly would otherwise poison
+        ``LibrarySymbolIndex.get_symbols``'s cache with the hardcoded
+        fallback set.
+        """
+        if library is None or (isinstance(library, (list, tuple)) and len(library) == 0):
+            default = LibrarySymbolIndex._default_library_root()
+            return [default] if default is not None else []
         if isinstance(library, (str, Path)):
             return [Path(library)]
         return [Path(p) for p in library]
@@ -1385,6 +1640,107 @@ class SemanticAnalyzer:
                 if result is not None:
                     return True
         return False
+
+    # -- expression identifier resolution (v0.54.0 Phase B) -------------------
+
+    def _check_expression_identifiers(
+        self,
+        model: Any,
+        symtab: SymbolTable,
+        lib_roots: list[Path] | None = None,
+    ) -> list[SemanticIssue]:
+        """Resolve identifiers used inside expression bodies.
+
+        Constraint bodies, calc result expressions, attribute/feature
+        default values, and transition guards carry structured expression
+        ASTs.  Every identifier inside them must resolve to a symbol
+        visible from the enclosing scope: a local feature, an inherited
+        feature, an enclosing definition member, an imported symbol, or a
+        standard-library type.
+        """
+        collector = ExpressionIdentifierCollector()
+        references = collector.collect(model)
+        issues: list[SemanticIssue] = []
+        seen: set[tuple[str, int]] = set()  # (ref, id(element)) dedupe
+
+        for ref_str, element, scope_path in references:
+            key = (ref_str, id(element))
+            if key in seen:
+                continue
+            seen.add(key)
+            if self._is_resolved(ref_str, symtab, scope_path, lib_roots):
+                continue
+            # Dotted feature chains (`wheel1.mass`): resolve the head, then
+            # each successive step as a member of the previous step's element.
+            if "." in ref_str and self._resolve_feature_chain(
+                ref_str, symtab, scope_path, lib_roots
+            ):
+                continue
+            issues.append(SemanticIssue(
+                severity="error",
+                code="UNRESOLVED_EXPRESSION_IDENTIFIER",
+                message=f"Unresolved identifier '{ref_str}' in expression of "
+                        f"{type(element).__name__} "
+                        f"'{getattr(element, 'name', None) or '<anonymous>'}'",
+                element=element,
+                reference=ref_str,
+            ))
+        return issues
+
+    def _resolve_feature_chain(
+        self,
+        ref_str: str,
+        symtab: SymbolTable,
+        scope_path: list[str],
+        lib_roots: list[Path] | None = None,
+    ) -> bool:
+        """Resolve a dotted feature chain like ``wheel1.hub.mass``.
+
+        The head segment must resolve as a symbol from the referencing
+        scope; each subsequent segment must exist as a named child of the
+        previous segment's element (feature navigation through part
+        structure).
+        """
+        segments = ref_str.split(".")
+        head = segments[0]
+        if not self._is_resolved(head, symtab, scope_path, lib_roots):
+            return False
+
+        # Locate the head element by walking to its scope
+        current_table = symtab
+        for scope_name in scope_path:
+            child = current_table._children.get(scope_name)
+            if child is not None:
+                current_table = child
+            else:
+                break
+        current_element = current_table.lookup(head)
+        if current_element is None:
+            current_element = current_table.lookup("::".join(segments[:1]))
+        if current_element is None:
+            return False
+
+        for segment in segments[1:]:
+            # Find `segment` among the current element's descendants,
+            # stopping at that element's own subtree boundary.
+            current_element = self._find_member(current_element, segment)
+            if current_element is None:
+                return False
+        return True
+
+    @staticmethod
+    def _find_member(element: Any, name: str) -> Optional[Any]:
+        """Find a member named *name* within *element*'s subtree (1 level + nesting)."""
+        # Direct children first
+        for child in getattr(element, "children", []):
+            if getattr(child, "name", None) == name:
+                return child
+        # Nested usage children (usage parts contain structure)
+        for child in getattr(element, "children", []):
+            for grand in getattr(child, "children", []):
+                if getattr(grand, "name", None) == name:
+                    return grand
+        return None
 
     # -- OCL well-formedness constraints ------------------------------------
 

@@ -1588,3 +1588,179 @@ class TestAnalysisResult:
         result = analyze(model)
         count = sum(1 for _ in result)
         assert count == len(result)
+
+
+# ---------------------------------------------------------------------------
+# Expression identifier resolution (v0.54.0 — Phase B)
+# ---------------------------------------------------------------------------
+
+
+class TestExpressionIdentifierResolution:
+    """Identifiers inside expression bodies must resolve against the symbol table."""
+
+    def test_constraint_body_resolved(self):
+        model = loads("""
+            package P {
+                part def Vehicle {
+                    part wheel1 { attribute mass : Integer; }
+                    constraint c1 { wheel1.mass > 0 }
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues if i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER"]
+
+    def test_deep_chain_resolved(self):
+        model = loads("""
+            package P {
+                part def Vehicle {
+                    part chassis { part hub { attribute rpm : Integer; } }
+                    constraint c2 { chassis.hub.rpm < 5000.0 }
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues if i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER"]
+
+    def test_unresolved_in_constraint_body(self):
+        model = loads("""
+            package P {
+                part def Vehicle {
+                    constraint c1 { missing_var > 0 }
+                }
+            }
+        """)
+        issues = analyze(model)
+        bad = [i for i in issues if i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER"]
+        assert any("missing_var" in i.reference for i in bad)
+
+    def test_attribute_default_value_resolved(self):
+        model = loads("""
+            package P {
+                part def V {
+                    attribute a : Integer;
+                    attribute b : Integer = a + 2;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues if i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER"]
+
+    def test_attribute_default_value_unresolved(self):
+        model = loads("""
+            package P {
+                part def V {
+                    attribute b : Integer = nohere.mass + ghost;
+                }
+            }
+        """)
+        issues = analyze(model)
+        bad = [i for i in issues if i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER"]
+        assert any("nohere" in i.reference for i in bad)
+        assert any("ghost" in i.reference for i in bad)
+
+    def test_unresolved_chain_reports_head_and_chain(self):
+        model = loads("""
+            package P {
+                part def V {
+                    constraint c { wheel9.deep.nope == 1 }
+                }
+            }
+        """)
+        issues = analyze(model)
+        bad = [i.reference for i in issues if i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER"]
+        assert "wheel9" in bad
+        assert "wheel9.deep.nope" in bad
+
+    def test_imported_symbol_resolves_in_expression(self):
+        model = loads("""
+            package P {
+                public import ScalarValues::*;
+                part def Shape {
+                    attribute edges : Integer;
+                    attribute perimeter : Integer = size(edges) * 2;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues if i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER"]
+
+    def test_assert_constraint_body_resolved(self):
+        model = loads("""
+            package P {
+                part def V {
+                    attribute a : Integer;
+                    assert constraint { a < 100 }
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues if i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER"]
+
+    def test_guard_expression_resolved(self):
+        model = loads("""
+            package P {
+                part def V {
+                    attribute a : Integer;
+                    state s {
+                        state S1;
+                        state S2;
+                        transition t1 first S1
+                            if a > 1.0
+                            then S2;
+                    }
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues if i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER"]
+
+    def test_guard_unresolved(self):
+        model = loads("""
+            package P {
+                part def V {
+                    state s {
+                        state S1;
+                        state S2;
+                        transition t1 first S1
+                            if nosuchsignal > 1.0
+                            then S2;
+                    }
+                }
+            }
+        """)
+        issues = analyze(model)
+        bad = [i for i in issues if i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER"]
+        assert any("nosuchsignal" in i.reference for i in bad)
+
+    def test_issue_message_names_expression_owner(self):
+        model = loads("""
+            package P {
+                part def Vehicle {
+                    constraint c1 { mystery > 0 }
+                }
+            }
+        """)
+        issues = analyze(model)
+        expr_issues = [i for i in issues if i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER"]
+        assert expr_issues
+        assert any("Constraint" in i.message for i in expr_issues)
+
+    def test_library_function_size_in_expr(self):
+        """`size` (CollectionFunctions) must be indexed from the bundled library."""
+        from sysmlpy.semantic import LibrarySymbolIndex
+        LibrarySymbolIndex.clear_cache()
+        model = loads("""
+            package P {
+                public import ScalarValues::*;
+                part def Shape {
+                    attribute edges : Integer;
+                    attribute perimeter : Integer = size(edges) * 2;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [
+            i for i in issues
+            if i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER" and i.reference == "size"
+        ]

@@ -14,19 +14,21 @@ and dropped the textX parser in favor of [an ANTLR4 parser grammar](https://gith
 changed our unit library to pint.
 The project had diverged so much from sysml2py that a new name, sysmlpy, was selected.
 
-> **⚠️ Constraints are changing.** Upcoming releases (v0.54+) overhaul how
-> constraint, calc, and expression bodies are validated: names inside
-> expressions will be **resolved against the symbol table** (v0.54.0),
-> followed by operand type checking and unit-dimension compatibility via
-> pint (v0.55.0). Models that parse cleanly today may start producing
-> semantic errors once this lands. Track progress in
+> **⚠️ Constraints are changing.** As of v0.54.0, names inside
+> constraint / calc / default-value / guard expressions are **resolved
+> against the symbol table** — unresolved identifiers now produce
+> `UNRESOLVED_EXPRESSION_IDENTIFIER` errors from `analyze()`. Coming
+> next (v0.55.0): operand **type checking** and pint
+> **unit-dimension compatibility** inside expressions, which may turn
+> more currently-clean models into semantic errors. Track progress in
 > [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md).
 
 > **Scope reminder** — a green parse result means the file **parsed
-> syntactically**. Names inside constraint bodies and other OCL-style
-> expressions are not yet resolved by the semantic analyzer, so a
-> document that names an undefined symbol inside an `assert constraint
-> { ... }` will still parse cleanly. See [STATUS.md §Known Issues](STATUS.md#known-issues).
+> syntactically**. Expression identifiers are only checked when you run
+> `analyze(model)` explicitly, and operand type / unit checking inside
+> expressions is not yet implemented, so a constraint with mismatched
+> units will currently pass analysis. See
+> [STATUS.md §Known Issues](STATUS.md#known-issues).
 
 For release history, see [CHANGELOG.md](CHANGELOG.md).
 

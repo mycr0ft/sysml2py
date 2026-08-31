@@ -1,5 +1,50 @@
 # CHANGELOG
 
+## v0.54.0 (2026-08-30)
+
+### :mag: Phase B — Name Resolution on Structured Expressions
+
+The semantic analyzer now walks the structured expression ASTs captured
+since v0.52.0 and resolves every identifier against the symbol table.
+A new analyzer step (4b in `SemanticAnalyzer.analyze`) collects
+identifiers from expression bodies and emits
+`UNRESOLVED_EXPRESSION_IDENTIFIER` errors for names that don't resolve.
+
+Covered expression contexts: constraint / assert-constraint bodies,
+calculation result expressions, attribute / item / port / reference
+default values (`= expr`), and transition guard expressions.
+
+Resolution rules, in order:
+
+- qualified names (`P::A`, `ScalarValues::Real`) against package
+  namespaces and the `LibrarySymbolIndex`
+- unqualified names against the local scope chain (enclosing
+  definitions, imports, inherited features)
+- dotted feature chains (`wheel1.hub.mass`) resolved segment by
+  segment: the head must resolve as a symbol from the referencing
+  scope, and each subsequent step must exist within the previous
+  step's element subtree
+- invocation targets (`size(edges)`) resolve like any other reference;
+  argument expressions are walked recursively
+
+Library index fix: `_DEFINITION_RE` now captures `function` declarations
+(`function size { ... }` in `CollectionFunctions.kerml` etc. — ~40+
+library functions newly indexed), and `SemanticAnalyzer._normalize_library_paths(None)`
+resolves to the bundled library root instead of an empty list that
+poisoned the symbol-index cache with the hardcoded fallback set.
+
+New public internals in `semantic.py`:
+`ExpressionIdentifierCollector`, `_walk_expression_identifiers()`,
+`_find_owned_expressions()`, `SemanticAnalyzer._check_expression_identifiers()`,
+`SemanticAnalyzer._resolve_feature_chain()`, `SemanticAnalyzer._find_member()`.
+
+Phase C next (v0.55.0): operand type checking and pint unit-dimension
+compatibility inside expressions — see
+[docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md).
+
+Test results: fast suite 696/696, grammar round-trip 143/143.
+12 new expression-resolution tests in `tests/semantic_test.py` (136 total).
+
 ## v0.53.1 (2026-08-30)
 
 ### :white_check_mark: Phase A — Grammar Class Integrity & 100% Parse Conformance

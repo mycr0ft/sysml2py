@@ -1,6 +1,6 @@
 # sysmlpy — Master Development Plan & Roadmap
 
-> **Current Version:** v0.53.1 (August 2026)  
+> **Current Version:** v0.54.0 (August 2026)  
 > **Repository:** https://github.com/mycr0ft/sysmlpy  
 > **Upstream Grammar PR:** [daltskin/sysml-v2-grammar#12](https://github.com/daltskin/sysml-v2-grammar/pull/12)
 
@@ -10,11 +10,12 @@
 
 `sysmlpy` is a Python library for parsing, manipulating, and validating SysML v2.0 models using an ANTLR4-based parser, a rich AST of grammar classes, and a semantic analysis engine.
 
-### Current Health & Metrics (v0.53.1)
-- **Fast Test Suite:** 684/684 passed (100%) across grammar round-trips, public API classes, navigation, semantic analysis, import resolution, and PlantUML renderings.
+### Current Health & Metrics (v0.54.0)
+- **Fast Test Suite:** 696/696 passed (100%) across grammar round-trips, public API classes, navigation, semantic analysis, import resolution, and PlantUML renderings.
 - **Grammar Round-Trip Suite:** 143/143 passed (100%).
 - **XPect Parse Conformance:** 123/123 (100%) — `Import_Visibility_Valid.error` now matches the grammar's enforced import-visibility syntax error.
 - **Grammar Class Integrity:** 358/358 classes implement `get_definition()` (reflection-audited; 36 added in v0.53.1).
+- **Expression Name Resolution:** Identifiers inside constraint bodies, calc results, attribute defaults, and guards resolve against the symbol table; unresolved names emit `UNRESOLVED_EXPRESSION_IDENTIFIER` (v0.54.0).
 - **Upstream Grammar Conformance:** 310/310 official OMG specification fixture files parse cleanly via the corrected grammar in `daltskin/sysml-v2-grammar#12`.
 - **Expression Engine:** Structured, per-precedence AST capture active for binary, unary, invocation, and feature-chain expressions (replacing legacy collapse-to-text).
 
@@ -49,14 +50,14 @@
 └────────────────────────────────────┬─────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼─────────────────────────────────────┐
-│ Phase B: Name Resolution on Structured Expressions (v0.54.0) ← NEXT     │
+│ Phase B: Name Resolution on Structured Expressions (v0.54.0) ✅         │
 │   - Resolve FeatureReferenceExpression / FeatureChain against SymbolTable│
 │   - Identify unbound variables, scoped attributes, and imported symbols  │
 │   - Emit SemanticIssues for unresolved expression identifiers            │
 └────────────────────────────────────┬─────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼─────────────────────────────────────┐
-│ Phase C: Expression Type Checking & Static Evaluation (v0.55.0)          │
+│ Phase C: Expression Type Checking & Static Evaluation (v0.55.0) ← NEXT  │
 │   - Operator operand type compatibility (numeric, boolean, string)       │
 │   - Pint unit compatibility checking inside expressions                  │
 │   - Constant folding / static expression reduction                       │
@@ -82,7 +83,16 @@ All items complete as of v0.53.1:
 - `ReturnParameterMember.get_definition()` shape bug fixed (list vs dict for `ownedRelatedElement`).
 - `Import_Visibility_Valid.error` updated to the enforced bare-import syntax error; **XPect conformance 123/123 (100%)**.
 
-### Phase B: Name Resolution on Structured Expressions (v0.54.0) — NEXT
+### Phase B: Name Resolution on Structured Expressions (COMPLETE / v0.54.0)
+
+#### Resolution
+Implemented as analyzer step 4b (`SemanticAnalyzer._check_expression_identifiers`):
+- `ExpressionIdentifierCollector` walks the public-API model tree and extracts identifiers from each expression-owning element's grammar (`constraint`, `assert constraint`, `calc`, attribute/item/port/reference defaults, transition guards).
+- `_walk_expression_identifiers()` traverses the v0.52 per-precedence expression dict (Conditional → … → Primary), pulling QualifiedNames from `FeatureReferenceMember`, `PrimaryExpression` base + `ownedRelationship1/2` chains, `OwnedFeatureChain` steps, and `InvocationExpression` targets/arguments.
+- `SemanticIssue(severity="error", code="UNRESOLVED_EXPRESSION_IDENTIFIER")` emitted for unresolved names; dotted chains resolve segment-by-segment (`_resolve_feature_chain`).
+- Library fix bundled in: `function` declarations now indexed (~1604 symbols, up from ~1417) and the bundled library is the default `lib_roots` so `size()` etc. resolve without explicit `library=`.
+
+### Phase C: Semantic Type Compatibility & Unit Safety (v0.55.0) — NEXT
 
 #### Goal
 Now that expressions are captured as structured AST nodes rather than collapsed text strings, the semantic analyzer can walk expression trees and validate identifiers against the `SymbolTable`.

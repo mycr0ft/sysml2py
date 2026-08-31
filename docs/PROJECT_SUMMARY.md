@@ -2,7 +2,7 @@
 
 > **For:** Future agents and team members
 > **Last Updated:** August 30, 2026
-> **Current Version:** v0.53.1
+> **Current Version:** v0.54.0
 > **Repository:** https://github.com/mycr0ft/sysmlpy
 > **Master Development Plan:** [docs/DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)
 
@@ -25,7 +25,7 @@ sysmlpy/
 │   │   └── antlr4/          # Generated ANTLR parser/lexer
 │   ├── definition.py        # Model, Package, RootNamespace classes
 │   ├── usage.py             # Part, Item, Attribute, Port, Action, etc.
-│   ├── semantic.py          # Semantic analysis engine (~2.3K lines)
+│   ├── semantic.py          # Semantic analysis engine (~2.7K lines)
 │   ├── project.py           # Multi-file project loading (load_files, load_project)
 │   ├── store.py             # Storage backends (memory, NetworkX, Kuzu, Cayley)
 │   ├── plantuml.py          # PlantUML diagram generation
@@ -42,7 +42,7 @@ sysmlpy/
 │   ├── main_test.py         # 7 integration tests
 │   ├── plantuml_test.py     # 122 PlantUML view rendering tests
 │   ├── boxes_view_test.py   # 19 boxes-backed state-machine visualizer tests (v0.36.0)
-│   ├── semantic_test.py     # 124 semantic analysis tests
+│   ├── semantic_test.py     # 136 semantic analysis tests
 │   ├── project_test.py      # 17 multi-file loading tests
 │   ├── navigate_test.py     # 42 model navigation tests
 │   ├── import_test.py       # 21 import resolution tests
@@ -83,7 +83,7 @@ SysML text → ANTLR4 Lexer/Parser → Parse Tree
 - Missing classes added: `DefinitionBody`, `DefinitionBodyItem`, `FeatureSpecializationPart`, `SubclassificationPart`
 - `classtree()` converts Model tree back to text
 
-### Semantic Analysis (v0.17.0 → v0.20.1)
+### Semantic Analysis (v0.17.0 → v0.54.0)
 
 The semantic analysis engine (`semantic.py`) provides comprehensive validation:
 
@@ -92,8 +92,9 @@ The semantic analysis engine (`semantic.py`) provides comprehensive validation:
 | **Symbol Resolution** | ✅ Complete | Hierarchical symbol table with parent chain lookup |
 | **Import Resolution** | ✅ Complete | Namespace (`::*`), membership, recursive (`::*::**`) |
 | **Import Visibility** | ✅ Complete | `private`/`public`/`protected` enforcement |
-| **Library Symbol Index** | ✅ Complete | Scans 88 `.kerml`/`.sysml` files (~1,417 symbols) |
+| **Library Symbol Index** | ✅ Complete | Scans 88 `.kerml`/`.sysml` files (~1,604 symbols, incl. `function` decls) |
 | **Inheritance Resolution** | ✅ Complete | Supertype chain traversal for subsetting/redefinition |
+| **Expression Name Resolution** | ✅ Complete (v0.54.0) | Identifiers in constraint/calc/default/guard bodies resolve against the symbol table; segment-by-segment feature-chain resolution |
 | **OCL Constraints** | ✅ 8 of 8 | See table below |
 
 ### Multi-File Projects (v0.21.0)

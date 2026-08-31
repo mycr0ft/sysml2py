@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.53.1** (2026-08-30)
+Current version: **v0.54.0** (2026-08-30)
 
 ---
 
@@ -200,14 +200,14 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 | `tests/class_test.py` | 54 | ✅ All pass |
 | `tests/main_test.py` | 7 | ✅ All pass |
 | `tests/plantuml_test.py` | 108 | ✅ All pass |
-| `tests/semantic_test.py` | 118 | ✅ All pass |
+| `tests/semantic_test.py` | 136 | ✅ All pass |
 | `tests/navigate_test.py` | 33 | ✅ All pass |
 | `tests/import_test.py` | 16 | ✅ All pass |
 | `tests/validator_test.py` | 34 | ✅ All pass |
 | `tests/project_test.py` | 17 | ✅ All pass |
 | `tests/store_test.py` | 46 | Pass (optional deps skipped if not installed) |
 | `tests/conformance_test.py` | 123 | ✅ All pass (100%) |
-| **Total** | **635** | **635 pass** |
+| **Total** | **696** | **696 pass** |
 
 ### Documentation
 
@@ -277,7 +277,7 @@ All private underscore-prefixed mutation methods given public aliases:
 | `antlr_visitor.py` ~line 9558 | Top-level attribute multiplicity not captured (nested attributes work) |
 | `definition.py` | Dead code — duplicate `elif inner_class == "ActionUsage"` block |
 | `usage.py` | Type relationships (`: TypeName`) not preserved in `load_from_grammar()` |
-| `semantic.py` | Names inside constraint bodies (`assert constraint { ... }`) and other expressions are not resolved. A parse-clean result means *parsed*, not *checked* ([issue #3](https://github.com/mycr0ft/sysmlpy/issues/3), finding 4). |
+| `semantic.py` | Operand **type** and **unit** checking inside expressions not yet implemented (Phase C, v0.55.0). Expression *name* resolution landed in v0.54.0. |
 
 ---
 
@@ -340,14 +340,14 @@ Run with: `poetry run pytest -m conformance`
 | Public API classes (complete) | 28 |
 | Grammar classes with `get_definition()` | **358 of 358 (100%, reflection-audited)** |
 | Grammar classes with graceful fallback | All 358 (no more NotImplementedError crashes) |
-| Unit + grammar + integration tests | 684 passing |
+| Unit + grammar + integration tests | 696 passing |
 | Grammar round-trip tests passing | **143 / 143 (100%)** |
 | Helper-property tests | 8 / 8 |
 | Grammar-side References dispatch | ✅ | | |
 | PlantUML rendering tests | **108 passing** |
 | Conformance tests (2026-03 XPect suite) | **123 / 123 (100%)** |
-| Semantic analysis tests | **118 passing** |
+| Semantic analysis tests | **136 passing** |
 | Storage backend tests | **46 passing** (optional deps skipped if missing) |
 | Bundled standard library files | 88 (kernel `.kerml` + systems `.sysml` + domain `.sysml`) |
-| Library symbols indexed | ~1,417 |
+| Library symbols indexed | ~1,604 (incl. library `function` declarations, v0.54.0) |
 | PlantUML view functions | 10 (GV, PV, AFV, IV, STV, SV, CV, Tabular, DataValue, RelMatrix) |

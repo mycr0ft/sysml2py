@@ -6,18 +6,23 @@ See [STATUS.md](STATUS.md) and [CHANGELOG.md](CHANGELOG.md) for the current proj
 
 ---
 
-## Active Tasks (Phase B: v0.54.0)
+## Active Tasks (Phase C: v0.55.0)
 
-- [ ] **Name Resolution on Structured Expressions:**
-  - [ ] Expression AST walker (`_walk_expression_identifiers`) in `semantic.py`
-  - [ ] Symbol resolution for `FeatureReferenceExpression` / `FeatureChainMember` against `SymbolTable`
-  - [ ] Unqualified-name lookup in local scopes (calc parameters, state variables, enclosing definitions)
-  - [ ] Qualified-name lookup against package namespaces and `LibrarySymbolIndex`
-  - [ ] Emit `SemanticIssue(error)` for unresolved expression identifiers
+- [ ] **Expression Type Checking & Static Evaluation:**
+  - [ ] Operator operand type compatibility (numeric, boolean, string) on the structured expression AST
+  - [ ] Pint unit-dimension compatibility checking inside expressions (`[m] + [kg]` → error)
+  - [ ] Constant folding / static expression reduction (e.g. `10 [kg] * 2` → `20 [kg]`)
 
 ---
 
 ## Recently Completed
+
+- [x] **Phase B (v0.54.0):** Name resolution on structured expressions
+  - [x] `_walk_expression_identifiers` + `ExpressionIdentifierCollector` in `semantic.py`
+  - [x] Resolution for constraints, assert constraints, calc bodies, attribute defaults, guards
+  - [x] Dotted feature-chain segment resolution (`wheel1.hub.mass`)
+  - [x] `UNRESOLVED_EXPRESSION_IDENTIFIER` errors for unresolved names
+  - [x] Library index captures `function` declarations; bundled library indexed by default
 
 - [x] **Phase A (v0.53.1):** Grammar Class Integrity & 100% Parse Conformance
   - [x] `get_definition()` added to all 36 missing classes (reflection audit: 358/358)
@@ -28,5 +33,4 @@ See [STATUS.md](STATUS.md) and [CHANGELOG.md](CHANGELOG.md) for the current proj
 
 ## Upcoming Milestones
 
-- [ ] **Phase C (v0.55.0):** Semantic expression type compatibility and unit safety checking
 - [ ] **Phase D (v0.56.0+):** ANTLR SLL mode fast-path parsing & graph store query enhancements
