@@ -1210,7 +1210,7 @@
 
 
 <h1 id="sysmlpy-project-status">sysmlpy — Project Status<a class="headerlink" href="#sysmlpy-project-status" title="Permanent link">&para;</a></h1>
-<p>Current version: <strong>v0.58.0</strong> (2026-08-31)</p>
+<p>Current version: <strong>v0.59.0</strong> (2026-08-31)</p>
 <hr />
 <h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
 <h3 id="public-api-classes">Public API Classes<a class="headerlink" href="#public-api-classes" title="Permanent link">&para;</a></h3>
@@ -1981,8 +1981,8 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 <td><strong>Done in v0.57.0</strong> — <code>_typed_by_name</code> / <code>typed_by_name</code> preserved for all usage kinds loaded from grammar (<code>Part</code>, <code>Attribute</code>, <code>Item</code>, <code>Port</code>, <code>Action</code>, <code>Interface</code>, <code>UseCase</code>, <code>Requirement</code>, <code>State</code>, behavior children). Resolving <code>typedby</code> to the definition <em>object</em> via a model pass remains a follow-up.</td>
 </tr>
 <tr>
-<td>Fix top-level attribute multiplicity</td>
-<td>Visitor hardcodes <code>specialization=None</code> for top-level attributes</td>
+<td>~Fix top-level attribute multiplicity~</td>
+<td><strong>Verified fixed (v0.40.0) + flags bug fixed in v0.59.0</strong> — bounds (<code>[N]</code>, <code>[N..M]</code>, <code>[*]</code>) already survived since v0.40.0 (docs were stale); the real remaining bug was <code>ordered</code>/<code>nonunique</code> hardcoded <code>False</code> in the visitor extractors plus a <code>MultiplicityPart.dump()</code> XOR-guard that dropped <code>ordered</code>. All fixed.</td>
 </tr>
 <tr>
 <td>~AliasMember / Import handling~</td>

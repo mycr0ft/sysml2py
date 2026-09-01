@@ -741,7 +741,7 @@
 
 <h1 id="sysmlpy-master-development-plan-roadmap">sysmlpy — Master Development Plan &amp; Roadmap<a class="headerlink" href="#sysmlpy-master-development-plan-roadmap" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>Current Version:</strong> v0.58.0 (August 2026)<br />
+<p><strong>Current Version:</strong> v0.59.0 (August 2026)<br />
 <strong>Repository:</strong> https://github.com/mycr0ft/sysmlpy<br />
 <strong>Upstream Grammar PR:</strong> <a href="https://github.com/daltskin/sysml-v2-grammar/pull/12">daltskin/sysml-v2-grammar#12</a></p>
 </blockquote>
@@ -864,6 +864,10 @@ tracked in <a href="../TODO.md">TODO.md</a>.  Post-plan high-priority fixes:</p>
 <li><strong>v0.58.0 — Import/AliasMember order:</strong> both <code>_ensure_body()</code> paths
   (Model + Package) preserve source positions of imports and aliases;
   interleaved files now round-trip exactly through <code>loads().dump()</code>.</li>
+<li><strong>v0.59.0 — Top-level multiplicity:</strong> bounds verified fixed since
+  v0.40.0 (stale docs cleared); the residual <code>ordered</code> / <code>nonunique</code>
+  flag bugs (visitor extractors hardcoded <code>False</code>, <code>MultiplicityPart.dump()</code>
+  XOR-guard) fixed in v0.59.0.  All STATUS.md High Priority items done.</li>
 </ul>
 <hr />
 <h2 id="5-testing-verification-standard">5. Testing &amp; Verification Standard<a class="headerlink" href="#5-testing-verification-standard" title="Permanent link">&para;</a></h2>

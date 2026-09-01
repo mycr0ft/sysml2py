@@ -431,6 +431,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0590-2026-08-31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.59.0 (2026-08-31)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.59.0 (2026-08-31)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-top-level-attribute-multiplicity-verified-fixed-flags-bug-found-fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Top-level attribute multiplicity — verified fixed, flags bug found &amp; fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0580-2026-08-31" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2664,6 +2692,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0590-2026-08-31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.59.0 (2026-08-31)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.59.0 (2026-08-31)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-top-level-attribute-multiplicity-verified-fixed-flags-bug-found-fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Top-level attribute multiplicity — verified fixed, flags bug found &amp; fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0580-2026-08-31" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4856,6 +4912,36 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0590-2026-08-31">v0.59.0 (2026-08-31)<a class="headerlink" href="#v0590-2026-08-31" title="Permanent link">&para;</a></h2>
+<h3 id="white_check_mark-top-level-attribute-multiplicity-verified-fixed-flags-bug-found-fixed">:white_check_mark: Top-level attribute multiplicity — verified fixed, flags bug found &amp; fixed<a class="headerlink" href="#white_check_mark-top-level-attribute-multiplicity-verified-fixed-flags-bug-found-fixed" title="Permanent link">&para;</a></h3>
+<p>Investigation of the last STATUS.md High Priority item found the headline
+bug <strong>already resolved in v0.40.0</strong> (commit <code>eb65e9e</code> switched the top-level
+<code>attributeUsage</code> dispatch from the typed-by-only <code>_build_specialization()</code>
+to <code>_build_full_specialization_from_ctx()</code>, which captures multiplicity via
+<code>_get_multiplicity_part()</code>); the STATUS / PROJECT_SUMMARY / AGENTS.md
+entries were simply never cleared.  Verified end-to-end: bounds (<code>[N]</code>,
+<code>[N..M]</code>, <code>[*]</code>, variable refs) survive for <code>attribute</code>, <code>part</code>, <code>item</code>,
+and <code>port</code> at package level, with typing and/or re-declarations.</p>
+<p>However, the investigation surfaced a <strong>real adjacent bug</strong>:</p>
+<ul>
+<li><code>ordered</code> / <code>nonunique</code> multiplicity flags were <strong>hardcoded <code>False</code></strong> in
+  both ANTLR multiplicity extractors (<code>_get_multiplicity_part</code>,
+  <code>_extract_multiplicity_from_mp</code>), silently dropping <code>attribute x[3]
+  ordered;</code>'s keyword.</li>
+<li>After fixing the visitor, a <strong>second</strong> bug surfaced in
+  <code>MultiplicityPart.dump()</code> (<code>grammar/classes.py</code>): its
+  <code>isOrdered and not isOrdered2</code> guard never fired because <code>__init__</code>
+  populates both fields from the same dict value — <code>ordered</code> was dropped on
+  every round-trip while <code>nonunique</code> happened to work.</li>
+</ul>
+<p>Fixes:
+- Both visitor multiplicity extractors now read <code>ORDERED()</code> / <code>NONUNIQUE()</code>
+  from the ANTLR <code>MultiplicityPartContext</code>.
+- <code>MultiplicityPart.dump()</code> emits the keyword when either flag is set.
+- Grammar note: <code>nonunique ordered</code> canonicalizes to <code>ordered nonunique</code>
+  (grammar-rule order; semantically identical) — round-trip is stable.
+- 7 regression tests in <code>tests/class_test.py</code> (flags, bounds, all usage
+  kinds, canonicalization stability).</p>
 <h2 id="v0580-2026-08-31">v0.58.0 (2026-08-31)<a class="headerlink" href="#v0580-2026-08-31" title="Permanent link">&para;</a></h2>
 <h3 id="white_check_mark-import-aliasmember-source-order-preservation-high-priority-fix">:white_check_mark: Import / AliasMember source-order preservation (High Priority fix)<a class="headerlink" href="#white_check_mark-import-aliasmember-source-order-preservation-high-priority-fix" title="Permanent link">&para;</a></h3>
 <p><code>Model.load()</code> and <code>Package.load_from_grammar()</code> always preserved

@@ -1512,9 +1512,9 @@
 <td><code>IfNode</code>, <code>WhileLoopNode</code>, <code>ForLoopNode</code>, <code>ControlNode</code>, <code>SendNode</code>, <code>AcceptNode</code>, <code>TerminateNode</code>, etc. exist in the visitor but not in <code>grammar/classes.py</code>. 16 grammar tests fail with <code>KeyError</code>.</td>
 </tr>
 <tr>
-<td><strong>Top-level attribute multiplicity not captured</strong></td>
-<td><code>antlr_visitor.py</code> ~line 9558</td>
-<td>Attributes defined at package level (not inside a definition) have <code>specialization=None</code> hardcoded, so multiplicity like <code>attribute x[5..2]</code> is lost. Nested attributes inside definitions work correctly.</td>
+<td>~<strong>Top-level attribute multiplicity not captured</strong>~</td>
+<td>Resolved — v0.40.0 fixed bounds capture (docs were stale); v0.59.0 fixed the remaining <code>ordered</code>/<code>nonunique</code> flags hardcoded <code>False</code> in the visitor + a <code>MultiplicityPart.dump()</code> XOR-guard bug.</td>
+<td></td>
 </tr>
 <tr>
 <td><strong>Typing resolved to name only</strong></td>
@@ -1626,13 +1626,13 @@
 <h3 id="parser-and-grammar">Parser and Grammar<a class="headerlink" href="#parser-and-grammar" title="Permanent link">&para;</a></h3>
 <ol>
 <li>
-<p><strong>Fix top-level attribute multiplicity</strong> — The visitor hardcodes <code>specialization=None</code> for top-level attributes. This requires updating the visitor to call <code>_build_full_specialization_from_ctx</code> for attribute usages.</p>
+<p>~~<strong>Fix top-level attribute multiplicity</strong>~~ — <strong>Resolved v0.59.0.</strong> Bounds were fixed in v0.40.0 (docs stale); the remaining <code>ordered</code>/<code>nonunique</code> flag bugs in the visitor extractors and <code>MultiplicityPart.dump()</code> were fixed in v0.59.0.</p>
 </li>
 <li>
-<p><strong>Typed-by preservation</strong> — Preserve type relationships when loading from grammar in <code>load_from_grammar()</code>.</p>
+<p>~~<strong>Typed-by preservation</strong>~~ — <strong>Resolved v0.57.0</strong> (<code>Usage.typed_by_name</code>).</p>
 </li>
 <li>
-<p><strong>AliasMember and Import handling</strong> — Implement <code>load_package_body()</code> support for these node types.</p>
+<p>~~<strong>AliasMember and Import handling</strong>~~ — <strong>Resolved v0.58.0</strong> (source-order preservation in <code>_ensure_body()</code>).</p>
 </li>
 </ol>
 <h3 id="library-and-standard-compliance">Library and Standard Compliance<a class="headerlink" href="#library-and-standard-compliance" title="Permanent link">&para;</a></h3>
