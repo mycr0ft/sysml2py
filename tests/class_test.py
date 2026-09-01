@@ -721,3 +721,125 @@ def test_requirement_nested_children_preserves_grammar_roundtrip():
     eng = m.children[0].children[1]
     assert eng.name == "engineSpecification"
     assert len(eng.children) == 2
+
+
+# ---------------------------------------------------------------------------
+# Typed-by preservation on load_from_grammar (v0.57.0)
+# ---------------------------------------------------------------------------
+
+def _find_by_name(root, name):
+    if getattr(root, 'name', None) == name:
+        return root
+    for c in getattr(root, 'children', []) or []:
+        r = _find_by_name(c, name)
+        if r is not None:
+            return r
+    return None
+
+
+def test_typed_by_name_preserved_part():
+    import sysmlpy
+    text = """package P {
+        part def Engine;
+        part def Vehicle {
+            part engine : Engine;
+        }
+    }"""
+    m = sysmlpy.loads(text)
+    eng = _find_by_name(m, "engine")
+    assert eng is not None
+    assert eng.typed_by_name == "Engine"
+    assert eng._typed_by_name == "Engine"
+
+
+def test_typed_by_name_preserved_qualified_type():
+    import sysmlpy
+    text = """package P {
+        part def Vehicle {
+            attribute mass : ScalarValues::Real;
+        }
+    }"""
+    m = sysmlpy.loads(text)
+    mass = _find_by_name(m, "mass")
+    assert mass is not None
+    assert mass.typed_by_name == "ScalarValues::Real"
+
+
+def test_typed_by_name_preserved_across_usage_kinds():
+    import sysmlpy
+    text = """package P {
+        item def Fuel;
+        port def SupplyPort;
+        action def ComputeAct;
+        interface def DataIface;
+        part def Vehicle {
+            item fuel : Fuel;
+            port supply : SupplyPort;
+            action compute : ComputeAct;
+            interface link : DataIface;
+        }
+    }"""
+    m = sysmlpy.loads(text)
+    expected = {
+        "fuel": "Fuel",
+        "supply": "SupplyPort",
+        "compute": "ComputeAct",
+        "link": "DataIface",
+    }
+    for name, want in expected.items():
+        el = _find_by_name(m, name)
+        assert el is not None, f"{name} missing from model tree"
+        assert el.typed_by_name == want, (
+            f"{name}: typed_by_name={el.typed_by_name!r}, want {want!r}"
+        )
+
+
+def test_typed_by_name_none_without_typing():
+    import sysmlpy
+    text = """package P {
+        part def Engine;
+        part def Vehicle {
+            part bare;
+        }
+    }"""
+    m = sysmlpy.loads(text)
+    bare = _find_by_name(m, "bare")
+    assert bare is not None
+    assert bare.typed_by_name is None
+
+
+def test_typed_by_name_behavior_children():
+    import sysmlpy
+    text = """package P {
+        state def Mode;
+        part def Vehicle {
+            state active : Mode;
+        }
+    }"""
+    m = sysmlpy.loads(text)
+    veh = _find_by_name(m, "Vehicle")
+    states = [c for c in veh.children if type(c).__name__ == "State"]
+    assert len(states) == 1
+    assert states[0].typed_by_name == "Mode"
+
+
+def test_typed_by_name_default_instance():
+    # Programmatically-built elements default to None without errors
+    p = Part(name="x")
+    assert p.typed_by_name is None
+    a = Attribute(name="y")
+    assert a.typed_by_name is None
+
+
+def test_typed_by_name_dump_roundtrip_unchanged():
+    import sysmlpy
+    text = """package P {
+        part def Engine;
+        part def Vehicle {
+            part engine : Engine;
+            attribute mass : ScalarValues::Real;
+        }
+    }"""
+    m = sysmlpy.loads(text)
+    strip = lambda s: "".join(s.split())
+    assert strip(m.dump()) == strip(text)

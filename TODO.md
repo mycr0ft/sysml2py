@@ -21,6 +21,17 @@ are complete.  Candidate follow-up work:
 
 ## Recently Completed
 
+- [x] **v0.58.0:** Import / AliasMember source-order preservation (High Priority from STATUS.md)
+  - [x] Both `_ensure_body()` rebuild paths (Model + Package) re-emit `Import`/`AliasMember` at original positions
+  - [x] Root-level and interleaved imports/aliases round-trip through `loads(...).dump()`
+  - [x] 10 regression tests in `tests/import_test.py` (`TestImportSourceOrder`)
+
+- [x] **v0.57.0:** Typed-by preservation (High Priority from STATUS.md)
+  - [x] `_extract_specialization_info()` hoisted from `Action` to base `Usage`; handles both grammar layouts
+  - [x] New `Usage.typed_by_name` property populated on `loads()` for all usage kinds (Part, Item, Attribute, Port, Connection, Action, Interface, UseCase, Requirement, State, behavior children)
+  - [x] 7 regression tests in `tests/class_test.py`
+  - [ ] Follow-up: resolve `typedby` to the definition *object* via a model pass
+
 - [x] **Phase D (v0.56.0):** High-performance parsing & graph store queries
   - [x] Two-stage SLL → LL parse with single-build fast path (38% faster parse)
   - [x] `prediction_mode=` parameter (sll / ll / sll_only)

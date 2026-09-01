@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.56.0** (2026-08-31)
+Current version: **v0.58.0** (2026-08-31)
 
 ---
 
@@ -274,10 +274,10 @@ All private underscore-prefixed mutation methods given public aliases:
 | Location | Description |
 |---|---|
 | `grammar/classes.py` | `PackageBodyElement` name is hardcoded; `#!TODO This isn't always the case` |
-| `definition.py` (`RootNamespace`) | `load_package_body()` raises `NotImplementedError` for `AliasMember` and `Import` nodes |
+| `definition.py` (`RootNamespace`) | ~~`load_package_body()` raises `NotImplementedError` for `AliasMember` and `Import` nodes~~ **Resolved in v0.58.0** — node types were already dispatched; the real gap (imports/aliases moved to the end of the package body on public-API dump) is fixed. |
 | `antlr_visitor.py` ~line 9558 | Top-level attribute multiplicity not captured (nested attributes work) |
 | `definition.py` | Dead code — duplicate `elif inner_class == "ActionUsage"` block |
-| `usage.py` | Type relationships (`: TypeName`) not preserved in `load_from_grammar()` |
+| `usage.py` | ~~Type relationships (`: TypeName`) not preserved in `load_from_grammar()`~~ **Fixed in v0.57.0** — `_extract_specialization_info()` hoisted to base `Usage`; new `Usage.typed_by_name` populates on all usage kinds. `typedby` object resolution is a follow-up. |
 | `semantic.py` | `*`/`/` dimension derivation (`mass * speed → ForceValue` inference) not yet implemented (future); `+`/`-` dimension equality and operand-category checks are complete (v0.55.0). |
 | `antlr_parser.py` | SLL error *wording* may differ from LL wording (`missing '}' at '<EOF>'` vs `extraneous input '<EOF>' ...`); source position always matches (v0.56.0). |
 
@@ -289,9 +289,9 @@ All private underscore-prefixed mutation methods given public aliases:
 
 | Feature | Description |
 |---|---|
-| Typed-by preservation | Type relationships not preserved when loading elements from grammar (`usage.py`, marked `#!TODO Typed By`) |
+| ~Typed-by preservation~ | **Done in v0.57.0** — `_typed_by_name` / `typed_by_name` preserved for all usage kinds loaded from grammar (`Part`, `Attribute`, `Item`, `Port`, `Action`, `Interface`, `UseCase`, `Requirement`, `State`, behavior children). Resolving `typedby` to the definition *object* via a model pass remains a follow-up. |
 | Fix top-level attribute multiplicity | Visitor hardcodes `specialization=None` for top-level attributes |
-| AliasMember / Import handling | `definition.py` `load_package_body()` needs these node types |
+| ~AliasMember / Import handling~ | **Done in v0.58.0** — nodes were already parsed and held on `Package.imports` (definition.py); the gap was `_ensure_body()` reordering imports/aliases to the end of the body on dump. Source-order interleaving now preserved in both Model and Package rebuild paths. |
 
 ### Medium Priority
 

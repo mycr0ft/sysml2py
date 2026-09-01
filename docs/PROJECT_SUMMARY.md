@@ -244,6 +244,8 @@ Multiplicity ranges (`[N]`, `[N..M]`, `[*]`) are stored as part of the `FeatureS
 | **Import visibility optional in grammar** | Made `visibilityIndicator` required in `SysMLv2Parser.g4` (v0.21.0) |
 | **No multi-file loading support** | Added `load_files()`, `load_project()`, `load_with_dependencies()` (v0.21.0) |
 | **Standard library imports not validated** | Semantic analyzer now checks `LibrarySymbolIndex` for import targets (v0.21.0) |
+| **AliasMember / Import serialization order** | v0.58.0 — `_ensure_body()` (Model + Package) now re-emits imports/aliases at their original source positions instead of appending them to the end. |
+| **Typed-by not preserved in load_from_grammar** | v0.57.0 — `_extract_specialization_info()` hoisted to base `Usage` (both grammar layouts); new `Usage.typed_by_name` property populated for all usage kinds. |
 
 ### High Priority
 
@@ -251,10 +253,10 @@ Multiplicity ranges (`[N]`, `[N..M]`, `[*]`) are stored as part of the `FeatureS
 |-------|----------|--------|
 | **Action control-flow node classes missing** | `grammar/classes.py` | `IfNode`, `WhileLoopNode`, `ForLoopNode`, `ControlNode`, `SendNode`, `AcceptNode`, `TerminateNode`, etc. exist in the visitor but not in `grammar/classes.py`. 16 grammar tests fail with `KeyError`. |
 | **Top-level attribute multiplicity not captured** | `antlr_visitor.py` ~line 9558 | Attributes defined at package level (not inside a definition) have `specialization=None` hardcoded, so multiplicity like `attribute x[5..2]` is lost. Nested attributes inside definitions work correctly. |
-| **Typed-by not preserved in load_from_grammar** | `usage.py` (marked `#!TODO Typed By`) | When loading a model from grammar, type relationships (`: TypeName`) are not preserved on the public class objects. |
+| **Typing resolved to name only** | `usage.py` | v0.57.0 preserves the declared type *name* (`typed_by_name`) on usages loaded from grammar; resolving `typedby` to the definition *object* via a model pass is still open. |
 | **Duplicate ActionUsage block** | `definition.py` | Dead code — duplicate `elif inner_class == "ActionUsage"` block. |
 | **PackageBodyElement name hardcoded** | `grammar/classes.py` | Comment says `#!TODO This isn't always the case`. |
-| **RootNamespace doesn't handle AliasMember/Import** | `definition.py` | `load_package_body()` raises `NotImplementedError` for these node types. |
+| **RootNamespace doesn't handle AliasMember/Import** | `definition.py` | ~~`load_package_body()` raises `NotImplementedError`~~ **Resolved v0.58.0** — node types already dispatched; serialization-order gap fixed. |
 
 ### Medium Priority
 

@@ -170,28 +170,46 @@ class Model(Searchable):
     def _ensure_body(self):
         """Rebuild the grammar body from current children and imports.
 
-        Serializes all child elements into PackageMember wrappers and
-        preserves any existing Import or AliasMember entries. Updates
-        self.grammar with the reconstructed RootNamespace.
+        Serializes all child elements into PackageMember wrappers while
+        preserving ``Import`` and ``AliasMember`` declarations **at their
+        original source positions** (v0.58.0).  The existing grammar body
+        is used as the ordering template: each ``PackageMember`` slot is
+        refilled with the fresh serialization of the next child, and any
+        children beyond the recorded slots are appended at the end.
 
         Returns
         -------
         Model
             Self for chaining.
         """
-        body = []
+        # Serialize all current children into PackageMember definitions
+        child_defs = []
         for abc in self.children:
             v = abc._get_definition(child="PackageBody")
             if isinstance(v, list):
                 for subchild in v:
-                    body.append(PackageMember(subchild).get_definition())
+                    child_defs.append(PackageMember(subchild).get_definition())
             else:
-                body.append(PackageMember(v).get_definition())
+                child_defs.append(PackageMember(v).get_definition())
 
-        if hasattr(self, 'grammar') and self.grammar:
-            for child in self.grammar.children:
-                if child.__class__.__name__ in ('Import', 'AliasMember'):
-                    body.append(child.get_definition())
+        existing = getattr(getattr(self, 'grammar', None), 'children', None)
+
+        body = []
+        if existing:
+            member_iter = iter(child_defs)
+            for item in existing:
+                cn = item.__class__.__name__
+                if cn in ('Import', 'AliasMember'):
+                    body.append(item.get_definition())
+                elif cn == 'PackageMember':
+                    try:
+                        body.append(next(member_iter))
+                    except StopIteration:
+                        break  # children shrank; drop stale members
+            # children added programmatically beyond recorded slots
+            body.extend(member_iter)
+        else:
+            body = child_defs
 
         if len(body) > 0:
             self.grammar = RootNamespace(
@@ -567,22 +585,43 @@ class Package(Searchable):
     def _ensure_body(self):
         """Rebuild the package grammar body from current children and imports.
 
-        Serializes all child elements into PackageMember wrappers and
-        preserves any existing Import or AliasMember entries.
+        Serializes all child elements into PackageMember wrappers while
+        preserving ``Import`` and ``AliasMember`` declarations **at their
+        original source positions** (v0.58.0).  The existing grammar body
+        is used as the ordering template: each ``PackageMember`` slot is
+        refilled with the fresh serialization of the next child, and any
+        children beyond the recorded slots are appended at the end.
         """
-        body = []
+        # Serialize all current children into PackageMember definitions
+        child_defs = []
         for abc in self.children:
             v = abc._get_definition(child="PackageBody")
             if isinstance(v, list):
                 for subchild in v:
-                    body.append(PackageMember(subchild).get_definition())
+                    child_defs.append(PackageMember(subchild).get_definition())
             else:
-                body.append(PackageMember(v).get_definition())
+                child_defs.append(PackageMember(v).get_definition())
 
-        if hasattr(self.grammar, 'body') and self.grammar.body:
-            for child in self.grammar.body.children:
-                if child.__class__.__name__ in ('Import', 'AliasMember'):
-                    body.append(child.get_definition())
+        body_children = getattr(
+            getattr(getattr(self, 'grammar', None), 'body', None), 'children', None
+        )
+
+        body = []
+        if body_children:
+            member_iter = iter(child_defs)
+            for item in body_children:
+                cn = item.__class__.__name__
+                if cn in ('Import', 'AliasMember'):
+                    body.append(item.get_definition())
+                elif cn == 'PackageMember':
+                    try:
+                        body.append(next(member_iter))
+                    except StopIteration:
+                        break  # children shrank; drop stale members
+            # children added programmatically beyond recorded slots
+            body.extend(member_iter)
+        else:
+            body = child_defs
 
         if len(body) > 0:
             self.grammar.body = PackageBody(

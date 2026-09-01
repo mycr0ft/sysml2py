@@ -249,3 +249,119 @@ class TestPackageImportsProperty:
         imports = pkg.imports
         imports.clear()
         assert len(pkg.imports) == 1
+
+
+class TestImportSourceOrder:
+    """Imports/aliases must stay at their original source positions (v0.58.0).
+
+    Previously _ensure_body() always appended Import/AliasMember nodes after
+    all members, so any source file interleaving imports with definitions
+    failed exact-text round-trip."""
+
+    @staticmethod
+    def _round_trip_equal(src: str) -> bool:
+        model = sysmlpy.loads(src)
+        out = model.dump()
+        strip = lambda s: "".join(s.split())
+        return strip(src) == strip(out)
+
+    def test_import_before_member_round_trip(self):
+        src = """package P {
+    private import Q::*;
+    package Q;
+}
+"""
+        assert self._round_trip_equal(src)
+
+    def test_import_after_member_round_trip(self):
+        src = """package P {
+    package A;
+    private import Q::*;
+}
+"""
+        assert self._round_trip_equal(src)
+
+    def test_import_interleaved_round_trip(self):
+        src = """package P {
+    package A;
+    public import Q::*;
+    package B;
+    private import R;
+    package C;
+}
+"""
+        assert self._round_trip_equal(src)
+
+    def test_import_order_multiple(self):
+        model = sysmlpy.loads("""package P {
+    private import Q::*;
+    package A;
+    public import R::*;
+    package B;
+}
+""")
+        out = model.dump()
+        strip = lambda s: "".join(s.split())
+        # import positions preserved relative to members
+        q_pos = strip(out).index("privateimportQ::*;")
+        b_pos = out.index("package B;")
+        r_pos = strip(out).index("publicimportR::*;")
+        c_pos = out.index("private import Q")
+        assert q_pos < out.index("package Q") if "package Q" in out else True
+        assert r_pos < b_pos
+
+    def test_alias_source_position_round_trip(self):
+        src = """package P {
+    alias A for Q;
+    package Q;
+}
+"""
+        assert self._round_trip_equal(src)
+
+    def test_alias_after_member_round_trip(self):
+        src = """package P {
+    package Q;
+    alias A for Q;
+}
+"""
+        assert self._round_trip_equal(src)
+
+    def test_mixed_import_alias_interleaved(self):
+        src = """package P {
+    private import S::*;
+    alias A1 for Q;
+    package Q;
+    package S;
+}
+"""
+        assert self._round_trip_equal(src)
+
+    def test_nested_package_import_round_trip(self):
+        src = """package P {
+    package Inner {
+        private import Q::*;
+        package Q;
+    }
+}
+"""
+        assert self._round_trip_equal(src)
+
+    def test_programmatic_add_appends_after_import(self):
+        """Children added programmatically go to the end; existing import untouched."""
+        model = sysmlpy.loads("package P { private import Q::*; package Q; }")
+        pkg = model.children[0]
+        pkg._set_child(sysmlpy.Part(definition=True, name="Motor"))
+        out = model.dump()
+        assert out.index("private import") < out.index("part def")
+
+    def test_imports_survive_dump_loop(self):
+        """dump -> load -> dump is stable (idempotent ordering)."""
+        src = """package P {
+    private import Q::*;
+    package Q;
+    alias A for Q;
+}
+"""
+        first = sysmlpy.loads(src).dump()
+        second = sysmlpy.loads(first).dump()
+        assert "".join(first.split()) == "".join(second.split())

@@ -1,5 +1,82 @@
 # CHANGELOG
 
+## v0.58.0 (2026-08-31)
+
+### :white_check_mark: Import / AliasMember source-order preservation (High Priority fix)
+
+`Model.load()` and `Package.load_from_grammar()` always preserved
+`Import` / `AliasMember` grammar nodes in the body, but both
+`_ensure_body()` rebuild paths (Model, definition.py:170; Package,
+definition.py:567) serialized children first and appended imports and
+aliases at the **end** — so any source file interleaving imports with
+definitions failed exact-text round-trip through the public API
+(`loads(...).dump()` reordered statements).
+
+- Both `_ensure_body()` implementations now use the existing grammar body
+  as an **ordering template**: `Import` / `AliasMember` nodes are re-emitted
+  at their original positions, `PackageMember` slots are refilled with
+  fresh serializations of the public children in order, children added
+  programmatically (or beyond the recorded slots) append at the end, and
+  children removed programmatically drop their stale slots.
+- Root-level imports (before the first package) round-trip as well.
+- `add_import()` programmatic behavior unchanged (appends at end).
+- 10 new regression tests in `tests/import_test.py`
+  (`TestImportSourceOrder`): before/after/interleaved imports, multiple
+  imports, aliases before/after members, mixed import+alias, nested
+  packages, programmatic add, and dump-loop idempotence.
+
+### :memo: Notes
+
+- Visitors and grammar classes already handled `Import` / `AliasMember` —
+  this fix is confined to the two `_ensure_body()` rebuild paths in
+  `definition.py`; parse conformance and grammar round-trip unaffected
+  (143/143 grammar, 123/123 conformance expected).
+- STATUS.md "AliasMember / Import handling" high-priority item resolved;
+  the node types were already supported end-to-end — the gap was
+  serialization ordering only.
+
+## v0.57.0 (2026-08-31)
+
+### :white_check_mark: Typed-By Preservation on `load_from_grammar` (High Priority fix)
+
+Previously only `Action` captured its typing from the grammar; every other
+usage kind (`Part`, `Item`, `Attribute`, `Port`, `Connection`, `Interface`,
+`UseCase`, `Requirement`, `State`, ...) loaded via `loads()` lost the
+`: TypeName` relationship on the **public-API object** (the grammar object
+kept it, so text round-trip still worked).
+
+- `_extract_specialization_info()` hoisted from `Action` to base `Usage` and
+  extended to handle **both** grammar layouts: usage-style
+  (`grammar.usage.declaration.declaration.specialization` — PartUsage,
+  AttributeUsage, ItemUsage, PortUsage, ...) and behavior-style
+  (`grammar.declaration.declaration*.specialization` — ActionUsage, ...).
+  Captures `Typings` (`: Type`), `Subsettings` (`:> base`), `Redefinitions`
+  (`:>> base`), and `References` (`::> base`) names.
+- Base `Usage.__init__` now initializes `_typed_by_name`,
+  `_specializes_names`, `_redefined_refs`, `_referenced_refs` for all
+  subclasses.
+- Extraction wired into `Usage.load_from_grammar` (base) plus the
+  overriding loaders `Interface`, `UseCase`, `Requirement`, and `State`,
+  and into `_load_behavior_child()` for `Constraint`, `Calculation`,
+  `State`, `Requirement`, and `Allocation` usages inside definition bodies.
+- New public property **`Usage.typed_by_name`** — the declared type as a
+  name string (`part engine : Engine` → `"Engine"`;
+  `attribute mass : ScalarValues::Real` → `"ScalarValues::Real"`); `None`
+  when untyped. Resolving `typedby` to the definition *object* via a model
+  pass remains a follow-up.
+- 7 new regression tests in `tests/class_test.py` (all usage kinds,
+  qualified names, behavior children, unset default, dump round-trip
+  unchanged).
+
+### :memo: Notes
+
+- `set_value()` unit validation now sees the typed type name on elements
+  loaded from grammar (previously it silently skipped because `typedby`
+  was only populated programmatically).
+- Known-issue entries in `STATUS.md`, `docs/PROJECT_SUMMARY.md`, and
+  `AGENTS.md` updated; examples' "typedby may not be populated" comments
+  corrected.
+
 ## v0.56.0 (2026-08-31)
 
 ### :rocket: Phase D — High-Performance Parsing & Graph Store Queries

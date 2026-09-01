@@ -97,7 +97,9 @@ print(f"\nAfter setting: {attr.get_value()}")
 # 5. Checking Type
 # =============================================================================
 
-# NOTE: typedby is populated during load_from_grammar but may need verification
+# NOTE (v0.57.0): the declared type name is preserved on load via
+# `typed_by_name`; the resolved definition object (`typedby`) requires
+# programmatic wiring via set_typed_by().
 
 model = loads('''
 package Example {
@@ -111,11 +113,11 @@ package Example {
 vehicle = model.children[0].children[0]
 
 for attr in vehicle.children:
-    if attr.typedby:
-        print(f"{attr.name} : {attr.typedby.name}")
+    if attr.typed_by_name:
+        print(f"{attr.name} : {attr.typed_by_name}")
     else:
         # Access type from grammar structure
-        print(f"{attr.name} : (type in grammar, typedby not populated)")
+        print(f"{attr.name} : (type in grammar, typing not declared)")
 
 # =============================================================================
 # 6. Nested Parts

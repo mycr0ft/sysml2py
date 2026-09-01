@@ -107,8 +107,9 @@ print(f"\nColors as list: {colors}")
 # 5. Type Resolution
 # =============================================================================
 
-# The type is stored in the grammar structure.
-# typedby may not be populated during load_from_grammar (known issue).
+# The declared type name is preserved on load (v0.57.0): use
+# attr.typed_by_name. The resolved definition object (`typedby`) still
+# requires programmatic wiring via set_typed_by().
 
 model = loads('''
 package Example {
@@ -122,15 +123,16 @@ package Example {
 vehicle = model.children[0].children[0]
 
 for attr in vehicle.children:
-    # Access grammar to see type info
-    print(f"{attr.name}: grammar type = {type(attr.grammar).__name__}")
+    # typed_by_name carries the declared type name since v0.57.0
+    print(f"{attr.name}: declared type = {attr.typed_by_name}")
 
 # =============================================================================
 # 6. Attribute Multiplicity
 # =============================================================================
 
 # Attributes can have multiplicity like Real[3] for arrays
-# The type information is stored in the grammar but not yet exposed via Python API
+# Note: top-level (package-level) attribute multiplicity is still a known
+# visitor gap; multiplicity on attributes inside definitions is preserved.
 
 model = loads('''
 package Example {

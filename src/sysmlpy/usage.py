@@ -167,6 +167,13 @@ class Usage(Searchable):
         self.typedby = None
         self._is_definition = None  # overridden via the setter below
         self.parent = None
+        # Re-declaration chains captured from grammar (v0.57.0).
+        # Previously only Action initialized these; all other usage kinds
+        # loaded from grammar lost their typing / subsetting information.
+        self._typed_by_name = None
+        self._specializes_names = []
+        self._redefined_refs = []
+        self._referenced_refs = []
 
     @property
     def is_definition(self):
@@ -353,6 +360,22 @@ class Usage(Searchable):
         if rn:
             return rn
         return ""
+
+    @property
+    def typed_by_name(self):
+        """The declared type of this usage as a name string (v0.57.0).
+
+        Populated by ``load_from_grammar`` from the grammar's feature
+        specialization (``part engine : Engine`` → ``"Engine"``,
+        ``attribute mass : ScalarValues::Real`` → ``"ScalarValues::Real"``).
+        ``None`` when the element was not loaded from grammar or carries
+        no typing relationship.
+
+        Note: this is the *declared name*; ``self.typedby`` holds the
+        resolved definition object (only when set programmatically via
+        ``set_typed_by`` or when a second resolution pass has run).
+        """
+        return getattr(self, '_typed_by_name', None)
 
     def _get_definition(self, child=None):
         """Build the grammar tree dict for this element.
@@ -1038,6 +1061,96 @@ class Usage(Searchable):
                             c.parent = self
                             self.children.append(c)
 
+        self._extract_specialization_info(grammar)
+
+        return self
+
+    def _extract_specialization_info(self, grammar):
+        """Capture Typings / Subsettings / Redefinitions / References names
+        from the grammar's feature specialization so ``_typed_by_name`` and
+        friends are populated on every usage kind loaded from grammar
+        (v0.57.0 — previously only ``Action`` did this, leaving ``Part``,
+        ``Attribute``, ``Item``, ``Port``, etc. without typing information
+        on the public-API object even though the grammar object kept it).
+
+        Handles both grammar layouts:
+          - usage-style: ``grammar.usage.declaration.declaration.specialization``
+            (PartUsage, AttributeUsage, ItemUsage, PortUsage, ...)
+          - behavior-style: ``grammar.declaration.declaration.declaration.specialization``
+            (ActionUsage, ...)
+        """
+        spec = None
+        g = getattr(grammar, 'grammar', grammar)
+        ud = getattr(g, 'usage', None)
+        if ud is not None and getattr(ud, 'declaration', None) is not None:
+            d = ud.declaration
+            if not hasattr(d, 'declaration'):
+                spec = getattr(d, 'specialization', None)
+            else:
+                inner = getattr(d, 'declaration', None)
+                spec = getattr(inner, 'specialization', None) if inner is not None else None
+        else:
+            node = getattr(g, 'declaration', None)
+            for _ in range(3):
+                if node is None or hasattr(node, 'specialization'):
+                    break
+                node = getattr(node, 'declaration', None)
+            spec = getattr(node, 'specialization', None) if node is not None else None
+        if spec is None:
+            return
+        for fs in getattr(spec, 'specializations', None) or []:
+            rel = getattr(fs, 'relationship', None)
+            kind = rel.__class__.__name__ if rel is not None else None
+            if kind == 'Typings':
+                tb = getattr(rel, 'typing', None)
+                for ft in getattr(tb, 'relationships', []) or []:
+                    rel2 = getattr(ft, 'relationship', None)
+                    ftype = getattr(rel2, 'type', None)
+                    qn = getattr(ftype, 'type', None)
+                    names = getattr(qn, 'names', None)
+                    if names:
+                        self._typed_by_name = '::'.join(names)
+                        break
+                    elements = getattr(ftype, 'elements', None) or []
+                    seg_names = []
+                    for el in elements:
+                        if hasattr(el, 'names') and el.names:
+                            seg_names.extend(el.names)
+                        elif hasattr(el, 'feature'):
+                            for seg in getattr(el.feature, 'children', []) or []:
+                                cf = getattr(seg, 'chainingFeature', None)
+                                if cf is not None and getattr(cf, 'names', None):
+                                    seg_names.extend(cf.names)
+                    if seg_names:
+                        self._typed_by_name = '.'.join(seg_names)
+                        break
+            elif kind in ('Subsettings', 'Redefinitions', 'References'):
+                target = (
+                    self._specializes_names if kind == 'Subsettings'
+                    else self._redefined_refs if kind == 'Redefinitions'
+                    else self._referenced_refs
+                )
+                for child in getattr(rel, 'children', None) or []:
+                    qn = (
+                        getattr(child, 'redefinedFeature', None)
+                        or getattr(child, 'referencedFeature', None)
+                    )
+                    if qn is not None and getattr(qn, 'names', None):
+                        target.append('::'.join(qn.names))
+                        continue
+                    elements = getattr(child, 'elements', None) or []
+                    seg_names = []
+                    for el in elements:
+                        if hasattr(el, 'names') and el.names:
+                            seg_names.extend(el.names)
+                        elif hasattr(el, 'feature'):
+                            for seg in getattr(el.feature, 'children', []) or []:
+                                cf = getattr(seg, 'chainingFeature', None)
+                                if cf is not None and getattr(cf, 'names', None):
+                                    seg_names.extend(cf.names)
+                    if seg_names:
+                        target.append('.'.join(seg_names))
+
         return self
 
     def add_directed_feature(self, direction, name=str(uuidlib.uuid4())):
@@ -1131,25 +1244,31 @@ def _load_behavior_child(parent, inner, inner_name):
                         return name_obj.getText()
         return None
 
+    # Behavior usages created without load_from_grammar still capture their
+    # typing from the grammar's feature specialization (v0.57.0).
     if inner_name == "AssertConstraintUsage":
         c = Constraint()
         c.grammar = inner
         c.name = _name_from_declaration(inner)
+        c._extract_specialization_info(inner)
         return c
     if inner_name == "ConstraintUsage":
         c = Constraint()
         c.grammar = inner
         c.name = _name_from_declaration(inner)
+        c._extract_specialization_info(inner)
         return c
     if inner_name == "CalculationUsage":
         c = Calculation()
         c.grammar = inner
         c.name = _name_from_declaration(inner)
+        c._extract_specialization_info(inner)
         return c
     if inner_name == "StateUsage":
         c = State()
         c.grammar = inner
         c.name = _name_from_declaration(inner)
+        c._extract_specialization_info(inner)
         return c
     if inner_name == "ActionUsage":
         c = Action(grammar=inner).load_from_grammar(inner)
@@ -1158,16 +1277,19 @@ def _load_behavior_child(parent, inner, inner_name):
         c = Requirement()
         c.grammar = inner
         c.name = _name_from_declaration(inner)
+        c._extract_specialization_info(inner)
         return c
     if inner_name == "SatisfyRequirementUsage":
         c = Requirement()
         c.grammar = inner
         c.name = _name_from_declaration(inner)
+        c._extract_specialization_info(inner)
         return c
     if inner_name == "AllocationUsage":
         c = Allocation()
         c.grammar = inner
         c.name = _name_from_declaration(inner)
+        c._extract_specialization_info(inner)
         return c
     return None
 
@@ -1910,7 +2032,9 @@ class Interface(Usage):
                         feat_decl = inner_decl.declaration
                         if hasattr(feat_decl, 'identification') and feat_decl.identification:
                             self.name = feat_decl.identification.declaredName
-        
+
+        self._extract_specialization_info(grammar)
+
         return self
 
 
@@ -2099,73 +2223,6 @@ class Action(Usage):
 
         return self
 
-    def _extract_specialization_info(self, grammar):
-        """Capture Typings / Subsettings / Redefinitions / References names
-        from the grammar's feature specialization so ``dump()`` can render
-        them (v0.41.0)."""
-        fd = None
-        if getattr(grammar, 'declaration', None) is not None:
-            ud = getattr(grammar.declaration, 'declaration', None)
-            if ud is not None:
-                fd = getattr(ud, 'declaration', None)
-        spec = getattr(fd, 'specialization', None) if fd is not None else None
-        if spec is None:
-            return
-        for fs in getattr(spec, 'specializations', None) or []:
-            rel = getattr(fs, 'relationship', None)
-            kind = rel.__class__.__name__ if rel is not None else None
-            if kind == 'Typings':
-                tb = getattr(rel, 'typing', None)
-                for ft in getattr(tb, 'relationships', []) or []:
-                    rel2 = getattr(ft, 'relationship', None)
-                    ftype = getattr(rel2, 'type', None)
-                    qn = getattr(ftype, 'type', None)
-                    names = getattr(qn, 'names', None)
-                    if names:
-                        self._typed_by_name = '::'.join(names)
-                        break
-                    elements = getattr(ftype, 'elements', None) or []
-                    seg_names = []
-                    for el in elements:
-                        if hasattr(el, 'names') and el.names:
-                            seg_names.extend(el.names)
-                        elif hasattr(el, 'feature'):
-                            for seg in getattr(el.feature, 'children', []) or []:
-                                cf = getattr(seg, 'chainingFeature', None)
-                                if cf is not None and getattr(cf, 'names', None):
-                                    seg_names.extend(cf.names)
-                    if seg_names:
-                        self._typed_by_name = '.'.join(seg_names)
-                        break
-            elif kind in ('Subsettings', 'Redefinitions', 'References'):
-                target = (
-                    self._specializes_names if kind == 'Subsettings'
-                    else self._redefined_refs if kind == 'Redefinitions'
-                    else self._referenced_refs
-                )
-                for child in getattr(rel, 'children', None) or []:
-                    qn = (
-                        getattr(child, 'redefinedFeature', None)
-                        or getattr(child, 'referencedFeature', None)
-                    )
-                    if qn is not None and getattr(qn, 'names', None):
-                        target.append('::'.join(qn.names))
-                        continue
-                    elements = getattr(child, 'elements', None) or []
-                    seg_names = []
-                    for el in elements:
-                        if hasattr(el, 'names') and el.names:
-                            seg_names.extend(el.names)
-                        elif hasattr(el, 'feature'):
-                            for seg in getattr(el.feature, 'children', []) or []:
-                                cf = getattr(seg, 'chainingFeature', None)
-                                if cf is not None and getattr(cf, 'names', None):
-                                    seg_names.extend(cf.names)
-                    if seg_names:
-                        target.append('.'.join(seg_names))
-
-        return self
-    
     def _extract_initial_node(self, node):
         """Extract the source name from an InitialNodeMember."""
         if hasattr(node, 'child') and node.child:
@@ -2766,7 +2823,9 @@ class UseCase(Usage):
                         feat_decl = inner_decl.declaration
                         if hasattr(feat_decl, 'identification') and feat_decl.identification:
                             self.name = feat_decl.identification.declaredName
-        
+
+        self._extract_specialization_info(grammar)
+
         return self
 
 
@@ -3044,7 +3103,9 @@ class Requirement(Usage):
                         pass  # could extract subject
                     elif child_class == "ActorMember":
                         pass  # could extract actors
-        
+
+        self._extract_specialization_info(grammar)
+
         return self
 
     def _extract_nested_requirements(self, def_body_item):
@@ -3611,7 +3672,9 @@ class State(_BehaviorUsage):
                 decl = decl.declaration
             if hasattr(decl, 'identification') and decl.identification:
                 self.name = decl.identification.declaredName
-        
+
+        self._extract_specialization_info(grammar)
+
         # Extract nested states, transitions, and actions from body
         # StateDefinition: grammar.body -> StateDefBody -> children -> StateBodyPart -> children -> items
         # StateUsage: grammar.body -> StateUsageBody -> children -> StateDefBody -> children -> StateBodyPart -> children -> items

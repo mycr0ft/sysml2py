@@ -1,6 +1,6 @@
 # sysmlpy — Master Development Plan & Roadmap
 
-> **Current Version:** v0.56.0 (August 2026)  
+> **Current Version:** v0.58.0 (August 2026)  
 > **Repository:** https://github.com/mycr0ft/sysmlpy  
 > **Upstream Grammar PR:** [daltskin/sysml-v2-grammar#12](https://github.com/daltskin/sysml-v2-grammar/pull/12)
 
@@ -136,7 +136,15 @@ Implemented in v0.56.0:
 ## Project Plan Complete
 
 All four planned phases (A–D) are implemented.  Follow-up candidates are
-tracked in [TODO.md](../TODO.md).
+tracked in [TODO.md](../TODO.md).  Post-plan high-priority fixes:
+
+- **v0.57.0 — Typed-by preservation:** `_extract_specialization_info()`
+  hoisted to base `Usage` and extended to both grammar layouts; new
+  `Usage.typed_by_name` property populated on `loads()` for all usage
+  kinds.  Follow-up: resolve `typedby` to the definition object.
+- **v0.58.0 — Import/AliasMember order:** both `_ensure_body()` paths
+  (Model + Package) preserve source positions of imports and aliases;
+  interleaved files now round-trip exactly through `loads().dump()`.
 
 ---
 

@@ -137,7 +137,7 @@ else:
 | `plantuml_test.py` | 108 | All `as_*_view()` functions |
 | `semantic_test.py` | 107 | `analyze()`, OCL checks, symbol resolution, imports |
 | `navigate_test.py` | 33 | `Searchable` mixin, model traversal |
-| `import_test.py` | 16 | Import visibility, `load_with_dependencies()` |
+| `import_test.py` | 31 | Import visibility/round-trip, `add_import()`, `.imports`, source-order preservation |
 | `validator_test.py` | 34 | Validator rules |
 | `project_test.py` | 17 | `load_files()`, `load_project()` |
 | `store_test.py` | 46 | Storage backends (networkx/kuzu are skipped if not installed) |
@@ -187,11 +187,14 @@ project's `pyproject.toml`.)
 usages (~line 9558). Nested attributes inside definitions work correctly.
 Do not report this as a bug you discovered — it is a known issue.
 
-### 6. `load_from_grammar()` does not preserve type relationships
+### 6. Type relationships: name preserved, object resolution is not
 
-When a model is loaded via `loads()`, the public class objects (`Part`,
-`Action`, etc.) do not carry their `: TypeName` typing. The grammar objects
-do. This is marked `#!TODO Typed By` in `usage.py`.
+Since v0.57.0, `load_from_grammar()` preserves the declared type *name* on
+all usage kinds — use `obj.typed_by_name` (e.g. `"Engine"`,
+`"ScalarValues::Real"`). What is still **not** preserved is the resolved
+definition *object* in `obj.typedby`; that is only set when wired
+programmatically via `set_typed_by()`. A model-wide resolution pass is a
+tracked follow-up (see TODO.md).
 
 ---
 
