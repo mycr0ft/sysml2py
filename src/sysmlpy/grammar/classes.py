@@ -8380,14 +8380,15 @@ class MultiplicityPart:
     def dump(self):
         output = [child.dump() for child in self.children]
 
-        if self.isOrdered and not self.isOrdered2:
+        # isOrdered/isOrdered2 are populated from the same dict field during
+        # round-trip (the ANTLR dict carries a single isOrdered flag), so the
+        # X OR Y logic below never fired — silently dropping the keyword on
+        # `attribute x[3] ordered;`. Emit whichever flag is set (v0.59.0).
+        if self.isOrdered or self.isOrdered2:
             output.append("ordered")
 
         if self.isNonunique or self.isNonunique2:
             output.append("nonunique")
-
-        if self.isOrdered2 and not self.isOrdered:
-            output.append("ordered")
 
         return " ".join(output)
 

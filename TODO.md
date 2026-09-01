@@ -21,6 +21,7 @@ are complete.  Candidate follow-up work:
 
 ## Recently Completed
 
+- [x] **v0.59.0:** Top-level multiplicity — verified bounds fixed since v0.40.0 (stale docs); fixed real residual bug: `ordered`/`nonunique` flags hardcoded `False` in both visitor multiplicity extractors + `MultiplicityPart.dump()` XOR-guard dropping `ordered`. 7 tests.
 - [x] **v0.58.0:** Import / AliasMember source-order preservation (High Priority from STATUS.md)
   - [x] Both `_ensure_body()` rebuild paths (Model + Package) re-emit `Import`/`AliasMember` at original positions
   - [x] Root-level and interleaved imports/aliases round-trip through `loads(...).dump()`

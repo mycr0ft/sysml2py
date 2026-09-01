@@ -1,6 +1,6 @@
 # sysmlpy — Master Development Plan & Roadmap
 
-> **Current Version:** v0.58.0 (August 2026)  
+> **Current Version:** v0.59.0 (August 2026)  
 > **Repository:** https://github.com/mycr0ft/sysmlpy  
 > **Upstream Grammar PR:** [daltskin/sysml-v2-grammar#12](https://github.com/daltskin/sysml-v2-grammar/pull/12)
 
@@ -145,6 +145,10 @@ tracked in [TODO.md](../TODO.md).  Post-plan high-priority fixes:
 - **v0.58.0 — Import/AliasMember order:** both `_ensure_body()` paths
   (Model + Package) preserve source positions of imports and aliases;
   interleaved files now round-trip exactly through `loads().dump()`.
+- **v0.59.0 — Top-level multiplicity:** bounds verified fixed since
+  v0.40.0 (stale docs cleared); the residual `ordered` / `nonunique`
+  flag bugs (visitor extractors hardcoded `False`, `MultiplicityPart.dump()`
+  XOR-guard) fixed in v0.59.0.  All STATUS.md High Priority items done.
 
 ---
 

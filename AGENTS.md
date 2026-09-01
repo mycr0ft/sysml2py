@@ -181,11 +181,13 @@ navigation helper.
 `[tool.poetry].version` field too — it is no longer present in this
 project's `pyproject.toml`.)
 
-### 5. Top-level attribute multiplicity is lost
+### 5. Top-level attribute multiplicity — RESOLVED (v0.59.0)
 
-`antlr_visitor.py` hardcodes `specialization=None` for top-level attribute
-usages (~line 9558). Nested attributes inside definitions work correctly.
-Do not report this as a bug you discovered — it is a known issue.
+Multiplicities on top-level usages (`attribute x[5..2]`, `part w[4]
+ordered`) round-trip correctly — bounds since v0.40.0, `ordered`/`nonunique`
+flags since v0.59.0. The old "specialization=None" note was stale. Note:
+`nonunique ordered` canonicalizes to `ordered nonunique` on dump
+(grammatically identical).
 
 ### 6. Type relationships: name preserved, object resolution is not
 

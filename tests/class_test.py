@@ -843,3 +843,80 @@ def test_typed_by_name_dump_roundtrip_unchanged():
     m = sysmlpy.loads(text)
     strip = lambda s: "".join(s.split())
     assert strip(m.dump()) == strip(text)
+
+
+# ---------------------------------------------------------------------------
+# Multiplicity ordered/nonunique flags on round-trip (v0.59.0)
+# ---------------------------------------------------------------------------
+
+def test_multiplicity_ordered_flag_round_trip():
+    """`ordered` keyword must survive loads() -> dump()."""
+    import sysmlpy
+    text = """package P {
+        attribute x[3] ordered;
+    }"""
+    m = sysmlpy.loads(text)
+    strip = lambda s: "".join(s.split())
+    assert strip(m.dump()) == strip(text)
+
+
+def test_multiplicity_nonunique_flag_round_trip():
+    import sysmlpy
+    text = """package P {
+        attribute x[3] nonunique;
+    }"""
+    m = sysmlpy.loads(text)
+    strip = lambda s: "".join(s.split())
+    assert strip(m.dump()) == strip(text)
+
+
+def test_multiplicity_ordered_nonunique_together():
+    import sysmlpy
+    text = """package P {
+        attribute x[3] ordered nonunique;
+    }"""
+    m = sysmlpy.loads(text)
+    strip = lambda s: "".join(s.split())
+    assert strip(m.dump()) == strip(text)
+
+
+def test_multiplicity_flags_preserved_in_grammar_object():
+    import sysmlpy
+    m = sysmlpy.loads("package P { attribute x[3] ordered nonunique; }")
+    attr = m.children[0].children[0]
+    spec = attr.grammar.usage.declaration.declaration.specialization
+    assert spec.multiplicity is not None
+    assert spec.multiplicity.isOrdered is True
+    assert spec.multiplicity.isNonunique is True
+
+
+def test_multiplicity_flags_on_part_usage():
+    import sysmlpy
+    text = """package P {
+        part w[4] ordered;
+    }"""
+    m = sysmlpy.loads(text)
+    strip = lambda s: "".join(s.split())
+    assert strip(m.dump()) == strip(text)
+
+
+def test_multiplicity_no_flags_regression():
+    # Plain bounds remain untouched (no spurious keywords)
+    import sysmlpy
+    m = sysmlpy.loads("""package P {
+        attribute y[5..2];
+    }""")
+    out = m.dump()
+    assert "ordered" not in out and "nonunique" not in out
+    assert "y[5..2]" in out.replace(" ", "") or "y[5..2]" in out
+
+
+def test_toplevel_multiplicity_bounds_preserved():
+    """Original STATUS.md bug report: top-level attribute x[5..2]."""
+    import sysmlpy
+    m = sysmlpy.loads("""package P { attribute x[5..2]; }""")
+    attr = m.children[0].children[0]
+    spec = attr.grammar.usage.declaration.declaration.specialization
+    assert spec is not None and spec.multiplicity is not None
+    strip = lambda s: "".join(s.split())
+    assert strip(m.dump()) == strip("package P { attribute x[5..2]; }")

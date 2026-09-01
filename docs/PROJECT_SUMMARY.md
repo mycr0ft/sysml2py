@@ -252,7 +252,7 @@ Multiplicity ranges (`[N]`, `[N..M]`, `[*]`) are stored as part of the `FeatureS
 | Issue | Location | Impact |
 |-------|----------|--------|
 | **Action control-flow node classes missing** | `grammar/classes.py` | `IfNode`, `WhileLoopNode`, `ForLoopNode`, `ControlNode`, `SendNode`, `AcceptNode`, `TerminateNode`, etc. exist in the visitor but not in `grammar/classes.py`. 16 grammar tests fail with `KeyError`. |
-| **Top-level attribute multiplicity not captured** | `antlr_visitor.py` ~line 9558 | Attributes defined at package level (not inside a definition) have `specialization=None` hardcoded, so multiplicity like `attribute x[5..2]` is lost. Nested attributes inside definitions work correctly. |
+| ~**Top-level attribute multiplicity not captured**~ |Resolved — v0.40.0 fixed bounds capture (docs were stale); v0.59.0 fixed the remaining `ordered`/`nonunique` flags hardcoded `False` in the visitor + a `MultiplicityPart.dump()` XOR-guard bug. |
 | **Typing resolved to name only** | `usage.py` | v0.57.0 preserves the declared type *name* (`typed_by_name`) on usages loaded from grammar; resolving `typedby` to the definition *object* via a model pass is still open. |
 | **Duplicate ActionUsage block** | `definition.py` | Dead code — duplicate `elif inner_class == "ActionUsage"` block. |
 | **PackageBodyElement name hardcoded** | `grammar/classes.py` | Comment says `#!TODO This isn't always the case`. |
@@ -297,11 +297,11 @@ Multiplicity ranges (`[N]`, `[N..M]`, `[*]`) are stored as part of the `FeatureS
 
 ### Parser and Grammar
 
-8. **Fix top-level attribute multiplicity** — The visitor hardcodes `specialization=None` for top-level attributes. This requires updating the visitor to call `_build_full_specialization_from_ctx` for attribute usages.
+8. ~~**Fix top-level attribute multiplicity**~~ — **Resolved v0.59.0.** Bounds were fixed in v0.40.0 (docs stale); the remaining `ordered`/`nonunique` flag bugs in the visitor extractors and `MultiplicityPart.dump()` were fixed in v0.59.0.
 
-9. **Typed-by preservation** — Preserve type relationships when loading from grammar in `load_from_grammar()`.
+9. ~~**Typed-by preservation**~~ — **Resolved v0.57.0** (`Usage.typed_by_name`).
 
-10. **AliasMember and Import handling** — Implement `load_package_body()` support for these node types.
+10. ~~**AliasMember and Import handling**~~ — **Resolved v0.58.0** (source-order preservation in `_ensure_body()`).
 
 ### Library and Standard Compliance
 

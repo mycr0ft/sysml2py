@@ -1,5 +1,39 @@
 # CHANGELOG
 
+## v0.59.0 (2026-08-31)
+
+### :white_check_mark: Top-level attribute multiplicity — verified fixed, flags bug found & fixed
+
+Investigation of the last STATUS.md High Priority item found the headline
+bug **already resolved in v0.40.0** (commit `eb65e9e` switched the top-level
+`attributeUsage` dispatch from the typed-by-only `_build_specialization()`
+to `_build_full_specialization_from_ctx()`, which captures multiplicity via
+`_get_multiplicity_part()`); the STATUS / PROJECT_SUMMARY / AGENTS.md
+entries were simply never cleared.  Verified end-to-end: bounds (`[N]`,
+`[N..M]`, `[*]`, variable refs) survive for `attribute`, `part`, `item`,
+and `port` at package level, with typing and/or re-declarations.
+
+However, the investigation surfaced a **real adjacent bug**:
+
+- `ordered` / `nonunique` multiplicity flags were **hardcoded `False`** in
+  both ANTLR multiplicity extractors (`_get_multiplicity_part`,
+  `_extract_multiplicity_from_mp`), silently dropping `attribute x[3]
+  ordered;`'s keyword.
+- After fixing the visitor, a **second** bug surfaced in
+  `MultiplicityPart.dump()` (`grammar/classes.py`): its
+  `isOrdered and not isOrdered2` guard never fired because `__init__`
+  populates both fields from the same dict value — `ordered` was dropped on
+  every round-trip while `nonunique` happened to work.
+
+Fixes:
+- Both visitor multiplicity extractors now read `ORDERED()` / `NONUNIQUE()`
+  from the ANTLR `MultiplicityPartContext`.
+- `MultiplicityPart.dump()` emits the keyword when either flag is set.
+- Grammar note: `nonunique ordered` canonicalizes to `ordered nonunique`
+  (grammar-rule order; semantically identical) — round-trip is stable.
+- 7 regression tests in `tests/class_test.py` (flags, bounds, all usage
+  kinds, canonicalization stability).
+
 ## v0.58.0 (2026-08-31)
 
 ### :white_check_mark: Import / AliasMember source-order preservation (High Priority fix)

@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.58.0** (2026-08-31)
+Current version: **v0.59.0** (2026-08-31)
 
 ---
 
@@ -290,7 +290,7 @@ All private underscore-prefixed mutation methods given public aliases:
 | Feature | Description |
 |---|---|
 | ~Typed-by preservation~ | **Done in v0.57.0** — `_typed_by_name` / `typed_by_name` preserved for all usage kinds loaded from grammar (`Part`, `Attribute`, `Item`, `Port`, `Action`, `Interface`, `UseCase`, `Requirement`, `State`, behavior children). Resolving `typedby` to the definition *object* via a model pass remains a follow-up. |
-| Fix top-level attribute multiplicity | Visitor hardcodes `specialization=None` for top-level attributes |
+| ~Fix top-level attribute multiplicity~ | **Verified fixed (v0.40.0) + flags bug fixed in v0.59.0** — bounds (`[N]`, `[N..M]`, `[*]`) already survived since v0.40.0 (docs were stale); the real remaining bug was `ordered`/`nonunique` hardcoded `False` in the visitor extractors plus a `MultiplicityPart.dump()` XOR-guard that dropped `ordered`. All fixed. |
 | ~AliasMember / Import handling~ | **Done in v0.58.0** — nodes were already parsed and held on `Package.imports` (definition.py); the gap was `_ensure_body()` reordering imports/aliases to the end of the body on dump. Source-order interleaving now preserved in both Model and Package rebuild paths. |
 
 ### Medium Priority

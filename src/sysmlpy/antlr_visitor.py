@@ -7148,10 +7148,12 @@ def _extract_multiplicity_from_mp(mp_ctx):
         else:
             return None
         
+        is_ordered = bool(mp_ctx.ORDERED()) if hasattr(mp_ctx, 'ORDERED') else False
+        is_nonunique = bool(mp_ctx.NONUNIQUE()) if hasattr(mp_ctx, 'NONUNIQUE') else False
         return {
             "name": "MultiplicityPart",
-            "isOrdered": False,
-            "isNonunique": False,
+            "isOrdered": is_ordered,
+            "isNonunique": is_nonunique,
             "ownedRelationship": [
                 {
                     "name": "OwnedMultiplicity",
@@ -13597,11 +13599,18 @@ def _get_multiplicity_part(fsp_ctx):
             bound_dicts = [_make_bound(members[0].getText()), _make_bound(members[1].getText())]
         else:
             return None
-        
+
+        # ORDERED / NONUNIQUE indicators follow ownedMultiplicity in
+        # multiplicityPart (grammar: `ownedMultiplicity ( ORDERED ( NONUNIQUE )?
+        # | NONUNIQUE ( ORDERED )? )?`).  Previously hardcoded False, silently
+        # dropping the keywords on dump.
+        is_ordered = bool(mp_ctx.ORDERED()) if hasattr(mp_ctx, 'ORDERED') else False
+        is_nonunique = bool(mp_ctx.NONUNIQUE()) if hasattr(mp_ctx, 'NONUNIQUE') else False
+
         return {
             "name": "MultiplicityPart",
-            "isOrdered": False,
-            "isNonunique": False,
+            "isOrdered": is_ordered,
+            "isNonunique": is_nonunique,
             "ownedRelationship": [
                 {
                     "name": "OwnedMultiplicity",
