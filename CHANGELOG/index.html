@@ -431,6 +431,84 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0580-2026-08-31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.58.0 (2026-08-31)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.58.0 (2026-08-31)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-import-aliasmember-source-order-preservation-high-priority-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Import / AliasMember source-order preservation (High Priority fix)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memo-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :memo: Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v0570-2026-08-31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.57.0 (2026-08-31)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.57.0 (2026-08-31)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-typed-by-preservation-on-load_from_grammar-high-priority-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Typed-By Preservation on load_from_grammar (High Priority fix)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memo-notes_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :memo: Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0560-2026-08-31" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2586,6 +2664,84 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0580-2026-08-31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.58.0 (2026-08-31)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.58.0 (2026-08-31)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-import-aliasmember-source-order-preservation-high-priority-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Import / AliasMember source-order preservation (High Priority fix)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memo-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :memo: Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v0570-2026-08-31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.57.0 (2026-08-31)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.57.0 (2026-08-31)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-typed-by-preservation-on-load_from_grammar-high-priority-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Typed-By Preservation on load_from_grammar (High Priority fix)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memo-notes_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :memo: Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0560-2026-08-31" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4700,6 +4856,79 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0580-2026-08-31">v0.58.0 (2026-08-31)<a class="headerlink" href="#v0580-2026-08-31" title="Permanent link">&para;</a></h2>
+<h3 id="white_check_mark-import-aliasmember-source-order-preservation-high-priority-fix">:white_check_mark: Import / AliasMember source-order preservation (High Priority fix)<a class="headerlink" href="#white_check_mark-import-aliasmember-source-order-preservation-high-priority-fix" title="Permanent link">&para;</a></h3>
+<p><code>Model.load()</code> and <code>Package.load_from_grammar()</code> always preserved
+<code>Import</code> / <code>AliasMember</code> grammar nodes in the body, but both
+<code>_ensure_body()</code> rebuild paths (Model, definition.py:170; Package,
+definition.py:567) serialized children first and appended imports and
+aliases at the <strong>end</strong> — so any source file interleaving imports with
+definitions failed exact-text round-trip through the public API
+(<code>loads(...).dump()</code> reordered statements).</p>
+<ul>
+<li>Both <code>_ensure_body()</code> implementations now use the existing grammar body
+  as an <strong>ordering template</strong>: <code>Import</code> / <code>AliasMember</code> nodes are re-emitted
+  at their original positions, <code>PackageMember</code> slots are refilled with
+  fresh serializations of the public children in order, children added
+  programmatically (or beyond the recorded slots) append at the end, and
+  children removed programmatically drop their stale slots.</li>
+<li>Root-level imports (before the first package) round-trip as well.</li>
+<li><code>add_import()</code> programmatic behavior unchanged (appends at end).</li>
+<li>10 new regression tests in <code>tests/import_test.py</code>
+  (<code>TestImportSourceOrder</code>): before/after/interleaved imports, multiple
+  imports, aliases before/after members, mixed import+alias, nested
+  packages, programmatic add, and dump-loop idempotence.</li>
+</ul>
+<h3 id="memo-notes">:memo: Notes<a class="headerlink" href="#memo-notes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Visitors and grammar classes already handled <code>Import</code> / <code>AliasMember</code> —
+  this fix is confined to the two <code>_ensure_body()</code> rebuild paths in
+  <code>definition.py</code>; parse conformance and grammar round-trip unaffected
+  (143/143 grammar, 123/123 conformance expected).</li>
+<li>STATUS.md "AliasMember / Import handling" high-priority item resolved;
+  the node types were already supported end-to-end — the gap was
+  serialization ordering only.</li>
+</ul>
+<h2 id="v0570-2026-08-31">v0.57.0 (2026-08-31)<a class="headerlink" href="#v0570-2026-08-31" title="Permanent link">&para;</a></h2>
+<h3 id="white_check_mark-typed-by-preservation-on-load_from_grammar-high-priority-fix">:white_check_mark: Typed-By Preservation on <code>load_from_grammar</code> (High Priority fix)<a class="headerlink" href="#white_check_mark-typed-by-preservation-on-load_from_grammar-high-priority-fix" title="Permanent link">&para;</a></h3>
+<p>Previously only <code>Action</code> captured its typing from the grammar; every other
+usage kind (<code>Part</code>, <code>Item</code>, <code>Attribute</code>, <code>Port</code>, <code>Connection</code>, <code>Interface</code>,
+<code>UseCase</code>, <code>Requirement</code>, <code>State</code>, ...) loaded via <code>loads()</code> lost the
+<code>: TypeName</code> relationship on the <strong>public-API object</strong> (the grammar object
+kept it, so text round-trip still worked).</p>
+<ul>
+<li><code>_extract_specialization_info()</code> hoisted from <code>Action</code> to base <code>Usage</code> and
+  extended to handle <strong>both</strong> grammar layouts: usage-style
+  (<code>grammar.usage.declaration.declaration.specialization</code> — PartUsage,
+  AttributeUsage, ItemUsage, PortUsage, ...) and behavior-style
+  (<code>grammar.declaration.declaration*.specialization</code> — ActionUsage, ...).
+  Captures <code>Typings</code> (<code>: Type</code>), <code>Subsettings</code> (<code>:&gt; base</code>), <code>Redefinitions</code>
+  (<code>:&gt;&gt; base</code>), and <code>References</code> (<code>::&gt; base</code>) names.</li>
+<li>Base <code>Usage.__init__</code> now initializes <code>_typed_by_name</code>,
+  <code>_specializes_names</code>, <code>_redefined_refs</code>, <code>_referenced_refs</code> for all
+  subclasses.</li>
+<li>Extraction wired into <code>Usage.load_from_grammar</code> (base) plus the
+  overriding loaders <code>Interface</code>, <code>UseCase</code>, <code>Requirement</code>, and <code>State</code>,
+  and into <code>_load_behavior_child()</code> for <code>Constraint</code>, <code>Calculation</code>,
+  <code>State</code>, <code>Requirement</code>, and <code>Allocation</code> usages inside definition bodies.</li>
+<li>New public property <strong><code>Usage.typed_by_name</code></strong> — the declared type as a
+  name string (<code>part engine : Engine</code> → <code>"Engine"</code>;
+  <code>attribute mass : ScalarValues::Real</code> → <code>"ScalarValues::Real"</code>); <code>None</code>
+  when untyped. Resolving <code>typedby</code> to the definition <em>object</em> via a model
+  pass remains a follow-up.</li>
+<li>7 new regression tests in <code>tests/class_test.py</code> (all usage kinds,
+  qualified names, behavior children, unset default, dump round-trip
+  unchanged).</li>
+</ul>
+<h3 id="memo-notes_1">:memo: Notes<a class="headerlink" href="#memo-notes_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>set_value()</code> unit validation now sees the typed type name on elements
+  loaded from grammar (previously it silently skipped because <code>typedby</code>
+  was only populated programmatically).</li>
+<li>Known-issue entries in <code>STATUS.md</code>, <code>docs/PROJECT_SUMMARY.md</code>, and
+  <code>AGENTS.md</code> updated; examples' "typedby may not be populated" comments
+  corrected.</li>
+</ul>
 <h2 id="v0560-2026-08-31">v0.56.0 (2026-08-31)<a class="headerlink" href="#v0560-2026-08-31" title="Permanent link">&para;</a></h2>
 <h3 id="rocket-phase-d-high-performance-parsing-graph-store-queries">:rocket: Phase D — High-Performance Parsing &amp; Graph Store Queries<a class="headerlink" href="#rocket-phase-d-high-performance-parsing-graph-store-queries" title="Permanent link">&para;</a></h3>
 <p><strong>Two-stage SLL → LL parsing</strong> (<code>/antlr_parser.py</code>): <code>parse()</code> now runs

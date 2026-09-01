@@ -1486,6 +1486,14 @@
 <td><strong>Standard library imports not validated</strong></td>
 <td>Semantic analyzer now checks <code>LibrarySymbolIndex</code> for import targets (v0.21.0)</td>
 </tr>
+<tr>
+<td><strong>AliasMember / Import serialization order</strong></td>
+<td>v0.58.0 — <code>_ensure_body()</code> (Model + Package) now re-emits imports/aliases at their original source positions instead of appending them to the end.</td>
+</tr>
+<tr>
+<td><strong>Typed-by not preserved in load_from_grammar</strong></td>
+<td>v0.57.0 — <code>_extract_specialization_info()</code> hoisted to base <code>Usage</code> (both grammar layouts); new <code>Usage.typed_by_name</code> property populated for all usage kinds.</td>
+</tr>
 </tbody>
 </table>
 <h3 id="high-priority">High Priority<a class="headerlink" href="#high-priority" title="Permanent link">&para;</a></h3>
@@ -1509,9 +1517,9 @@
 <td>Attributes defined at package level (not inside a definition) have <code>specialization=None</code> hardcoded, so multiplicity like <code>attribute x[5..2]</code> is lost. Nested attributes inside definitions work correctly.</td>
 </tr>
 <tr>
-<td><strong>Typed-by not preserved in load_from_grammar</strong></td>
-<td><code>usage.py</code> (marked <code class="highlight">Typed By</code>)</td>
-<td>When loading a model from grammar, type relationships (<code>: TypeName</code>) are not preserved on the public class objects.</td>
+<td><strong>Typing resolved to name only</strong></td>
+<td><code>usage.py</code></td>
+<td>v0.57.0 preserves the declared type <em>name</em> (<code>typed_by_name</code>) on usages loaded from grammar; resolving <code>typedby</code> to the definition <em>object</em> via a model pass is still open.</td>
 </tr>
 <tr>
 <td><strong>Duplicate ActionUsage block</strong></td>
@@ -1526,7 +1534,7 @@
 <tr>
 <td><strong>RootNamespace doesn't handle AliasMember/Import</strong></td>
 <td><code>definition.py</code></td>
-<td><code>load_package_body()</code> raises <code>NotImplementedError</code> for these node types.</td>
+<td>~~<code>load_package_body()</code> raises <code>NotImplementedError</code>~~ <strong>Resolved v0.58.0</strong> — node types already dispatched; serialization-order gap fixed.</td>
 </tr>
 </tbody>
 </table>
