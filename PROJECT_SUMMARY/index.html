@@ -1018,7 +1018,7 @@
 <blockquote>
 <p><strong>For:</strong> Future agents and team members
 <strong>Last Updated:</strong> August 31, 2026
-<strong>Current Version:</strong> v0.56.0
+<strong>Current Version:</strong> v0.60.0
 <strong>Repository:</strong> https://github.com/mycr0ft/sysmlpy
 <strong>Master Development Plan:</strong> <a href="../DEVELOPMENT_PLAN/">docs/DEVELOPMENT_PLAN.md</a></p>
 </blockquote>
@@ -1549,9 +1549,9 @@
 </thead>
 <tbody>
 <tr>
-<td><strong>Feature chain type resolution incomplete</strong></td>
-<td><code>semantic.py</code> <code>_get_feature_type()</code></td>
-<td>Can resolve the type of the first feature in a chain but not subsequent features (requires full type resolution).</td>
+<td>~~<strong>Feature chain type resolution incomplete</strong>~~</td>
+<td><strong>Resolved v0.60.0</strong> — <code>ReferenceCollector</code> reference-kind tagging (typing refs are no longer chain-checked; fixes false <code>INCOMPATIBLE_FEATURE_CHAIN</code> on qualified type names) + full dotted-chain resolution through declared types with <code>:&gt;</code> inheritance, and visibility of enclosing-usage type members for <code>::</code>/<code>.</code>/single-member references (<code>_resolve_through_context</code>).</td>
+<td></td>
 </tr>
 <tr>
 <td><strong>Connector end compatibility is a stub</strong></td>
@@ -1602,7 +1602,7 @@
 <h3 id="semantic-analysis-extensions">Semantic Analysis Extensions<a class="headerlink" href="#semantic-analysis-extensions" title="Permanent link">&para;</a></h3>
 <ol>
 <li>
-<p><strong>Full type resolution for feature chains</strong> — Currently only resolves the first feature's type. Full implementation would resolve types through the entire chain (<code>a.b.c</code> where <code>a: A</code>, <code>A</code> has <code>b: B</code>, <code>B</code> has <code>c: C</code>).</p>
+<p>~~<strong>Full type resolution for feature chains</strong>~~ — <strong>Resolved v0.60.0.</strong> Dotted expression chains (<code>a.b.c</code> where <code>a: A</code>, <code>A</code> has <code>b: B</code>, <code>B</code> has <code>c: C</code>) resolve through the declared type of each feature, following subsetting inheritance. Members of an enclosing usage's declared type are visible to chained references in usage bodies (<code>::</code>, <code>.</code>, and single-member forms), and inherited chain features advance to their declared type during compatibility checking.</p>
 </li>
 <li>
 <p><strong>Connector end type compatibility</strong> — Validate that connected ends have compatible types (e.g., a <code>Port</code> end can only connect to another <code>Port</code> end).</p>

@@ -431,6 +431,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0600-2026-09-02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.60.0 (2026-09-02)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.60.0 (2026-09-02)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-feature-chain-type-resolution-statusmd-medium-priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Feature chain type resolution (STATUS.md Medium Priority)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0590-2026-08-31" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2692,6 +2720,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0600-2026-09-02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.60.0 (2026-09-02)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.60.0 (2026-09-02)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-feature-chain-type-resolution-statusmd-medium-priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Feature chain type resolution (STATUS.md Medium Priority)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0590-2026-08-31" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4912,6 +4968,76 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0600-2026-09-02">v0.60.0 (2026-09-02)<a class="headerlink" href="#v0600-2026-09-02" title="Permanent link">&para;</a></h2>
+<h3 id="white_check_mark-feature-chain-type-resolution-statusmd-medium-priority">:white_check_mark: Feature chain type resolution (STATUS.md Medium Priority)<a class="headerlink" href="#white_check_mark-feature-chain-type-resolution-statusmd-medium-priority" title="Permanent link">&para;</a></h3>
+<p>Two semantic-engine fixes for feature chains, both found by probing the
+four STATUS.md Medium Priority items:</p>
+<p><strong>1. False-positive <code>INCOMPATIBLE_FEATURE_CHAIN</code> on qualified type names.</strong>
+<code>ReferenceCollector</code> collected typing references (<code>attribute mass:
+ScalarValues::Real</code>) alongside feature chains, and the chain check treated
+the qualified name as <code>feature ScalarValues of Real</code> — reporting an error
+on <strong>every</strong> model that used a namespace-qualified type (library or
+user-defined).  Fix:</p>
+<ul>
+<li><code>ReferenceCollector</code> now tags each reference with its relationship kind
+  (<code>typing</code> / <code>subsetting</code> / <code>redefinition</code> / <code>subclassification</code>) as a
+  4th tuple element.</li>
+<li><code>_check_feature_chaining_compatible</code> only chain-checks <code>subsetting</code> and
+  <code>redefinition</code> references — their targets are genuinely feature chains
+  (<code>a::b</code> / <code>a.b</code>).  Typing and subclassification references are type
+  paths validated by the existing symbol-resolution pass.</li>
+</ul>
+<p><strong>2. Full dotted-chain resolution through declared types.</strong>
+Expression chains like <code>wheels.hub.mass</code> previously only navigated
+structural children; when a segment lives on the current element's
+<em>declared type</em> (e.g. <code>hub</code> on <code>part def Wheel</code>, the type of <code>wheels</code>),
+resolution failed with <code>UNRESOLVED_EXPRESSION_IDENTIFIER</code>.  Fix in
+<code>SemanticAnalyzer._resolve_feature_chain</code>:</p>
+<ul>
+<li>The walk now tracks the current navigation <em>type</em> alongside the current
+  element (seeded from the head's declared type).</li>
+<li>When structural child navigation fails, the segment is resolved as a
+  member of the type definition via <code>SymbolTable._definition_features</code>,
+  following subsetting inheritance (<code>find_defining_type_for_feature</code>) and
+  qualified type names (<code>ScalarValues::Real</code> → simple-name fallback).</li>
+<li>Works in attribute defaults and constraint bodies.</li>
+</ul>
+<p>Tests: 17 cases in <code>tests/semantic_test.py</code>
+(<code>TestFeatureChainTypeResolution</code>).</p>
+<p><strong>3. Members of an enclosing usage's declared type are now visible.</strong>
+Members of a usage's type are inherited features of the usage, so chained
+references inside a usage body must resolve against them:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>part myCar : Car {
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    attribute carPower :&gt; engine::power;   // engine is a member of Car
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>}
+</code></pre></div>
+<p>previously raised <code>UNDEFINED_SYMBOL</code> for <code>engine::power</code> (and the <code>.</code>
+expression-chain variant likewise) because the head lives in <code>Car</code>'s
+symbol-table scope — a <em>sibling</em> of the referencing scope, unreachable by
+upward lookup.  Fix:</p>
+<ul>
+<li><code>SemanticAnalyzer._resolve_through_context</code> resolves a chained (or
+  single) reference by looking the head up as a feature of the declared
+  type of each enclosing usage (innermost first,
+  <code>_context_types_for_resolution</code>), then walking the remaining segments
+  through declared types (<code>_walk_chain_segments</code>).  Strictly
+  existence-based — every segment must resolve, so typos still error.</li>
+<li>Wired into the symbol-resolution pass (Step 4) and the expression
+  identifier pass (Step 4b); <code>engine::name</code> (nonexistent member) is still
+  reported by both passes.</li>
+<li>Chain-compatibility fix: after locating an <em>inherited</em> chain feature,
+  the loop now advances to the feature's <em>declared type</em> instead of the
+  supertype that declares it (<code>engine</code> declared on <code>Vehicle</code>, typed by
+  <code>Engine</code> means the next segment is checked against <code>Engine</code>, not
+  <code>Vehicle</code>), mirroring the direct-feature branch.</li>
+</ul>
+<p>Covered: false-positive regressions for library and user-qualified types,
+chain resolution through typed features (attribute defaults + constraint
+bodies), inheritance through <code>:&gt;</code>-subclassed part types, context-type
+resolution for <code>::</code> / <code>.</code> / single-member references in usage bodies,
+inherited-member chains, and negative cases (bad middle/tail segment,
+unknown head, package-level undefined still flagged).
+Suite: 170 semantic tests, 850 fast-suite tests, 123 conformance tests pass.</p>
 <h2 id="v0590-2026-08-31">v0.59.0 (2026-08-31)<a class="headerlink" href="#v0590-2026-08-31" title="Permanent link">&para;</a></h2>
 <h3 id="white_check_mark-top-level-attribute-multiplicity-verified-fixed-flags-bug-found-fixed">:white_check_mark: Top-level attribute multiplicity — verified fixed, flags bug found &amp; fixed<a class="headerlink" href="#white_check_mark-top-level-attribute-multiplicity-verified-fixed-flags-bug-found-fixed" title="Permanent link">&para;</a></h3>
 <p>Investigation of the last STATUS.md High Priority item found the headline
