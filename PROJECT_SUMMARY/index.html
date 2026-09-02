@@ -536,6 +536,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#command-line-interface-v0610-adoption-roadmap-goal-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Line Interface (v0.61.0 — Adoption Roadmap Goal 1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#plantuml-view-renderings-v0252-v0270" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1171,6 +1182,40 @@
 <li>Standard library validation: <code>ScalarValues</code>, <code>ISQ</code>, etc. recognized as valid</li>
 <li>12 new tests in <code>tests/project_test.py</code></li>
 </ul>
+<h3 id="command-line-interface-v0610-adoption-roadmap-goal-1">Command Line Interface (v0.61.0 — Adoption Roadmap Goal 1)<a class="headerlink" href="#command-line-interface-v0610-adoption-roadmap-goal-1" title="Permanent link">&para;</a></h3>
+<p>The <code>sysmlpy</code> console script exposes subcommands with CI-friendly exit
+codes (0 = success/clean, 1 = findings at threshold / operational error,
+2 = parse or load failure):</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sysmlpy analyze FILE [FILE...]</code></td>
+<td>Semantic analysis; text or <code>--format json</code> output; <code>--fail-on {error,warning,never}</code></td>
+</tr>
+<tr>
+<td><code>sysmlpy view FILE --view NAME</code></td>
+<td>Render any of the 11 views (<code>gv</code>, <code>pv</code>, <code>afv</code>, <code>iv</code>, <code>stv</code>, <code>sv</code>, <code>cv</code>, <code>tabular</code>, <code>datavalue</code>, <code>matrix</code>, <code>browser</code>) to stdout or <code>-o FILE</code>; <code>--focus</code>, <code>--element</code>, <code>--style</code>, <code>--direction</code>, <code>--format</code></td>
+</tr>
+<tr>
+<td><code>sysmlpy parse FILE</code></td>
+<td>Parse and print repr / <code>--dump</code> / <code>--json</code></td>
+</tr>
+<tr>
+<td><code>sysmlpy format FILE...</code></td>
+<td>Canonicalize in place (<code>-i</code>) or verify (<code>--check</code>); alias <code>fmt</code></td>
+</tr>
+</tbody>
+</table>
+<p>The legacy flat form (<code>sysmlpy FILE --dump</code>) is preserved with its
+original exit codes. Example CI usage:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sysmlpy<span class="w"> </span>analyze<span class="w"> </span>model/*.sysml<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span>--fail-on<span class="w"> </span>error
+</code></pre></div>
 <h3 id="plantuml-view-renderings-v0252-v0270">PlantUML View Renderings (v0.25.2 → v0.27.0)<a class="headerlink" href="#plantuml-view-renderings-v0252-v0270" title="Permanent link">&para;</a></h3>
 <p>Eight view rendering functions across two releases:</p>
 <table>
@@ -1381,8 +1426,8 @@
 <tbody>
 <tr>
 <td>Grammar round-trip</td>
-<td>77</td>
-<td>61 pass, 16 deferred (control-flow nodes)</td>
+<td>143</td>
+<td>✅ 143 pass (100%)</td>
 </tr>
 <tr>
 <td>Programmatic API</td>
@@ -1401,8 +1446,13 @@
 </tr>
 <tr>
 <td>Semantic analysis</td>
-<td>107</td>
-<td>✅ 107 pass</td>
+<td>170</td>
+<td>✅ 170 pass</td>
+</tr>
+<tr>
+<td>CLI</td>
+<td>39</td>
+<td>✅ 39 pass</td>
 </tr>
 <tr>
 <td>Multi-file loading</td>
@@ -1436,8 +1486,8 @@
 </tr>
 <tr>
 <td><strong>Total</strong></td>
-<td><strong>622</strong></td>
-<td><strong>606 pass, 16 deferred</strong></td>
+<td><strong>805</strong></td>
+<td><strong>805 pass</strong></td>
 </tr>
 </tbody>
 </table>
@@ -1700,42 +1750,42 @@
 <hr />
 <h2 id="quick-reference">Quick Reference<a class="headerlink" href="#quick-reference" title="Permanent link">&para;</a></h2>
 <h3 id="running-tests">Running Tests<a class="headerlink" href="#running-tests" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># All tests</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>pytest<span class="w"> </span>tests/
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Specific suites</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>pytest<span class="w"> </span>tests/grammar_test.py<span class="w">        </span><span class="c1"># Round-trip</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>pytest<span class="w"> </span>tests/class_test.py<span class="w">          </span><span class="c1"># Programmatic API</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>pytest<span class="w"> </span>tests/semantic_test.py<span class="w">       </span><span class="c1"># Semantic analysis</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>pytest<span class="w"> </span>tests/project_test.py<span class="w">        </span><span class="c1"># Multi-file loading</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>pytest<span class="w"> </span>tests/store_test.py<span class="w">          </span><span class="c1"># Storage backends</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>pytest<span class="w"> </span>tests/conformance_test.py<span class="w">    </span><span class="c1"># OMG conformance (slow)</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="c1"># Skip conformance (fast development)</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">"not conformance"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># All tests</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>pytest<span class="w"> </span>tests/
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Specific suites</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>pytest<span class="w"> </span>tests/grammar_test.py<span class="w">        </span><span class="c1"># Round-trip</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>pytest<span class="w"> </span>tests/class_test.py<span class="w">          </span><span class="c1"># Programmatic API</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>pytest<span class="w"> </span>tests/semantic_test.py<span class="w">       </span><span class="c1"># Semantic analysis</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>pytest<span class="w"> </span>tests/project_test.py<span class="w">        </span><span class="c1"># Multi-file loading</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>pytest<span class="w"> </span>tests/store_test.py<span class="w">          </span><span class="c1"># Storage backends</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>pytest<span class="w"> </span>tests/conformance_test.py<span class="w">    </span><span class="c1"># OMG conformance (slow)</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c1"># Skip conformance (fast development)</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">"not conformance"</span>
 </code></pre></div>
 <h3 id="adding-a-new-ocl-constraint">Adding a New OCL Constraint<a class="headerlink" href="#adding-a-new-ocl-constraint" title="Permanent link">&para;</a></h3>
 <ol>
 <li>
 <p>Add a check method to <code>SemanticAnalyzer</code> in <code>semantic.py</code>:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_check_my_constraint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">symtab</span><span class="p">:</span> <span class="n">SymbolTable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">SemanticIssue</span><span class="p">]:</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">issues</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SemanticIssue</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="c1"># Walk model, check constraint, append issues</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="k">return</span> <span class="n">issues</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_check_my_constraint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">symtab</span><span class="p">:</span> <span class="n">SymbolTable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">SemanticIssue</span><span class="p">]:</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">issues</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SemanticIssue</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="c1"># Walk model, check constraint, append issues</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="k">return</span> <span class="n">issues</span>
 </code></pre></div></p>
 </li>
 <li>
 <p>Call it from <code>analyze()</code>:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">issues</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_check_my_constraint</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">symtab</span><span class="p">))</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">issues</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_check_my_constraint</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">symtab</span><span class="p">))</span>
 </code></pre></div></p>
 </li>
 <li>
 <p>Add tests to <code>tests/semantic_test.py</code>:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">TestMyConstraint</span><span class="p">:</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">test_violation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>        <span class="n">model</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="s2">"..."</span><span class="p">)</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>        <span class="n">issues</span> <span class="o">=</span> <span class="n">analyze</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        <span class="k">assert</span> <span class="nb">any</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="s2">"MY_CONSTRAINT"</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">issues</span><span class="p">)</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">TestMyConstraint</span><span class="p">:</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">test_violation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>        <span class="n">model</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="s2">"..."</span><span class="p">)</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>        <span class="n">issues</span> <span class="o">=</span> <span class="n">analyze</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>        <span class="k">assert</span> <span class="nb">any</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="s2">"MY_CONSTRAINT"</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">issues</span><span class="p">)</span>
 </code></pre></div></p>
 </li>
 </ol>
@@ -1743,16 +1793,16 @@
 <ol>
 <li>
 <p>Subclass <code>Store</code> in <code>store.py</code>:
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyStore</span><span class="p">(</span><span class="n">Store</span><span class="p">):</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span> <span class="o">...</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="c1"># ... implement all abstract methods</span>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyStore</span><span class="p">(</span><span class="n">Store</span><span class="p">):</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span> <span class="o">...</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="c1"># ... implement all abstract methods</span>
 </code></pre></div></p>
 </li>
 <li>
 <p>Register in <code>create_store()</code>:
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">elif</span> <span class="n">backend</span> <span class="o">==</span> <span class="s2">"my"</span><span class="p">:</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="k">return</span> <span class="n">MyStore</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">elif</span> <span class="n">backend</span> <span class="o">==</span> <span class="s2">"my"</span><span class="p">:</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="k">return</span> <span class="n">MyStore</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div></p>
 </li>
 <li>

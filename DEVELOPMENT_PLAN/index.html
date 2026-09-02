@@ -719,6 +719,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#6-adoption-roadmap-v061-making-sysmlpy-useful-to-systems-engineers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Adoption Roadmap (v0.61+) — Making sysmlpy Useful to Systems Engineers
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -855,7 +866,8 @@
 <hr />
 <h2 id="project-plan-complete">Project Plan Complete<a class="headerlink" href="#project-plan-complete" title="Permanent link">&para;</a></h2>
 <p>All four planned phases (A–D) are implemented.  Follow-up candidates are
-tracked in <a href="../TODO.md">TODO.md</a>.  Post-plan high-priority fixes:</p>
+tracked in <a href="../TODO.md">TODO.md</a> and the <strong>Adoption Roadmap</strong> (§6 below).
+Post-plan high-priority fixes:</p>
 <ul>
 <li><strong>v0.57.0 — Typed-by preservation:</strong> <code>_extract_specialization_info()</code>
   hoisted to base <code>Usage</code> and extended to both grammar layouts; new
@@ -888,6 +900,93 @@ tracked in <a href="../TODO.md">TODO.md</a>.  Post-plan high-priority fixes:</p>
    <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">cd</span><span class="w"> </span>~/sysml-v2-grammar<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>python3<span class="w"> </span>scripts/conformance.py<span class="w"> </span>--verbose
 </code></pre></div>
    <em>Requirement: 310/310 official fixture files passed.</em></p>
+<hr />
+<h2 id="6-adoption-roadmap-v061-making-sysmlpy-useful-to-systems-engineers">6. Adoption Roadmap (v0.61+) — Making sysmlpy Useful to Systems Engineers<a class="headerlink" href="#6-adoption-roadmap-v061-making-sysmlpy-useful-to-systems-engineers" title="Permanent link">&para;</a></h2>
+<p>The parse/analyze/round-trip engine is complete (§1–§4).  The remaining
+work is the <em>last mile</em> between "correct toolkit" and "daily tool".
+Strategic framing: sysmlpy will not out-Cameo Cameo — the winnable
+position is <strong>headless SysML for the Python ecosystem</strong>: validation in
+CI, diagram/table generation in documentation pipelines, and models
+connected to Python-based analysis code.</p>
+<p>Prioritized goals (tracked as checkboxes in <a href="../TODO.md">TODO.md</a>):</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Goal</th>
+<th>Gap today</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>CLI: <code>analyze</code> + <code>view</code> commands with exit codes</strong></td>
+<td>CLI is parse/format only; no severity-filtered lint output for CI</td>
+<td>days</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Requirement traceability &amp; verification coverage</strong></td>
+<td><code>satisfy</code>/<code>verify</code>/<code>allocation</code> usages parse but are never traversed: no coverage reports or verification matrices; no ReqIF</td>
+<td>1–2 wks</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>JSON interchange format</strong></td>
+<td><code>--json</code> dumps the internal dict, not the SysML v2 spec's JSON interchange format</td>
+<td>1–2 wks</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Expression evaluator</strong></td>
+<td><code>const_fold</code> handles literals only; nothing binds attribute values (pint) into calc/constraint evaluation</td>
+<td>2–3 wks</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>LSP server</strong></td>
+<td>No editor integration; raw ANTLR error wording (SLL/LL parity, see TODO)</td>
+<td>2–4 wks</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Rendering without Java</strong></td>
+<td>Views emit PlantUML <em>source</em>; rendering requires a Java toolchain. <code>boxes</code> covers state machines only</td>
+<td>1–2 wks</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Spreadsheet bridge</strong></td>
+<td>Tabular views output text only; no CSV/XLSX export or attribute-value import</td>
+<td>days</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Semantic model diff</strong></td>
+<td>Nothing exists for review workflows</td>
+<td>~1 wk</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Validator depth</strong></td>
+<td>~10 OCL checks vs. hundreds in the spec</td>
+<td>incremental</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Technical stubs</strong></td>
+<td>Connector-end compatibility, <code>*</code>/<code>/</code> unit derivation, SLL error parity, regex-based library extraction, Cayley parity</td>
+<td>scattered</td>
+</tr>
+</tbody>
+</table>
+<p>Sequencing rationale: goals 1–3 are well-scoped on top of existing APIs
+(<code>parse()</code>/<code>analyze()</code> were deliberately built non-raising for exactly
+these consumers) and establish the CI-validation, traceability, and
+interop story.  Goal 4 turns <code>analyze()</code> from "is this well-formed" into
+"does this model pass its own constraints" — the bridge to trade studies.
+Goal 5 rounds out the authoring experience.</p>
 
 
 

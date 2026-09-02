@@ -431,6 +431,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0610-2026-09-02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.61.0 (2026-09-02)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.61.0 (2026-09-02)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-cli-analyze-view-commands-with-ci-friendly-exit-codes-adoption-roadmap-goal-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: CLI: analyze + view commands with CI-friendly exit codes (Adoption Roadmap Goal 1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0600-2026-09-02" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2720,6 +2748,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0610-2026-09-02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.61.0 (2026-09-02)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.61.0 (2026-09-02)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-cli-analyze-view-commands-with-ci-friendly-exit-codes-adoption-roadmap-goal-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: CLI: analyze + view commands with CI-friendly exit codes (Adoption Roadmap Goal 1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0600-2026-09-02" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4968,6 +5024,43 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0610-2026-09-02">v0.61.0 (2026-09-02)<a class="headerlink" href="#v0610-2026-09-02" title="Permanent link">&para;</a></h2>
+<h3 id="white_check_mark-cli-analyze-view-commands-with-ci-friendly-exit-codes-adoption-roadmap-goal-1">:white_check_mark: CLI: <code>analyze</code> + <code>view</code> commands with CI-friendly exit codes (Adoption Roadmap Goal 1)<a class="headerlink" href="#white_check_mark-cli-analyze-view-commands-with-ci-friendly-exit-codes-adoption-roadmap-goal-1" title="Permanent link">&para;</a></h3>
+<p>The CLI (<code>src/sysmlpy/__main__.py</code>, console script <code>sysmlpy</code>) was
+restructured into subcommands while <strong>preserving the legacy flat
+invocation</strong> (<code>sysmlpy FILE --dump</code> etc., including flag-first orders and
+its original exit code 1 on file/parse errors):</p>
+<ul>
+<li><strong><code>sysmlpy analyze FILE [FILE...]</code></strong> — loads the files as one merged
+  model (<code>load_files</code>) and runs the semantic analyzer. Human-readable
+  output (<code>error: CODE: message [ref: ...]</code> lines + summary) or
+  <code>--format json</code> with a machine-readable issues/summary structure for
+  CI integration. Flags: <code>--fail-on {error,warning,never}</code> (default
+  error), <code>--no-warnings</code>, <code>--no-summary</code>, <code>-l/--library</code>.</li>
+<li><strong><code>sysmlpy view FILE --view NAME</code></strong> — renders any of the 11 views
+  (<code>gv</code>, <code>pv</code>, <code>afv</code>, <code>iv</code>, <code>stv</code>, <code>sv</code>, <code>cv</code>, <code>tabular</code>, <code>datavalue</code>,
+  <code>matrix</code>, <code>browser</code>) to stdout or <code>-o FILE</code>. Flags: <code>--focus</code> (element
+  name; typos fail with exit 1 instead of silently rendering everything),
+  <code>--element</code> (repeatable), <code>--style bw|color</code>, <code>--direction TB|LR</code>,
+  <code>--format plantuml|markdown|html</code> (tabular views), <code>-l/--library</code>.
+  View kwargs are filtered by introspection, so graph-only flags are not
+  passed to tabular views and vice versa. A failing view (e.g. the
+  pre-existing <code>as_sequence_view</code> state-body bug) is reported as an
+  error message with exit 1, not a traceback.</li>
+<li><strong><code>sysmlpy parse FILE</code></strong> — the legacy parse behavior as a first-class
+  subcommand (<code>--dump</code>, <code>--json</code>, <code>--python</code>, <code>-l</code>).</li>
+<li><strong><code>sysmlpy format FILE...</code></strong> (alias <code>fmt</code>) — the <code>-i</code> / <code>--check</code>
+  behavior, extended to multiple files.</li>
+<li><strong>Exit code contract</strong> (documented in <code>--help</code>): 0 = success/clean,
+  1 = findings at or above the failure threshold / operational error,
+  2 = parse or load failure. <code>--version</code> added.</li>
+</ul>
+<p>New <code>tests/cli_test.py</code> — 39 tests covering all subcommands, exit codes,
+JSON output, multi-file merged analysis, output files, focus validation,
+legacy backward compatibility, and real subprocess invocations of the
+module entry point.</p>
+<p>Recorded the <strong>Adoption Roadmap</strong> (goals 1–10) in
+<code>docs/DEVELOPMENT_PLAN.md</code> §6 and <code>TODO.md</code>; Goal 1 is now complete.</p>
 <h2 id="v0600-2026-09-02">v0.60.0 (2026-09-02)<a class="headerlink" href="#v0600-2026-09-02" title="Permanent link">&para;</a></h2>
 <h3 id="white_check_mark-feature-chain-type-resolution-statusmd-medium-priority">:white_check_mark: Feature chain type resolution (STATUS.md Medium Priority)<a class="headerlink" href="#white_check_mark-feature-chain-type-resolution-statusmd-medium-priority" title="Permanent link">&para;</a></h3>
 <p>Two semantic-engine fixes for feature chains, both found by probing the

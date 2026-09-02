@@ -581,13 +581,28 @@
 <hr />
 <h2 id="active-tasks-post-phase-d-candidates">Active Tasks (Post-Phase-D candidates)<a class="headerlink" href="#active-tasks-post-phase-d-candidates" title="Permanent link">&para;</a></h2>
 <p>Phases A–D from the <a href="docs/DEVELOPMENT_PLAN.md">Master Development Plan</a>
-are complete.  Candidate follow-up work:</p>
+are complete.  Follow-up work is organized under the
+<a href="docs/DEVELOPMENT_PLAN.md#6-adoption-roadmap-v061--making-sysmlpy-useful-to-systems-engineers">Adoption Roadmap</a>
+(§6 of the plan) — goals to make sysmlpy useful to systems engineers:</p>
 <ul>
-<li>[ ] <code>*</code>/<code>/</code> unit-dimension derivation (e.g. <code>mass * speed</code> vs <code>ForceValue</code> inference)</li>
-<li>[ ] SLL error-message parity (align ANTLR wording between prediction modes)</li>
+<li>[x] <strong>Goal 1 — CLI: <code>analyze</code> + <code>view</code> commands with exit codes</strong> <em>(v0.61.0: <code>sysmlpy analyze FILE... [--format json] [--fail-on ...]</code>, <code>sysmlpy view FILE --view NAME [--focus ...] [-o ...]</code>, <code>parse</code>/<code>format</code> subcommands, documented 0/1/2 exit codes, legacy flat form preserved; 39 tests in <code>tests/cli_test.py</code>)</em></li>
+<li>[ ] <strong>Goal 2 — Requirement traceability &amp; verification coverage</strong> (satisfy/verify/allocation traversal, coverage matrices, ReqIF)</li>
+<li>[ ] <strong>Goal 3 — JSON interchange format</strong> (SysML v2 spec JSON exchange, not the internal dict)</li>
+<li>[ ] <strong>Goal 4 — Expression evaluator</strong> (bind pint attribute values into calc/constraint evaluation → trade studies)</li>
+<li>[ ] <strong>Goal 5 — LSP server</strong> (VS Code diagnostics from <code>parse()</code> + <code>analyze()</code>)</li>
+<li>[ ] <strong>Goal 6 — Rendering without Java</strong> (native SVG / Mermaid output; boxes covers state machines only)</li>
+<li>[ ] <strong>Goal 7 — Spreadsheet bridge</strong> (CSV/XLSX export of tabular views; attribute-value import)</li>
+<li>[ ] <strong>Goal 8 — Semantic model diff</strong> (review workflows)</li>
+<li>[ ] <strong>Goal 9 — Validator depth</strong> (more OCL well-formedness checks)</li>
+<li>[ ] <strong>Goal 10 — Technical stubs</strong> (connector-end compatibility, <code>*</code>/<code>/</code> unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)</li>
+</ul>
+<p>Legacy candidate follow-up work:</p>
+<ul>
+<li>[ ] <code>*</code>/<code>/</code> unit-dimension derivation (e.g. <code>mass * speed</code> vs <code>ForceValue</code> inference) <em>(→ Goal 10)</em></li>
+<li>[ ] SLL error-message parity (align ANTLR wording between prediction modes) <em>(→ Goal 10)</em></li>
 <li>[ ] Persistent DFA cache serialization to eliminate cold-start parse cost</li>
 <li>[ ] Visitor performance profiling (<code>parse_to_dict</code> dominates end-to-end time)</li>
-<li>[ ] CayleyStore query extensions (parity with NetworkX/Kùzu)</li>
+<li>[ ] CayleyStore query extensions (parity with NetworkX/Kùzu) <em>(→ Goal 10)</em></li>
 </ul>
 <hr />
 <h2 id="recently-completed">Recently Completed<a class="headerlink" href="#recently-completed" title="Permanent link">&para;</a></h2>
