@@ -821,16 +821,21 @@ class SymbolTable:
 class ReferenceCollector:
     """Collect all qualified-name references from a model's grammar tree.
 
-    Returns list of ``(qualified_name_str, element, scope_path)`` tuples where
-    ``scope_path`` is the list of scope names from root to the element.
+    Returns list of ``(qualified_name_str, element, scope_path, kind)`` tuples
+    where ``scope_path`` is the list of scope names from root to the element
+    and ``kind`` is the reference relationship: ``"typing"``, ``"subsetting"``,
+    ``"redefinition"``, or ``"subclassification"``.  The kind lets the
+    feature-chain check (v0.60.0) tell genuine feature chains (subsetting /
+    redefinition) apart from *type* references (typings / subclassification),
+    which are namespace paths and must not be chain-checked.
     """
 
-    def collect(self, model: Any) -> list[tuple[str, Any, list[str]]]:
-        results: list[tuple[str, Any, list[str]]] = []
+    def collect(self, model: Any) -> list[tuple[str, Any, list[str], str]]:
+        results: list[tuple[str, Any, list[str], str]] = []
         self._walk(model, results, [])
         return results
 
-    def _walk(self, element: Any, results: list[tuple[str, Any, list[str]]], scope_path: list[str]) -> None:
+    def _walk(self, element: Any, results: list[tuple[str, Any, list[str], str]], scope_path: list[str]) -> None:
         if element is None:
             return
 
@@ -850,7 +855,7 @@ class ReferenceCollector:
             self._walk(child, results, child_scope)
 
     def _extract_from_grammar(
-        self, grammar: Any, element: Any, results: list[tuple[str, Any, list[str]]], scope_path: list[str]
+        self, grammar: Any, element: Any, results: list[tuple[str, Any, list[str], str]], scope_path: list[str]
     ) -> None:
         usage = getattr(grammar, "usage", None)
         if usage is None:
@@ -874,7 +879,7 @@ class ReferenceCollector:
         self._collect_specialization_part(spec, element, results, scope_path)
 
     def _collect_specialization_part(
-        self, spec: Any, element: Any, results: list[tuple[str, Any, list[str]]], scope_path: list[str]
+        self, spec: Any, element: Any, results: list[tuple[str, Any, list[str], str]], scope_path: list[str]
     ) -> None:
         if spec is None:
             return
@@ -886,7 +891,7 @@ class ReferenceCollector:
             self._collect_feature_specialization(fs, element, results, scope_path)
 
     def _collect_feature_specialization(
-        self, fs: Any, element: Any, results: list[tuple[str, Any, list[str]]], scope_path: list[str]
+        self, fs: Any, element: Any, results: list[tuple[str, Any, list[str], str]], scope_path: list[str]
     ) -> None:
         if fs is None:
             return
@@ -898,7 +903,7 @@ class ReferenceCollector:
         rel_type = type(rel).__name__
 
         if rel_type == "Typings":
-            self._collect_typings(rel, element, results, scope_path)
+            self._collect_typings(rel, element, results, scope_path, "typing")
         elif rel_type == "Subsettings":
             self._collect_subsettings(rel, element, results, scope_path)
         elif rel_type == "Redefinitions":
@@ -907,18 +912,20 @@ class ReferenceCollector:
             self._collect_subclassification(rel, element, results, scope_path)
 
     def _collect_typings(
-        self, typings: Any, element: Any, results: list[tuple[str, Any, list[str]]], scope_path: list[str]
+        self, typings: Any, element: Any, results: list[tuple[str, Any, list[str], str]], scope_path: list[str],
+        kind: str = "typing",
     ) -> None:
         tb = getattr(typings, "typing", None)
         if tb is not None:
             for ft in getattr(tb, "relationships", []):
-                self._collect_feature_typing(ft, element, results, scope_path)
+                self._collect_feature_typing(ft, element, results, scope_path, kind)
 
         for ft in getattr(typings, "relationships", []):
-            self._collect_feature_typing(ft, element, results, scope_path)
+            self._collect_feature_typing(ft, element, results, scope_path, kind)
 
     def _collect_feature_typing(
-        self, ft: Any, element: Any, results: list[tuple[str, Any, list[str]]], scope_path: list[str]
+        self, ft: Any, element: Any, results: list[tuple[str, Any, list[str], str]], scope_path: list[str],
+        kind: str = "typing",
     ) -> None:
         if ft is None:
             return
@@ -936,17 +943,17 @@ class ReferenceCollector:
                 if qn is not None:
                     names = getattr(qn, "names", [])
                     if names:
-                        results.append(("::".join(names), element, scope_path))
+                        results.append(("::".join(names), element, scope_path, kind))
 
         elif rel_type == "ConjugatedPortTyping":
             qn = getattr(rel, "name", None)
             if qn is not None:
                 names = getattr(qn, "names", [])
                 if names:
-                    results.append(("::".join(names), element, scope_path))
+                    results.append(("::".join(names), element, scope_path, kind))
 
     def _collect_subsettings(
-        self, sub: Any, element: Any, results: list[tuple[str, Any, list[str]]], scope_path: list[str]
+        self, sub: Any, element: Any, results: list[tuple[str, Any, list[str], str]], scope_path: list[str]
     ) -> None:
         for child in getattr(sub, "children", []):
             segments = _chain_segments(child)
@@ -955,26 +962,26 @@ class ReferenceCollector:
                 # with '.' (e.g. base.x).
                 # Namespace qualification stays inside a segment ('A::B');
                 # feature-chain segments join with '.'.
-                results.append((".".join(segments), element, scope_path))
+                results.append((".".join(segments), element, scope_path, "subsetting"))
 
     def _collect_redefinitions(
-        self, red: Any, element: Any, results: list[tuple[str, Any, list[str]]], scope_path: list[str]
+        self, red: Any, element: Any, results: list[tuple[str, Any, list[str], str]], scope_path: list[str]
     ) -> None:
         for child in getattr(red, "children", []):
             segments = _chain_segments(child)
             if segments:
                 # Namespace qualification stays inside a segment ('A::B');
                 # feature-chain segments join with '.'.
-                results.append((".".join(segments), element, scope_path))
+                results.append((".".join(segments), element, scope_path, "redefinition"))
 
     def _collect_subclassification(
-        self, sc: Any, element: Any, results: list[tuple[str, Any, list[str]]], scope_path: list[str]
+        self, sc: Any, element: Any, results: list[tuple[str, Any, list[str], str]], scope_path: list[str]
     ) -> None:
         for child in getattr(sc, "children", []):
             for el in getattr(child, "elements", []):
                 names = getattr(el, "names", [])
                 if names:
-                    results.append(("::".join(names), element, scope_path))
+                    results.append(("::".join(names), element, scope_path, "subclassification"))
 
 
 
@@ -2275,7 +2282,7 @@ class SemanticAnalyzer:
         references = collector.collect(model)
 
         # Step 4: Cross-reference using scope-aware lookup
-        for ref_str, element, scope_path in references:
+        for ref_str, element, scope_path, _kind in references:
             if self._is_resolved(ref_str, symtab, scope_path, lib_roots):
                 if self._is_implicit_library_reference(ref_str, symtab, scope_path, lib_roots):
                     issues.append(SemanticIssue(
@@ -2287,6 +2294,12 @@ class SemanticAnalyzer:
                         element=element,
                         reference=ref_str,
                     ))
+                continue
+            # v0.60.0: members of an enclosing usage's declared type are
+            # visible features inside the usage's body — resolve chained
+            # references (and single members) through the context types
+            # before flagging the symbol as undefined.
+            if self._resolve_through_context(ref_str, symtab, element):
                 continue
             issues.append(SemanticIssue(
                 severity="error",
@@ -2616,8 +2629,13 @@ class SemanticAnalyzer:
             # Dotted feature chains (`wheel1.mass`): resolve the head, then
             # each successive step as a member of the previous step's element.
             if "." in ref_str and self._resolve_feature_chain(
-                ref_str, symtab, scope_path, lib_roots
+                ref_str, symtab, scope_path, lib_roots, element=element
             ):
+                continue
+            # Single identifiers (and chains whose head could not be found
+            # from the scope) may still be members of an enclosing usage's
+            # declared type (v0.60.0).
+            if self._resolve_through_context(ref_str, symtab, element):
                 continue
             issues.append(SemanticIssue(
                 severity="error",
@@ -2636,6 +2654,7 @@ class SemanticAnalyzer:
         symtab: SymbolTable,
         scope_path: list[str],
         lib_roots: list[Path] | None = None,
+        element: Any = None,
     ) -> bool:
         """Resolve a dotted feature chain like ``wheel1.hub.mass``.
 
@@ -2643,11 +2662,25 @@ class SemanticAnalyzer:
         scope; each subsequent segment must exist as a named child of the
         previous segment's element (feature navigation through part
         structure).
+
+        Since v0.60.0, when a segment is not found among the current
+        element's structural children, navigation continues through the
+        element's *declared type* (``Usage.typed_by_name``): the segment is
+        looked up as a member of the type definition, following subsetting
+        inheritance.  This resolves chains like ``wheels.hub.mass`` where
+        ``hub`` is a feature of ``Wheel`` (the type of ``wheels``) rather
+        than a structural child of the ``wheels`` usage.
+
+        When the head itself does not resolve from the symbol-table scope
+        (e.g. a chain inside a usage body: ``part myCar : Car { attribute
+        w = engine.power; }`` — ``engine`` is a member of ``Car``, the
+        declared type of ``myCar``), *element*'s context types are tried
+        via :meth:`_resolve_through_context`.
         """
         segments = ref_str.split(".")
         head = segments[0]
         if not self._is_resolved(head, symtab, scope_path, lib_roots):
-            return False
+            return self._resolve_through_context(ref_str, symtab, element)
 
         # Locate the head element by walking to its scope
         current_table = symtab
@@ -2663,13 +2696,168 @@ class SemanticAnalyzer:
         if current_element is None:
             return False
 
-        for segment in segments[1:]:
-            # Find `segment` among the current element's descendants,
-            # stopping at that element's own subtree boundary.
-            current_element = self._find_member(current_element, segment)
-            if current_element is None:
+        # Type of the current navigation position (name of its definition).
+        current_type = self._get_element_type(current_element)
+
+        return self._walk_chain_segments(
+            segments[1:], current_element, current_type, symtab
+        )
+
+    def _walk_chain_segments(
+        self,
+        segments: list[str],
+        current_element: Any,
+        current_type: Optional[str],
+        symtab: SymbolTable,
+    ) -> bool:
+        """Walk the remaining *segments* of a feature chain.
+
+        Each segment is located first among the current element's
+        structural children, then — as a fallback — as a feature of the
+        current element's declared type (see
+        :meth:`_resolve_segment_through_type`).
+        """
+        for segment in segments:
+            # 1) Structural navigation: find `segment` among the current
+            #    element's descendants, stopping at that element's own
+            #    subtree boundary.
+            next_element = self._find_member(current_element, segment)
+            if next_element is not None:
+                current_element = next_element
+                next_type = self._get_element_type(next_element)
+                if next_type is not None:
+                    current_type = next_type
+                continue
+
+            # 2) Type-definition navigation (v0.60.0): look `segment` up as
+            #    a feature of the current element's declared type.
+            resolved = self._resolve_segment_through_type(
+                segment, current_type, symtab
+            )
+            if resolved is None:
                 return False
+            current_element, current_type = resolved
         return True
+
+    def _context_types_for_resolution(self, element: Any) -> list[str]:
+        """Declared type names visible to *element* as feature scopes.
+
+        Walks the element's parent chain and collects the declared type of
+        each enclosing *usage* (innermost first) — a usage inherits the
+        members of its type, so ``part myCar : Car`` makes ``engine`` (a
+        member of ``Car``) visible inside myCar's body.  Stops at the first
+        enclosing definition: definition members are already visible via
+        the symbol table's scope walk.
+        """
+        types: list[str] = []
+        seen: set[str] = set()
+        node = element
+        while node is not None and type(node).__name__ != "Model":
+            if getattr(node, "is_definition", False):
+                break
+            declared = self._get_element_type(node)
+            if declared and declared not in seen:
+                seen.add(declared)
+                types.append(declared)
+            node = getattr(node, "parent", None)
+        return types
+
+    def _resolve_through_context(
+        self,
+        ref_str: str,
+        symtab: SymbolTable,
+        element: Any,
+    ) -> bool:
+        """Resolve a chained reference through the element's context types.
+
+        Members of an enclosing usage's declared type are visible features
+        inside the usage's body: in
+
+        ``part myCar : Car { attribute carPower :\u003e engine::power; }``
+
+        the head ``engine`` is a member of ``Car`` (myCar's type) and
+        ``power`` a member of ``Engine`` (engine's type).  Namespace
+        qualifiers (``::``) and feature-chain dots (``.``) are treated
+        uniformly as segment separators.  Strictly existence-based: every
+        segment must resolve, so typos still produce errors (v0.60.0).
+        """
+        if element is None:
+            return False
+        segments = [
+            seg
+            for part in ref_str.split(".")
+            for seg in part.split("::")
+            if seg
+        ]
+        if not segments:
+            return False
+        head = segments[0]
+        for context_type in self._context_types_for_resolution(element):
+            resolved = self._resolve_segment_through_type(
+                head, context_type, symtab
+            )
+            if resolved is None:
+                continue
+            current_element, current_type = resolved
+            if len(segments) == 1:
+                return True
+            if self._walk_chain_segments(
+                segments[1:], current_element, current_type, symtab
+            ):
+                return True
+        return False
+
+    def _resolve_segment_through_type(
+        self,
+        segment: str,
+        current_type: Optional[str],
+        symtab: SymbolTable,
+    ) -> Optional[tuple[Any, Optional[str]]]:
+        """Resolve *segment* as a feature of the definition named *current_type*.
+
+        Returns ``(member_element, feature_type_name)`` on success so the
+        chain walk can continue from the resolved feature, or ``None`` when
+        the feature does not exist on the type (directly or inherited).
+        """
+        if current_type is None:
+            return None
+
+        # Accept qualified type names ('ScalarValues::Real') by trying the
+        # full name first, then the simple name.
+        def_names = [current_type]
+        if "::" in current_type:
+            def_names.append(current_type.split("::")[-1])
+
+        for def_name in def_names:
+            def_info = symtab._definition_features.get(def_name)
+            if def_info is None:
+                continue
+
+            if segment in def_info["features"]:
+                defining_type = def_name
+            else:
+                # Inherited feature: walk the supertype chain.
+                defining_type = symtab.find_defining_type_for_feature(
+                    segment, def_name
+                )
+                if defining_type is None:
+                    continue
+
+            feature_type = self._get_feature_type(
+                segment, defining_type, symtab
+            )
+
+            # Locate the member element for further structural navigation.
+            defining_info = symtab._definition_features.get(defining_type)
+            member_element = None
+            if defining_info is not None:
+                member_element = self._find_member(
+                    defining_info["element"], segment
+                )
+
+            return member_element, feature_type
+
+        return None
 
     @staticmethod
     def _find_member(element: Any, name: str) -> Optional[Any]:
@@ -3139,12 +3327,22 @@ class SemanticAnalyzer:
 
         Validates that in a feature chain like 'a.b.c', the type of 'a' has
         feature 'b', and the type of 'b' has feature 'c'.
+
+        Only subsetting / redefinition references are chain-checked: their
+        targets are genuinely feature chains (``a::b`` / ``a.b``).  Typing and
+        subclassification references carry *type* names (``ScalarValues::Real``
+        is a namespace-qualified type, not a chain of features) and are
+        validated as plain symbols by the cross-reference pass; chain-checking
+        them produced false ``INCOMPATIBLE_FEATURE_CHAIN`` errors on every
+        qualified type name (fixed in v0.60.0).
         """
         issues: list[SemanticIssue] = []
         collector = ReferenceCollector()
         references = collector.collect(model)
 
-        for ref_str, element, scope_path in references:
+        for ref_str, element, scope_path, kind in references:
+            if kind not in ("subsetting", "redefinition"):
+                continue
             if "::" not in ref_str:
                 continue
 
@@ -3183,8 +3381,18 @@ class SemanticAnalyzer:
                             reference=ref_str,
                         ))
                         break
-                    else:
-                        current_type = defining
+                    # Advance to the inherited feature's *declared type* so
+                    # the next segment is validated against the feature's
+                    # type, not against the supertype that declares it
+                    # (v0.60.0 — 'engine' declared on Vehicle but typed by
+                    # 'Engine' means the next segment must be a member of
+                    # Engine, not of Vehicle).
+                    next_type = self._get_feature_type(part, defining, symtab)
+                    if next_type is None:
+                        # Undeclared feature type: remaining chain cannot
+                        # be validated.
+                        break
+                    current_type = next_type
                 else:
                     # Feature found - get its type for next iteration
                     next_type = self._get_feature_type(part, current_type, symtab)

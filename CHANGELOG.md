@@ -1,5 +1,83 @@
 # CHANGELOG
 
+## v0.60.0 (2026-09-02)
+
+### :white_check_mark: Feature chain type resolution (STATUS.md Medium Priority)
+
+Two semantic-engine fixes for feature chains, both found by probing the
+four STATUS.md Medium Priority items:
+
+**1. False-positive `INCOMPATIBLE_FEATURE_CHAIN` on qualified type names.**
+`ReferenceCollector` collected typing references (``attribute mass:
+ScalarValues::Real``) alongside feature chains, and the chain check treated
+the qualified name as ``feature ScalarValues of Real`` — reporting an error
+on **every** model that used a namespace-qualified type (library or
+user-defined).  Fix:
+
+- `ReferenceCollector` now tags each reference with its relationship kind
+  (`typing` / `subsetting` / `redefinition` / `subclassification`) as a
+  4th tuple element.
+- `_check_feature_chaining_compatible` only chain-checks `subsetting` and
+  `redefinition` references — their targets are genuinely feature chains
+  (``a::b`` / ``a.b``).  Typing and subclassification references are type
+  paths validated by the existing symbol-resolution pass.
+
+**2. Full dotted-chain resolution through declared types.**
+Expression chains like ``wheels.hub.mass`` previously only navigated
+structural children; when a segment lives on the current element's
+*declared type* (e.g. `hub` on `part def Wheel`, the type of `wheels`),
+resolution failed with `UNRESOLVED_EXPRESSION_IDENTIFIER`.  Fix in
+`SemanticAnalyzer._resolve_feature_chain`:
+
+- The walk now tracks the current navigation *type* alongside the current
+  element (seeded from the head's declared type).
+- When structural child navigation fails, the segment is resolved as a
+  member of the type definition via `SymbolTable._definition_features`,
+  following subsetting inheritance (`find_defining_type_for_feature`) and
+  qualified type names (`ScalarValues::Real` → simple-name fallback).
+- Works in attribute defaults and constraint bodies.
+
+Tests: 17 cases in `tests/semantic_test.py`
+(`TestFeatureChainTypeResolution`).
+
+**3. Members of an enclosing usage's declared type are now visible.**
+Members of a usage's type are inherited features of the usage, so chained
+references inside a usage body must resolve against them:
+
+```
+part myCar : Car {
+    attribute carPower :> engine::power;   // engine is a member of Car
+}
+```
+
+previously raised `UNDEFINED_SYMBOL` for `engine::power` (and the `.`
+expression-chain variant likewise) because the head lives in `Car`'s
+symbol-table scope — a *sibling* of the referencing scope, unreachable by
+upward lookup.  Fix:
+
+- `SemanticAnalyzer._resolve_through_context` resolves a chained (or
+  single) reference by looking the head up as a feature of the declared
+  type of each enclosing usage (innermost first,
+  `_context_types_for_resolution`), then walking the remaining segments
+  through declared types (`_walk_chain_segments`).  Strictly
+  existence-based — every segment must resolve, so typos still error.
+- Wired into the symbol-resolution pass (Step 4) and the expression
+  identifier pass (Step 4b); `engine::name` (nonexistent member) is still
+  reported by both passes.
+- Chain-compatibility fix: after locating an *inherited* chain feature,
+  the loop now advances to the feature's *declared type* instead of the
+  supertype that declares it (`engine` declared on `Vehicle`, typed by
+  `Engine` means the next segment is checked against `Engine`, not
+  `Vehicle`), mirroring the direct-feature branch.
+
+Covered: false-positive regressions for library and user-qualified types,
+chain resolution through typed features (attribute defaults + constraint
+bodies), inheritance through `:>`-subclassed part types, context-type
+resolution for `::` / `.` / single-member references in usage bodies,
+inherited-member chains, and negative cases (bad middle/tail segment,
+unknown head, package-level undefined still flagged).
+Suite: 170 semantic tests, 850 fast-suite tests, 123 conformance tests pass.
+
 ## v0.59.0 (2026-08-31)
 
 ### :white_check_mark: Top-level attribute multiplicity — verified fixed, flags bug found & fixed

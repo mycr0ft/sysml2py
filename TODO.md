@@ -21,6 +21,14 @@ are complete.  Candidate follow-up work:
 
 ## Recently Completed
 
+- [x] **v0.60.0:** Feature chain type resolution (Medium Priority from STATUS.md)
+  - [x] `ReferenceCollector` tags reference kind (`typing`/`subsetting`/`redefinition`/`subclassification`)
+  - [x] Chain check restricted to subsetting/redefinition — fixes false `INCOMPATIBLE_FEATURE_CHAIN` on every qualified type name (`ScalarValues::Real`)
+  - [x] Dotted expression chains (`wheels.hub.mass`) resolve through declared types incl. `:>` inheritance (`_resolve_feature_chain` + `_resolve_segment_through_type`)
+  - [x] Members of an enclosing usage's declared type resolve for `::`, `.`, and single-member references in usage bodies (`_resolve_through_context`; `part myCar : Car { attribute x :> engine::power; }`)
+  - [x] Inherited chain features advance to their *declared type* in the compatibility check (was advancing to the declaring supertype)
+  - [x] 17 regression tests in `tests/semantic_test.py` (`TestFeatureChainTypeResolution`)
+
 - [x] **v0.59.0:** Top-level multiplicity — verified bounds fixed since v0.40.0 (stale docs); fixed real residual bug: `ordered`/`nonunique` flags hardcoded `False` in both visitor multiplicity extractors + `MultiplicityPart.dump()` XOR-guard dropping `ordered`. 7 tests.
 - [x] **v0.58.0:** Import / AliasMember source-order preservation (High Priority from STATUS.md)
   - [x] Both `_ensure_body()` rebuild paths (Model + Package) re-emit `Import`/`AliasMember` at original positions

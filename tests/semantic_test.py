@@ -1226,6 +1226,341 @@ class TestFeatureChainingCompatible:
         assert any(i.code == "INCOMPATIBLE_FEATURE_CHAIN" for i in issues)
 
 
+class TestFeatureChainTypeResolution:
+    """Feature chain type resolution (v0.60.0 — STATUS.md Medium Priority).
+
+    Two aspects:
+    1. Type references (``attribute mass: ScalarValues::Real``) are namespace
+       paths, not feature chains — they must not be chain-checked.
+    2. Dotted expression chains (``wheels.hub.mass``) resolve through the
+       *declared type* of each feature, following subsetting inheritance.
+    """
+
+    def test_qualified_library_type_not_chain_checked(self):
+        # Regression: every qualified type name used to raise a false
+        # INCOMPATIBLE_FEATURE_CHAIN error ('ScalarValues' treated as a
+        # feature of the attribute's own type).
+        model = loads("""
+            package P {
+                part def Hub {
+                    attribute mass: ScalarValues::Real;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not any(i.code == "INCOMPATIBLE_FEATURE_CHAIN" for i in issues)
+
+    def test_qualified_user_type_not_chain_checked(self):
+        model = loads("""
+            package P {
+                package Sub {
+                    part def Axle;
+                }
+                part def Car {
+                    part a: Sub::Axle;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not any(i.code == "INCOMPATIBLE_FEATURE_CHAIN" for i in issues)
+
+    def test_unknown_qualified_type_still_undefined(self):
+        # The typing reference is no longer chain-checked, but an unknown
+        # qualified type is still reported by the symbol-resolution pass.
+        model = loads("""
+            package P {
+                part def Car {
+                    attribute x: P::NoSuch;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(i.code == "UNDEFINED_SYMBOL" for i in issues)
+        assert not any(i.code == "INCOMPATIBLE_FEATURE_CHAIN" for i in issues)
+
+    def test_expression_chain_through_typed_feature(self):
+        # 'wheels.hub.mass': hub is a feature of Wheel (the type of
+        # wheels), mass a feature of Hub (the type of hub).
+        model = loads("""
+            package P {
+                part def Wheel {
+                    attribute hub: Hub;
+                }
+                part def Hub {
+                    attribute mass: Real;
+                }
+                part def Car {
+                    part wheels: Wheel[4];
+                    attribute w: Real = wheels.hub.mass;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not any(
+            i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER" for i in issues
+        )
+
+    def test_expression_chain_through_typed_feature_in_constraint(self):
+        model = loads("""
+            package P {
+                part def Wheel {
+                    attribute hub: Hub;
+                }
+                part def Hub {
+                    attribute mass: Real;
+                }
+                part def Car {
+                    part wheels: Wheel[4];
+                    constraint { wheels.hub.mass > 0.0 }
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not any(
+            i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER" for i in issues
+        )
+
+    def test_expression_chain_inherited_feature(self):
+        # FancyWheel inherits 'hub' from Wheel via :> subsetting.
+        model = loads("""
+            package P {
+                part def Wheel {
+                    attribute hub: Hub;
+                }
+                part def Hub {
+                    attribute mass: Real;
+                }
+                part def FancyWheel :> Wheel;
+                part def Car {
+                    part fw: FancyWheel;
+                    attribute w: Real = fw.hub.mass;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not any(
+            i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER" for i in issues
+        )
+
+    def test_expression_chain_bad_middle_segment(self):
+        model = loads("""
+            package P {
+                part def Wheel {
+                    attribute hub: Hub;
+                }
+                part def Hub {
+                    attribute mass: Real;
+                }
+                part def Car {
+                    part wheels: Wheel[4];
+                    attribute w: Real = wheels.nothub.mass;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(
+            i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER"
+            and "wheels.nothub.mass" in i.reference
+            for i in issues
+        )
+
+    def test_expression_chain_bad_tail_segment(self):
+        model = loads("""
+            package P {
+                part def Wheel {
+                    attribute hub: Hub;
+                }
+                part def Hub {
+                    attribute mass: Real;
+                }
+                part def Car {
+                    part wheels: Wheel[4];
+                    attribute w: Real = wheels.hub.nomass;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(
+            i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER"
+            and "wheels.hub.nomass" in i.reference
+            for i in issues
+        )
+
+    def test_expression_chain_unknown_head(self):
+        model = loads("""
+            package P {
+                part def Wheel {
+                    attribute hub: Hub;
+                }
+                part def Hub {
+                    attribute mass: Real;
+                }
+                part def Car {
+                    part wheels: Wheel[4];
+                    attribute w: Real = nope.hub.mass;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(
+            i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER"
+            and "nope.hub.mass" in i.reference
+            for i in issues
+        )
+
+    # -- context-type resolution: members of an enclosing usage's declared
+    #    type are visible features inside the usage's body (v0.60.0) --
+
+    def test_subsetting_chain_member_of_usage_type(self):
+        # 'engine' is a member of Car (myCar's declared type); 'power' is a
+        # member of Engine (engine's type).
+        model = loads("""
+            package P {
+                part def Engine {
+                    attribute power;
+                }
+                part def Car {
+                    part engine : Engine;
+                }
+                part myCar : Car {
+                    attribute carPower :> engine::power;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not any(i.code == "UNDEFINED_SYMBOL" for i in issues)
+        assert not any(
+            i.code == "INCOMPATIBLE_FEATURE_CHAIN" for i in issues
+        )
+
+    def test_subsetting_chain_member_of_usage_type_bad_tail(self):
+        # 'ghost' is not a member of Engine: both the symbol pass and the
+        # chain-compatibility check must still flag it.
+        model = loads("""
+            package P {
+                part def Engine {
+                    attribute power;
+                }
+                part def Car {
+                    part engine : Engine;
+                }
+                part myCar : Car {
+                    attribute carPower :> engine::ghost;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(i.code == "UNDEFINED_SYMBOL" for i in issues)
+        assert any(
+            i.code == "INCOMPATIBLE_FEATURE_CHAIN" for i in issues
+        )
+
+    def test_expression_chain_member_of_usage_type(self):
+        # Dotted expression chain in a usage body: 'engine' resolves as a
+        # member of Car (myCar's type).
+        model = loads("""
+            package P {
+                part def Engine {
+                    attribute power: ScalarValues::Real;
+                }
+                part def Car {
+                    part engine : Engine;
+                }
+                part myCar : Car {
+                    attribute w: ScalarValues::Real = engine.power;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not any(
+            i.code == "UNRESOLVED_EXPRESSION_IDENTIFIER" for i in issues
+        )
+
+    def test_subsetting_single_member_of_usage_type(self):
+        # A single member of the usage's type is also a valid subset target.
+        model = loads("""
+            package P {
+                part def Engine { attribute power; }
+                part def Car {
+                    part engine : Engine;
+                }
+                part myCar : Car {
+                    part p :> engine;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not any(i.code == "UNDEFINED_SYMBOL" for i in issues)
+
+    def test_subsetting_chain_through_inherited_member(self):
+        # 'engine' is declared on Vehicle; Car :> Vehicle inherits it.
+        # The tail 'power' must be validated against Engine (engine's
+        # declared type), not Vehicle.
+        model = loads("""
+            package P {
+                part def Vehicle { part engine: Engine; }
+                part def Engine { attribute power; }
+                part def Car :> Vehicle;
+                part myCar : Car {
+                    attribute carPower :> engine::power;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not any(i.code == "UNDEFINED_SYMBOL" for i in issues)
+        assert not any(
+            i.code == "INCOMPATIBLE_FEATURE_CHAIN" for i in issues
+        )
+
+    def test_inherited_member_chain_bad_tail_flagged(self):
+        model = loads("""
+            package P {
+                part def Vehicle { part engine: Engine; }
+                part def Engine { attribute power; }
+                part def Car :> Vehicle;
+                part myCar : Car {
+                    attribute carPower :> engine::ghost;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(
+            i.code == "INCOMPATIBLE_FEATURE_CHAIN"
+            and "engine::ghost" in i.reference
+            for i in issues
+        )
+
+    def test_unknown_head_in_usage_body_flagged(self):
+        # 'ghost' is not a member of Car — must stay undefined.
+        model = loads("""
+            package P {
+                part def Engine { attribute power; }
+                part def Car {
+                    part engine : Engine;
+                }
+                part myCar : Car {
+                    part p :> ghost;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(i.code == "UNDEFINED_SYMBOL" for i in issues)
+
+    def test_package_level_undefined_still_flagged(self):
+        # Guard against over-reach: package-level members have no usage
+        # context, so unknown features must still be flagged.
+        model = loads("""
+            package P {
+                part x :> UndefinedFeature;
+            }
+        """)
+        issues = analyze(model)
+        assert any(
+            i.code == "UNDEFINED_SYMBOL" and "UndefinedFeature" in i.message
+            for i in issues
+        )
+
+
 class TestMultiplicityBoundsValid:
     """Multiplicity.bounds_valid: Lower bound must be <= upper bound."""
 

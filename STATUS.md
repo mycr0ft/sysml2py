@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.59.0** (2026-08-31)
+Current version: **v0.60.0** (2026-09-02)
 
 ---
 
@@ -197,18 +197,18 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 |---|---|---|
 | `tests/grammar_test.py` | 143 | ✅ All pass (100%) |
 | `tests/redefined_name_test.py` | 8 | ✅ All pass (100%) |
+| `tests/two_stage_parse_test.py` | 7 | ✅ All pass |
 | `tests/class_test.py` | 54 | ✅ All pass |
 | `tests/main_test.py` | 7 | ✅ All pass |
 | `tests/plantuml_test.py` | 108 | ✅ All pass |
-| `tests/semantic_test.py` | 153 | ✅ All pass |
-| `tests/two_stage_parse_test.py` | 7 | ✅ All pass |
+| `tests/semantic_test.py` | 170 | ✅ All pass |
 | `tests/navigate_test.py` | 33 | ✅ All pass |
 | `tests/import_test.py` | 16 | ✅ All pass |
 | `tests/validator_test.py` | 34 | ✅ All pass |
 | `tests/project_test.py` | 17 | ✅ All pass |
 | `tests/store_test.py` | 46 | Pass (optional deps skipped if not installed) |
 | `tests/conformance_test.py` | 123 | ✅ All pass (100%) |
-| **Total** | **696** | **696 pass** |
+| **Total** | **766** | **766 pass** |
 
 ### Documentation
 
@@ -297,9 +297,9 @@ All private underscore-prefixed mutation methods given public aliases:
 
 | Feature | Description |
 |---|---|
+| ~Feature chain type resolution~ | **Done in v0.60.0** — `ReferenceCollector` tags reference kind (`typing`/`subsetting`/`redefinition`/`subclassification`); chain check applies only to genuine feature chains (fixes false `INCOMPATIBLE_FEATURE_CHAIN` on every qualified type name like `ScalarValues::Real`). Dotted expression chains (`wheels.hub.mass`) resolve through the declared *type* of each feature, following `:>` inheritance; members of an enclosing usage's declared type (`part myCar : Car { attribute x :> engine::power; }`) resolve for `::`, `.`, and single-member references (`_resolve_through_context`); inherited chain features advance to their declared type in the compatibility check. 17 tests. |
 | Connection multiplicity ends | `connect X[0..1] to Y[1]` multiplicity in connector ends |
 | Nested `:>>` redefines in return | `return attribute X : Type { :>> feature = expr; }` |
-| Feature chain type resolution | Full chain resolution (`a.b.c`) in `semantic.py` |
 | Connector end compatibility | Full type-assignability check in `_check_connector_ends_compatible()` |
 
 ### Low Priority

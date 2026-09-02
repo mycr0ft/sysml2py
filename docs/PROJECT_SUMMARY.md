@@ -2,7 +2,7 @@
 
 > **For:** Future agents and team members
 > **Last Updated:** August 31, 2026
-> **Current Version:** v0.56.0
+> **Current Version:** v0.60.0
 > **Repository:** https://github.com/mycr0ft/sysmlpy
 > **Master Development Plan:** [docs/DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)
 
@@ -262,7 +262,7 @@ Multiplicity ranges (`[N]`, `[N..M]`, `[*]`) are stored as part of the `FeatureS
 
 | Issue | Location | Impact |
 |-------|----------|--------|
-| **Feature chain type resolution incomplete** | `semantic.py` `_get_feature_type()` | Can resolve the type of the first feature in a chain but not subsequent features (requires full type resolution). |
+| ~~**Feature chain type resolution incomplete**~~ | **Resolved v0.60.0** — `ReferenceCollector` reference-kind tagging (typing refs are no longer chain-checked; fixes false `INCOMPATIBLE_FEATURE_CHAIN` on qualified type names) + full dotted-chain resolution through declared types with `:>` inheritance, and visibility of enclosing-usage type members for `::`/`.`/single-member references (`_resolve_through_context`). |
 | **Connector end compatibility is a stub** | `semantic.py` `_check_connector_ends_compatible()` | Returns empty list — full implementation requires resolving types of both connector ends and checking assignability. |
 | **Library symbol extraction is regex-based** | `semantic.py` `LibrarySymbolIndex` | Uses regex patterns to extract symbols from `.kerml`/`.sysml` files rather than parsing them. May miss edge cases or produce false positives. |
 | **`_find_definition_by_name` walks entire model** | `semantic.py` | O(n) search through the entire model tree. Could be optimized with an index. |
@@ -281,7 +281,7 @@ Multiplicity ranges (`[N]`, `[N..M]`, `[*]`) are stored as part of the `FeatureS
 
 ### Semantic Analysis Extensions
 
-1. **Full type resolution for feature chains** — Currently only resolves the first feature's type. Full implementation would resolve types through the entire chain (`a.b.c` where `a: A`, `A` has `b: B`, `B` has `c: C`).
+1. ~~**Full type resolution for feature chains**~~ — **Resolved v0.60.0.** Dotted expression chains (`a.b.c` where `a: A`, `A` has `b: B`, `B` has `c: C`) resolve through the declared type of each feature, following subsetting inheritance. Members of an enclosing usage's declared type are visible to chained references in usage bodies (`::`, `.`, and single-member forms), and inherited chain features advance to their declared type during compatibility checking.
 
 2. **Connector end type compatibility** — Validate that connected ends have compatible types (e.g., a `Port` end can only connect to another `Port` end).
 
