@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.60.0** (2026-09-02)
+Current version: **v0.61.0** (2026-09-02)
 
 ---
 
@@ -53,6 +53,13 @@ These classes are fully implemented, have programmatic construction, `dump()` se
 
 ### Parser
 
+- **CLI** — `sysmlpy` console script with subcommands (v0.61.0):
+  `parse` (repr/dump/grammar-JSON), `analyze` (semantic analysis with
+  CI exit codes: 0 clean, 1 findings at `--fail-on` threshold, 2 parse
+  error; text or `--format json`), `view --view NAME` (all 11 views,
+  `--focus`, `--element`, `--style`, `--direction`, `--format`, `-o`),
+  `format` (alias `fmt`, multiple files). Legacy flat invocation
+  (`sysmlpy FILE --dump`) preserved with original exit codes.
 - **ANTLR4 parser** — default parser, using OMG grammar v2026.03.0
   - `load()`, `loads()`, `parse()`, `load_grammar()` (public API)
   - `load_antlr()`, `load_grammar_antlr()` (explicit ANTLR4 path)
@@ -207,8 +214,9 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 | `tests/validator_test.py` | 34 | ✅ All pass |
 | `tests/project_test.py` | 17 | ✅ All pass |
 | `tests/store_test.py` | 46 | Pass (optional deps skipped if not installed) |
+| `tests/cli_test.py` | 39 | ✅ All pass |
 | `tests/conformance_test.py` | 123 | ✅ All pass (100%) |
-| **Total** | **766** | **766 pass** |
+| **Total** | **805** | **805 pass** |
 
 ### Documentation
 

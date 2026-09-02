@@ -9,13 +9,28 @@ See [STATUS.md](STATUS.md) and [CHANGELOG.md](CHANGELOG.md) for the current proj
 ## Active Tasks (Post-Phase-D candidates)
 
 Phases A–D from the [Master Development Plan](docs/DEVELOPMENT_PLAN.md)
-are complete.  Candidate follow-up work:
+are complete.  Follow-up work is organized under the
+[Adoption Roadmap](docs/DEVELOPMENT_PLAN.md#6-adoption-roadmap-v061--making-sysmlpy-useful-to-systems-engineers)
+(§6 of the plan) — goals to make sysmlpy useful to systems engineers:
 
-- [ ] `*`/`/` unit-dimension derivation (e.g. `mass * speed` vs `ForceValue` inference)
-- [ ] SLL error-message parity (align ANTLR wording between prediction modes)
+- [x] **Goal 1 — CLI: `analyze` + `view` commands with exit codes** *(v0.61.0: `sysmlpy analyze FILE... [--format json] [--fail-on ...]`, `sysmlpy view FILE --view NAME [--focus ...] [-o ...]`, `parse`/`format` subcommands, documented 0/1/2 exit codes, legacy flat form preserved; 39 tests in `tests/cli_test.py`)*
+- [ ] **Goal 2 — Requirement traceability & verification coverage** (satisfy/verify/allocation traversal, coverage matrices, ReqIF)
+- [ ] **Goal 3 — JSON interchange format** (SysML v2 spec JSON exchange, not the internal dict)
+- [ ] **Goal 4 — Expression evaluator** (bind pint attribute values into calc/constraint evaluation → trade studies)
+- [ ] **Goal 5 — LSP server** (VS Code diagnostics from `parse()` + `analyze()`)
+- [ ] **Goal 6 — Rendering without Java** (native SVG / Mermaid output; boxes covers state machines only)
+- [ ] **Goal 7 — Spreadsheet bridge** (CSV/XLSX export of tabular views; attribute-value import)
+- [ ] **Goal 8 — Semantic model diff** (review workflows)
+- [ ] **Goal 9 — Validator depth** (more OCL well-formedness checks)
+- [ ] **Goal 10 — Technical stubs** (connector-end compatibility, `*`/`/` unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)
+
+Legacy candidate follow-up work:
+
+- [ ] `*`/`/` unit-dimension derivation (e.g. `mass * speed` vs `ForceValue` inference) *(→ Goal 10)*
+- [ ] SLL error-message parity (align ANTLR wording between prediction modes) *(→ Goal 10)*
 - [ ] Persistent DFA cache serialization to eliminate cold-start parse cost
 - [ ] Visitor performance profiling (`parse_to_dict` dominates end-to-end time)
-- [ ] CayleyStore query extensions (parity with NetworkX/Kùzu)
+- [ ] CayleyStore query extensions (parity with NetworkX/Kùzu) *(→ Goal 10)*
 
 ---
 

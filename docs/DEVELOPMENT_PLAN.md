@@ -136,7 +136,8 @@ Implemented in v0.56.0:
 ## Project Plan Complete
 
 All four planned phases (A–D) are implemented.  Follow-up candidates are
-tracked in [TODO.md](../TODO.md).  Post-plan high-priority fixes:
+tracked in [TODO.md](../TODO.md) and the **Adoption Roadmap** (§6 below).
+Post-plan high-priority fixes:
 
 - **v0.57.0 — Typed-by preservation:** `_extract_specialization_info()`
   hoisted to base `Usage` and extended to both grammar layouts; new
@@ -175,3 +176,36 @@ Before merging any changes or cutting a release:
    cd ~/sysml-v2-grammar && python3 scripts/conformance.py --verbose
    ```
    *Requirement: 310/310 official fixture files passed.*
+
+---
+
+## 6. Adoption Roadmap (v0.61+) — Making sysmlpy Useful to Systems Engineers
+
+The parse/analyze/round-trip engine is complete (§1–§4).  The remaining
+work is the *last mile* between "correct toolkit" and "daily tool".
+Strategic framing: sysmlpy will not out-Cameo Cameo — the winnable
+position is **headless SysML for the Python ecosystem**: validation in
+CI, diagram/table generation in documentation pipelines, and models
+connected to Python-based analysis code.
+
+Prioritized goals (tracked as checkboxes in [TODO.md](../TODO.md)):
+
+| # | Goal | Gap today | Effort |
+|---|------|-----------|--------|
+| 1 | **CLI: `analyze` + `view` commands with exit codes** | CLI is parse/format only; no severity-filtered lint output for CI | days |
+| 2 | **Requirement traceability & verification coverage** | `satisfy`/`verify`/`allocation` usages parse but are never traversed: no coverage reports or verification matrices; no ReqIF | 1–2 wks |
+| 3 | **JSON interchange format** | `--json` dumps the internal dict, not the SysML v2 spec's JSON interchange format | 1–2 wks |
+| 4 | **Expression evaluator** | `const_fold` handles literals only; nothing binds attribute values (pint) into calc/constraint evaluation | 2–3 wks |
+| 5 | **LSP server** | No editor integration; raw ANTLR error wording (SLL/LL parity, see TODO) | 2–4 wks |
+| 6 | **Rendering without Java** | Views emit PlantUML *source*; rendering requires a Java toolchain. `boxes` covers state machines only | 1–2 wks |
+| 7 | **Spreadsheet bridge** | Tabular views output text only; no CSV/XLSX export or attribute-value import | days |
+| 8 | **Semantic model diff** | Nothing exists for review workflows | ~1 wk |
+| 9 | **Validator depth** | ~10 OCL checks vs. hundreds in the spec | incremental |
+| 10 | **Technical stubs** | Connector-end compatibility, `*`/`/` unit derivation, SLL error parity, regex-based library extraction, Cayley parity | scattered |
+
+Sequencing rationale: goals 1–3 are well-scoped on top of existing APIs
+(`parse()`/`analyze()` were deliberately built non-raising for exactly
+these consumers) and establish the CI-validation, traceability, and
+interop story.  Goal 4 turns `analyze()` from "is this well-formed" into
+"does this model pass its own constraints" — the bridge to trade studies.
+Goal 5 rounds out the authoring experience.

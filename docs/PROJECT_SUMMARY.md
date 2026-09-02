@@ -113,6 +113,26 @@ Three new API functions enable cross-file import resolution:
 - Standard library validation: `ScalarValues`, `ISQ`, etc. recognized as valid
 - 12 new tests in `tests/project_test.py`
 
+### Command Line Interface (v0.61.0 — Adoption Roadmap Goal 1)
+
+The `sysmlpy` console script exposes subcommands with CI-friendly exit
+codes (0 = success/clean, 1 = findings at threshold / operational error,
+2 = parse or load failure):
+
+| Command | Purpose |
+|---------|---------|
+| `sysmlpy analyze FILE [FILE...]` | Semantic analysis; text or `--format json` output; `--fail-on {error,warning,never}` |
+| `sysmlpy view FILE --view NAME` | Render any of the 11 views (`gv`, `pv`, `afv`, `iv`, `stv`, `sv`, `cv`, `tabular`, `datavalue`, `matrix`, `browser`) to stdout or `-o FILE`; `--focus`, `--element`, `--style`, `--direction`, `--format` |
+| `sysmlpy parse FILE` | Parse and print repr / `--dump` / `--json` |
+| `sysmlpy format FILE...` | Canonicalize in place (`-i`) or verify (`--check`); alias `fmt` |
+
+The legacy flat form (`sysmlpy FILE --dump`) is preserved with its
+original exit codes. Example CI usage:
+
+```bash
+sysmlpy analyze model/*.sysml --format json --fail-on error
+```
+
 ### PlantUML View Renderings (v0.25.2 → v0.27.0)
 
 Eight view rendering functions across two releases:
@@ -185,18 +205,19 @@ The `analyze()` function now includes stylistic checks that warn about naming co
 
 | Suite | Count | Status |
 |-------|-------|--------|
-| Grammar round-trip | 77 | 61 pass, 16 deferred (control-flow nodes) |
+| Grammar round-trip | 143 | ✅ 143 pass (100%) |
 | Programmatic API | 54 | ✅ 54 pass |
 | Integration (main) | 7 | ✅ 7 pass |
 | PlantUML rendering | 108 | ✅ 108 pass |
-| Semantic analysis | 107 | ✅ 107 pass |
+| Semantic analysis | 170 | ✅ 170 pass |
+| CLI | 39 | ✅ 39 pass |
 | Multi-file loading | 17 | ✅ 17 pass |
 | Model navigation | 33 | ✅ 33 pass |
 | Import resolution | 16 | ✅ 16 pass |
 | Validator | 34 | ✅ 34 pass |
 | Storage backends | 46 | ✅ pass (optional deps skipped if missing) |
 | Conformance | 123 | ✅ 123 pass |
-| **Total** | **622** | **606 pass, 16 deferred** |
+| **Total** | **805** | **805 pass** |
 
 ---
 

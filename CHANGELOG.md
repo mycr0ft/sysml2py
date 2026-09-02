@@ -1,5 +1,46 @@
 # CHANGELOG
 
+## v0.61.0 (2026-09-02)
+
+### :white_check_mark: CLI: `analyze` + `view` commands with CI-friendly exit codes (Adoption Roadmap Goal 1)
+
+The CLI (`src/sysmlpy/__main__.py`, console script `sysmlpy`) was
+restructured into subcommands while **preserving the legacy flat
+invocation** (`sysmlpy FILE --dump` etc., including flag-first orders and
+its original exit code 1 on file/parse errors):
+
+- **`sysmlpy analyze FILE [FILE...]`** — loads the files as one merged
+  model (`load_files`) and runs the semantic analyzer. Human-readable
+  output (`error: CODE: message [ref: ...]` lines + summary) or
+  `--format json` with a machine-readable issues/summary structure for
+  CI integration. Flags: `--fail-on {error,warning,never}` (default
+  error), `--no-warnings`, `--no-summary`, `-l/--library`.
+- **`sysmlpy view FILE --view NAME`** — renders any of the 11 views
+  (`gv`, `pv`, `afv`, `iv`, `stv`, `sv`, `cv`, `tabular`, `datavalue`,
+  `matrix`, `browser`) to stdout or `-o FILE`. Flags: `--focus` (element
+  name; typos fail with exit 1 instead of silently rendering everything),
+  `--element` (repeatable), `--style bw|color`, `--direction TB|LR`,
+  `--format plantuml|markdown|html` (tabular views), `-l/--library`.
+  View kwargs are filtered by introspection, so graph-only flags are not
+  passed to tabular views and vice versa. A failing view (e.g. the
+  pre-existing `as_sequence_view` state-body bug) is reported as an
+  error message with exit 1, not a traceback.
+- **`sysmlpy parse FILE`** — the legacy parse behavior as a first-class
+  subcommand (`--dump`, `--json`, `--python`, `-l`).
+- **`sysmlpy format FILE...`** (alias `fmt`) — the `-i` / `--check`
+  behavior, extended to multiple files.
+- **Exit code contract** (documented in `--help`): 0 = success/clean,
+  1 = findings at or above the failure threshold / operational error,
+  2 = parse or load failure. `--version` added.
+
+New `tests/cli_test.py` — 39 tests covering all subcommands, exit codes,
+JSON output, multi-file merged analysis, output files, focus validation,
+legacy backward compatibility, and real subprocess invocations of the
+module entry point.
+
+Recorded the **Adoption Roadmap** (goals 1–10) in
+`docs/DEVELOPMENT_PLAN.md` §6 and `TODO.md`; Goal 1 is now complete.
+
 ## v0.60.0 (2026-09-02)
 
 ### :white_check_mark: Feature chain type resolution (STATUS.md Medium Priority)
