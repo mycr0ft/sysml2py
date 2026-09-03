@@ -230,7 +230,17 @@ All accept: `focus`, `elements`, `style` (`"bw"` or `"color"`), `direction`,
 4. If you touched `semantic.py`, run
    `poetry run pytest tests/semantic_test.py --tb=short`.
 5. If you bumped the version, update all three locations listed above.
-6. Update `CHANGELOG.md`, `STATUS.md`, and `docs/PROJECT_SUMMARY.md`.
+6. **Tag the release and push the tag** — the PyPI publish + GitHub
+   Release job only fires on `v*` **tag** pushes, never on plain
+   commits to `main`:
+   ```bash
+   git tag -a v0.X.Y -m "v0.X.Y: description" && git push origin v0.X.Y
+   ```
+   (Missed tags are recoverable: tag the historical commits and push —
+   the workflow builds the version recorded in each commit's tree.
+   v0.58.0–v0.64.0 were back-tagged on 2026-09-03 after 0.57.0–0.64.0
+   went out untagged.)
+7. Update `CHANGELOG.md`, `STATUS.md`, and `docs/PROJECT_SUMMARY.md`.
 
 ---
 
