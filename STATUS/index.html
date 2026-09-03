@@ -11,7 +11,7 @@
       
       
       
-        <link rel="prev" href="../quickstart/">
+        <link rel="prev" href="../LSP_EDITORS/">
       
       
         <link rel="next" href="../CHANGELOG/">
@@ -325,6 +325,60 @@
     
   
     Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../LSP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LSP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../LSP_EDITORS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LSP in Neovim & VS Code
   
 
     
@@ -1210,7 +1264,7 @@
 
 
 <h1 id="sysmlpy-project-status">sysmlpy — Project Status<a class="headerlink" href="#sysmlpy-project-status" title="Permanent link">&para;</a></h1>
-<p>Current version: <strong>v0.65.0</strong> (2026-09-03)</p>
+<p>Current version: <strong>v0.66.0</strong> (2026-09-03)</p>
 <hr />
 <h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
 <h3 id="public-api-classes">Public API Classes<a class="headerlink" href="#public-api-classes" title="Permanent link">&para;</a></h3>
@@ -1429,6 +1483,11 @@
   text sync) over stdio; <code>sysmlpy-lsp</code> console script + <code>python -m
   sysmlpy.lsp</code>; VS Code extension scaffold in <code>editors/vscode/</code>;
   Neovim recipes in <code>docs/LSP.md</code> (v0.65.0).</li>
+<li><strong>Spreadsheet bridge</strong> — <code>sysmlpy.spreadsheet</code>: CSV export of the
+  tabular views (<code>--format csv</code>), XLSX workbook export (<code>sysmlpy xlsx</code>,
+  optional openpyxl extra), and spreadsheet value import into
+  evaluator bindings (<code>eval --set-file</code>, <code>import_values_csv()</code>)
+  (v0.66.0).</li>
 <li><strong>ANTLR4 parser</strong> — default parser, using OMG grammar v2026.03.0</li>
 <li><code>load()</code>, <code>loads()</code>, <code>parse()</code>, <code>load_grammar()</code> (public API)</li>
 <li><code>load_antlr()</code>, <code>load_grammar_antlr()</code> (explicit ANTLR4 path)</li>
@@ -1877,6 +1936,11 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 <td>✅ All pass</td>
 </tr>
 <tr>
+<td><code>tests/spreadsheet_test.py</code></td>
+<td>37</td>
+<td>✅ 35 pass, 2 skip (no openpyxl)</td>
+</tr>
+<tr>
 <td><code>tests/navigate_test.py</code></td>
 <td>42</td>
 <td>✅ All pass</td>
@@ -1948,8 +2012,8 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><strong>Total</strong></td>
-<td><strong>1177</strong></td>
-<td><strong>1054 fast + 123 conformance pass</strong></td>
+<td><strong>1193</strong></td>
+<td><strong>1070 fast + 123 conformance pass (25 skipped: optional deps)</strong></td>
 </tr>
 </tbody>
 </table>

@@ -344,6 +344,60 @@
   
   
     <li class="md-nav__item">
+      <a href="../LSP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LSP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../LSP_EDITORS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LSP in Neovim & VS Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../STATUS/" class="md-nav__link">
         
   
@@ -429,6 +483,34 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#v0660-2026-09-03" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.66.0 (2026-09-03)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.66.0 (2026-09-03)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-spreadsheet-bridge-csvxlsx-export-value-import-adoption-roadmap-goal-7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Spreadsheet bridge — CSV/XLSX export, value import (Adoption Roadmap Goal 7)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#v0650-2026-09-03" class="md-nav__link">
@@ -2860,6 +2942,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0660-2026-09-03" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.66.0 (2026-09-03)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.66.0 (2026-09-03)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-spreadsheet-bridge-csvxlsx-export-value-import-adoption-roadmap-goal-7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Spreadsheet bridge — CSV/XLSX export, value import (Adoption Roadmap Goal 7)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0650-2026-09-03" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5248,6 +5358,46 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0660-2026-09-03">v0.66.0 (2026-09-03)<a class="headerlink" href="#v0660-2026-09-03" title="Permanent link">&para;</a></h2>
+<h3 id="white_check_mark-spreadsheet-bridge-csvxlsx-export-value-import-adoption-roadmap-goal-7">:white_check_mark: Spreadsheet bridge — CSV/XLSX export, value import (Adoption Roadmap Goal 7)<a class="headerlink" href="#white_check_mark-spreadsheet-bridge-csvxlsx-export-value-import-adoption-roadmap-goal-7" title="Permanent link">&para;</a></h3>
+<p>Also: <strong><code>docs/LSP_EDITORS.md</code></strong> — a practical setup guide for using the
+LSP server in Neovim (0.11+ <code>vim.lsp.config</code> and 0.8–0.10
+nvim-lspconfig) and VS Code (dev host + .vsix packaging, settings
+reference), registered in the MkDocs nav.</p>
+<ul>
+<li><strong>New <code>sysmlpy.spreadsheet</code> module</strong> (exported from the package
+  root):</li>
+<li>CSV export of the three tabular views: new <code>output_format="csv"</code>
+    on <code>as_tabular_view</code> / <code>as_data_value_tabular_view</code> /
+    <code>as_relationship_matrix_view</code> (shared <code>_format_table_rows_csv</code>
+    helper, proper quoting via the <code>csv</code> module), plus thin wrappers
+    <code>tabular_view_to_csv()</code> / <code>data_value_tabular_to_csv()</code> /
+    <code>relationship_matrix_to_csv()</code>.</li>
+<li><code>write_xlsx(model, path, include=…)</code> — Excel workbook with one
+    bold-headed sheet per view (Tabular / DataValues / Matrix);
+    requires the new optional <strong><code>xlsx</code> extra</strong> (<code>pip install
+    'sysmlpy[xlsx]'</code> → openpyxl ≥ 3.1); a missing openpyxl raises a
+    clear <code>ImportError</code> instead of failing mid-export.</li>
+<li><strong>Value import</strong>: <code>import_values_csv()</code> / <code>import_values_xlsx()</code>
+    parse spreadsheet rows into evaluator <strong>bindings</strong> — headers
+    <code>Name,Value[,Unit]</code> or <code>Element,Attribute,Value[,Unit]</code>; values
+    parse via <code>parse_value_literal()</code> (bool → int → float → pint
+    quantity → string). Compose with the Goal 4 evaluator:
+    <code>check_constraints(model, bindings=import_values_csv("v.csv"))</code> —
+    spreadsheet-driven constraint gates.</li>
+<li><strong>CLI</strong>:</li>
+<li><code>sysmlpy view FILE --view tabular --format csv</code> (and data-value /
+    matrix views) — new <code>csv</code> output format.</li>
+<li><code>sysmlpy eval FILE --constraints --set-file values.csv</code> — load
+    what-if values from CSV/XLSX (BOM-tolerant; <code>--set</code> flags win over
+    file values; exit 1 on constraint failures).</li>
+<li>New <strong><code>sysmlpy xlsx FILE -o model.xlsx [--sheets …] [--focus …]</code></strong>
+    subcommand for the workbook export.</li>
+</ul>
+<p>New <code>tests/spreadsheet_test.py</code> — 37 tests (CSV quoting, header/row
+shape, focus behavior, XLSX sheets/selection/bold headers, import
+layouts incl. units, CLI integration; openpyxl-dependent tests skip
+gracefully). Fast suite: 1070 passed + 25 skipped (optional-dep guards) + 123 conformance = 1193 total.</p>
 <h2 id="v0650-2026-09-03">v0.65.0 (2026-09-03)<a class="headerlink" href="#v0650-2026-09-03" title="Permanent link">&para;</a></h2>
 <h3 id="white_check_mark-lsp-server-editor-integration-adoption-roadmap-goal-5">:white_check_mark: LSP server — editor integration (Adoption Roadmap Goal 5)<a class="headerlink" href="#white_check_mark-lsp-server-editor-integration-adoption-roadmap-goal-5" title="Permanent link">&para;</a></h3>
 <p>sysmlpy now speaks the Language Server Protocol: live diagnostics and

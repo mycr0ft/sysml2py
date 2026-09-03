@@ -342,6 +342,60 @@
   
   
     <li class="md-nav__item">
+      <a href="../LSP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LSP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../LSP_EDITORS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LSP in Neovim & VS Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../STATUS/" class="md-nav__link">
         
   
@@ -591,7 +645,7 @@ are complete.  Follow-up work is organized under the
 <li>[x] <strong>Goal 4 — Expression evaluator</strong> <em>(v0.64.0: <code>sysmlpy.evaluator</code> — <code>collect_values()</code> / <code>evaluate_expression()</code> / <code>evaluate_calculation()</code> / <code>check_constraints()</code>; pint attribute values bind into calc/constraint evaluation with what-if <code>bindings</code>; feature-chain resolution with type fallback; glued unit-expression handling; <code>sysmlpy eval</code> CLI with <code>--expr</code>/<code>--set</code>/<code>--constraints</code>; calc defs inside part bodies no longer dropped by the visitor/object tree; 44 tests in <code>tests/evaluator_test.py</code>. Conditional expressions and calc <code>in</code> parameters tracked as follow-up.)</em></li>
 <li>[x] <strong>Goal 5 — LSP server</strong> <em>(v0.65.0: <code>sysmlpy.lsp</code> package — dependency-free LSP 3.17 subset over stdio JSON-RPC; <code>publishDiagnostics</code> (exact ANTLR syntax ranges + <code>analyze()</code> issues located via quoted-name heuristic), <code>documentSymbol</code> outline, <code>hover</code> (kind/type/value), <code>definition</code> (usage→decl, type name→type def), keyword+member <code>completion</code>, FULL text sync, UTF-16 positions; <code>sysmlpy-lsp</code> console script + <code>python -m sysmlpy.lsp</code>; VS Code extension scaffold <code>editors/vscode/sysmlpy-lsp/</code>; Neovim recipes in <code>docs/LSP.md</code>; 37 tests in <code>tests/lsp_test.py</code>. Follow-ups: incremental sync, position-tracked semantic diagnostics, workspace/symbol, <code>.</code>-completion.)</em></li>
 <li>[ ] <strong>Goal 6 — Rendering without Java</strong> (native SVG / Mermaid output; boxes covers state machines only)</li>
-<li>[ ] <strong>Goal 7 — Spreadsheet bridge</strong> (CSV/XLSX export of tabular views; attribute-value import)</li>
+<li>[x] <strong>Goal 7 — Spreadsheet bridge</strong> <em>(v0.66.0: <code>sysmlpy.spreadsheet</code> — CSV export of tabular/data-value/matrix views (<code>output_format="csv"</code>, <code>view --format csv</code>), <code>write_xlsx()</code> workbook export + <code>sysmlpy xlsx</code> CLI (optional <code>openpyxl</code> extra <code>sysmlpy[xlsx]</code>), value import into evaluator bindings (<code>import_values_csv()</code>/<code>import_values_xlsx()</code>, <code>eval --set-file</code>, <code>parse_value_literal()</code>); 37 tests in <code>tests/spreadsheet_test.py</code>.)</em></li>
 <li>[ ] <strong>Goal 8 — Semantic model diff</strong> (review workflows)</li>
 <li>[ ] <strong>Goal 9 — Validator depth</strong> (more OCL well-formedness checks)</li>
 <li>[ ] <strong>Goal 10 — Technical stubs</strong> (connector-end compatibility, <code>*</code>/<code>/</code> unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)</li>
