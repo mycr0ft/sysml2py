@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Adapter that renders a sysmlpy state machine as a `boxes` Diagram.
+"""Adapter that renders a sysmlpy state machine as a `diagramboxes`
+Diagram. (The `boxes` package was renamed to `diagramboxes` in v0.3.0
+to avoid a PyPI name collision.)
 
 Walks the visitor dict produced by :func:`sysmlpy.load_grammar` to find
 StateDefinition / StateUsage / TransitionUsage / EntryTransitionMember nodes
-and emits a boxes Diagram with:
+and emits a diagramboxes Diagram with:
 
 - rounded ``Node`` (stereotype ``«state»``) for each ``state`` member
 - a filled ``StartNode`` (initial pseudostate) for each ``entry; then X;``
@@ -12,7 +14,7 @@ and emits a boxes Diagram with:
 - an ``Edge`` between states for each ``transition X first A accept B then C``
   with the trigger name as the label
 
-The boxes pseudostate shapes already match UML/SysML notation:
+The diagramboxes pseudostate shapes already match UML/SysML notation:
 ``StartNode`` = filled circle (initial), ``DoneNode`` = bullseye (final),
 ``DecisionNode`` = diamond (choice), ``ForkJoinNode`` = thick bar (fork/join),
 ``TerminateNode`` = X-in-circle (terminate). These are imported and re-aliased
@@ -20,7 +22,7 @@ as the state-machine pseudostates to make intent explicit in client code.
 
 Public API
 ----------
-``as_state_transition_view_boxes(model, focus=None) -> boxes.Diagram``
+``as_state_transition_view_boxes(model, focus=None) -> diagramboxes.Diagram``
     Build a Diagram from a parsed model (or a SysML text string).
 ``render_state_transition_view(model, focus=None, routing='orthogonal') -> str``
     Convenience: build + render to terminal braille string.
@@ -33,7 +35,7 @@ from __future__ import annotations
 from typing import Any, Optional, Union
 
 try:
-    from boxes import (
+    from diagramboxes import (
         Diagram, Node, Edge, Port,
         InitialPseudostate, JunctionPseudostate,
         ChoicePseudostate, ForkPseudostate, JoinPseudostate,
@@ -43,7 +45,7 @@ try:
     )
 except ImportError as _exc:  # pragma: no cover
     raise ImportError(
-        "boxes_view requires the 'boxes' package. Install with:\n"
+        "boxes_view requires the 'diagramboxes' package. Install with:\n"
         "  pip install -e ~/boxes   (or)   poetry run pip install -e ../boxes"
     ) from _exc
 

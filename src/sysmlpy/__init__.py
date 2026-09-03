@@ -28,7 +28,8 @@ __all__ = [
     "analyze", "AnalysisResult", "SemanticIssue", "SemanticAnalyzer",
     "SysMLSyntaxError", "PartialParseError",
     "loads_partial", "load_partial",
-    # boxes-backed optional renderers (require pip install -e ../boxes)
+    # diagramboxes-backed optional renderers (the sibling package formerly
+# named `boxes` — renamed in its v0.3.0; install with pip install -e ../boxes)
     "as_state_transition_view_boxes", "render_state_transition_view",
     "render_state_transition_view_svg", "boxes_view",
 ]
@@ -413,10 +414,11 @@ from sysmlpy.semantic import analyze, AnalysisResult, SemanticIssue, SemanticAna
 
 from sysmlpy.project import load_files, load_project, load_with_dependencies
 
-# Optional boxes-backed state-machine renderer (lazy import on first use so
-# `import sysmlpy` works without `boxes` installed). The first call to any of
-# the functions below triggers `import sysmlpy.boxes_view`, which itself
-# raises ImportError with installation instructions if `boxes` is missing.
+# Optional diagramboxes-backed state-machine renderer (lazy import on first
+# use so `import sysmlpy` works without `diagramboxes` installed). The first
+# call to any of the functions below triggers `import sysmlpy.boxes_view`,
+# which itself raises ImportError with installation instructions if the
+# `diagramboxes` package is missing.
 def __getattr__(name):
     if name == "boxes_view":
         import sysmlpy.boxes_view as bv

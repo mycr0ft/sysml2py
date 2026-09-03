@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## Unreleased
+
+- Sibling package `boxes` renamed to `diagramboxes` (its v0.3.0) —
+  PyPI name collision. `sysmlpy.boxes_view` imports the new name and
+  the ImportError hint is updated; the 19 boxes-adapter tests now run
+  (they were skipping against a stale install).
+
 ## v0.67.0 (2026-09-03)
 
 ### :white_check_mark: PlantUML notation fidelity — official SysML v2 graphical conventions (Adoption Roadmap Goal 6, phase 1)

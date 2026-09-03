@@ -4,13 +4,14 @@
 
 Skipped if the `boxes` package is not importable in the current
 environment (it is treated as an optional dependency — install with
-``pip install -e ~/boxes`` or ``poetry run pip install -e ../boxes``).
+``pip install -e ~/boxes`` (checkout dir; the *package* is named
+``diagramboxes``) or ``poetry run pip install -e ../boxes``).
 """
 from __future__ import annotations
 
 import pytest
 
-boxes = pytest.importorskip("boxes")
+boxes = pytest.importorskip("diagramboxes")
 
 import sysmlpy  # noqa: E402
 from sysmlpy.boxes_view import (  # noqa: E402
