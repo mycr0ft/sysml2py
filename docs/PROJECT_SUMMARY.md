@@ -138,6 +138,23 @@ sysmlpy analyze model/*.sysml --format json --fail-on error
 sysmlpy trace model/*.sysml --fail-on uncovered --format markdown -o coverage.md
 ```
 
+### Language Server Protocol (v0.65.0 — Adoption Roadmap Goal 5)
+
+Editor integration: diagnostics, outline, hover, go-to-definition and
+completion for SysML v2 files in VS Code / Neovim / any LSP client.
+
+```bash
+sysmlpy-lsp --version              # console script installed with sysmlpy
+python -m sysmlpy.lsp --log /tmp/lsp.log   # protocol trace
+poetry run pytest tests/lsp_test.py -q     # 37 protocol/feature tests
+```
+
+- VS Code: ready-to-package extension at
+  `editors/vscode/sysmlpy-lsp/` (see its README for npm/vsce steps).
+- Neovim 0.11+: `vim.lsp.config("sysmlpy", { cmd = { "sysmlpy-lsp" },
+  filetypes = { "sysml" } })` + `vim.lsp.enable("sysmlpy")`.
+- Details & capability table: [`docs/LSP.md`](LSP.md).
+
 ### Expression Evaluation (v0.64.0 — Adoption Roadmap Goal 4)
 
 Attribute values (pint `Quantity`-aware) bind into expression
@@ -286,13 +303,14 @@ The `analyze()` function now includes stylistic checks that warn about naming co
 | Traceability | 46 | ✅ 46 pass |
 | JSON interchange | 38 | ✅ 38 pass |
 | Expression evaluator | 44 | ✅ 44 pass |
+| LSP server | 37 | ✅ 37 pass |
 | Model navigation | 42 | ✅ 42 pass |
 | CLI | 39 | ✅ 39 pass |
 | Validator | 34 | ✅ 34 pass |
 | Import resolution | 31 | ✅ 31 pass |
 | Multi-file loading | 17 | ✅ 17 pass |
 | Conformance | 123 | ✅ 123 pass |
-| **Total** | **1140** | **1017 fast + 123 conformance pass** |
+| **Total** | **1177** | **1054 fast + 123 conformance pass** |
 
 ---
 

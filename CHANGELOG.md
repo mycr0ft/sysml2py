@@ -1,5 +1,49 @@
 # CHANGELOG
 
+## v0.65.0 (2026-09-03)
+
+### :white_check_mark: LSP server — editor integration (Adoption Roadmap Goal 5)
+
+sysmlpy now speaks the Language Server Protocol: live diagnostics and
+model navigation in any LSP editor (VS Code, Neovim, Emacs, …).
+
+- **New `sysmlpy.lsp` package** (dependency-free — hand-rolled LSP 3.17
+  subset over JSON-RPC `Content-Length` stdio framing):
+  - `protocol.py` — byte-stream framing (encode/read, tolerant header
+    parsing), LSP error codes and symbol kinds.
+  - `server.py` — transport-agnostic `SysmlLanguageServer` (message
+    dict in → message dicts out) and `DocumentIndex` (one cached
+    parse+analyze snapshot per document version feeding all features).
+  - `stdio.py` — stdio transport loop; `sysmlpy-lsp` console script
+    (new in pyproject) and `python -m sysmlpy.lsp`; `--log FILE` for
+    protocol traces, `--version`.
+- **Features**:
+  - `publishDiagnostics` — ANTLR syntax errors with exact line:column
+    ranges; semantic issues from `analyze()` located in the text via a
+    quoted-name heuristic (position-tracked parser tracked as
+    follow-up; syntax positions are exact).
+  - `documentSymbol` — hierarchical outline with LSP SymbolKind mapping
+    (package→Package, defs→Class, attributes→Field, …) and brace-
+    balanced ranges.
+  - `hover` — markdown card: kind, name, qualified name, `typed by`,
+    literal value via `get_value()`.
+  - `definition` — usage name → its declaration; type name → the
+    type's definition.
+  - `completion` — SysML v2 keywords + all named model elements.
+  - FULL text sync; UTF-16 position encoding; lifecycle per spec
+    (uninitialized requests rejected, shutdown/exit honored, unknown
+    methods get -32601, analyzer failures never crash the session).
+- **Editor integrations**: `editors/vscode/sysmlpy-lsp/` — ready-to-
+  package VS Code extension (plain JS, vscode-languageclient, `.sysml`
+  grammar association, `sysmlpy.serverPath`/`serverArgs` settings);
+  `docs/LSP.md` documents Neovim setup (built-in `vim.lsp.config` for
+  0.11+ and nvim-lspconfig for 0.8–0.10) and other editors.
+
+New `tests/lsp_test.py` — 37 tests (framing round-trips incl. non-ASCII
+and malformed headers, lifecycle guards, diagnostic ranges, all
+features, in-memory stdio session, real subprocess run of
+`python -m sysmlpy.lsp`). Fast suite now 1054 + 123 conformance.
+
 ## v0.64.0 (2026-09-02)
 
 ### :white_check_mark: Expression evaluator — pint-bound calc/constraint evaluation (Adoption Roadmap Goal 4)

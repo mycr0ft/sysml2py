@@ -1,0 +1,57 @@
+{
+  "name": "sysmlpy-lsp",
+  "displayName": "SysML v2 (sysmlpy)",
+  "description": "SysML v2 language support powered by sysmlpy — diagnostics, outline, hover, go-to-definition, completion.",
+  "version": "0.65.0",
+  "publisher": "mycr0ft",
+  "license": "SEE LICENSE IN repository",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mycr0ft/sysmlpy"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Programming Languages"],
+  "activationEvents": [],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "sysml",
+        "aliases": ["SysML v2", "sysml"],
+        "extensions": [".sysml"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "SysML v2 (sysmlpy)",
+      "properties": {
+        "sysmlpy.serverPath": {
+          "type": "string",
+          "default": "sysmlpy-lsp",
+          "description": "Command used to start the sysmlpy language server (e.g. 'sysmlpy-lsp' on PATH, or an absolute path)."
+        },
+        "sysmlpy.serverArgs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Extra arguments passed to the language server executable (e.g. --log /tmp/lsp.log)."
+        },
+        "sysmlpy.trace.server": {
+          "type": "string",
+          "enum": ["off", "messages", "verbose"],
+          "default": "off",
+          "description": "Trace communication between VS Code and the sysmlpy language server."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "echo 'no build step — plain JS extension'"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}

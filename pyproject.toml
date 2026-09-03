@@ -6,7 +6,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "sysmlpy"
-version = "0.64.0"
+version = "0.65.0"
 description = ""
 authors = [{ name = "Jon R. Fox (mycr0ft)", email = "jon.fox@drfox.com" }]
 readme = "README.md"
@@ -27,6 +27,7 @@ kuzu = ["kuzu"]
 
 [tool.poetry.scripts]
 sysmlpy = "sysmlpy.__main__:main"
+sysmlpy-lsp = "sysmlpy.lsp.stdio:main"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0,<9.0"
