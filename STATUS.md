@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.62.0** (2026-09-02)
+Current version: **v0.63.0** (2026-09-02)
 
 ---
 
@@ -69,6 +69,10 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   `as_traceability_matrix_view()` in markdown/html/plantuml). Satisfy /
   verify / verification / subject relationships parse and round-trip
   (v0.62.0).
+- **JSON interchange** — `sysmlpy.interchange` (`to_interchange()` /
+  `from_interchange()`): JSON-LD-style partition documents (flat
+  ``@graph``, ``@id``/``@type`` elements, deterministic uuid5 ids) with
+  lossless import back to a live model (v0.63.0).
 - **ANTLR4 parser** — default parser, using OMG grammar v2026.03.0
   - `load()`, `loads()`, `parse()`, `load_grammar()` (public API)
   - `load_antlr()`, `load_grammar_antlr()` (explicit ANTLR4 path)
@@ -217,6 +221,7 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 | `tests/store_test.py` | 97 | Pass (optional deps skipped if not installed) |
 | `tests/class_test.py` | 75 | ✅ All pass |
 | `tests/traceability_test.py` | 46 | ✅ All pass |
+| `tests/interchange_test.py` | 38 | ✅ All pass |
 | `tests/navigate_test.py` | 42 | ✅ All pass |
 | `tests/cli_test.py` | 39 | ✅ All pass |
 | `tests/validator_test.py` | 34 | ✅ All pass |
@@ -231,7 +236,7 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 | `tests/main_test.py` | 7 | ✅ All pass |
 | `tests/partial_test.py` | 6 | ✅ All pass |
 | `tests/conformance_test.py` | 123 | ✅ All pass (100%) |
-| **Total** | **1080** | **957 fast + 123 conformance pass** |
+| **Total** | **1096** | **973 fast + 123 conformance pass** |
 
 ### Documentation
 

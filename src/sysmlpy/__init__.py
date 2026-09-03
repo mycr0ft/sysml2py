@@ -19,6 +19,7 @@ __all__ = [
     "as_traceability_matrix_view",
     "as_sequence_view", "as_case_view", "as_browser_view",
     "extract_traceability", "TraceabilityReport", "RequirementTrace",
+    "to_interchange", "from_interchange", "interchange_to_json_text",
     "analyze", "AnalysisResult", "SemanticIssue", "SemanticAnalyzer",
     "SysMLSyntaxError", "PartialParseError",
     "loads_partial", "load_partial",
@@ -27,7 +28,7 @@ __all__ = [
     "render_state_transition_view_svg", "boxes_view",
 ]
 __author__ = "Jon Fox"
-__version__ = "0.62.0"
+__version__ = "0.63.0"
 
 from sysmlpy.usage import (
     Item, Attribute, Part, Port, Action, Reference, UseCase, Requirement, Interface, Message,
@@ -46,6 +47,9 @@ from sysmlpy.antlr_parser import SysMLSyntaxError
 from sysmlpy.traceability import (
     extract_traceability, TraceabilityReport, RequirementTrace,
     as_traceability_matrix_view,
+)
+from sysmlpy.interchange import (
+    to_interchange, from_interchange, interchange_to_json_text,
 )
 
 

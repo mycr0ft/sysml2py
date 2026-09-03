@@ -126,6 +126,8 @@ codes (0 = success/clean, 1 = findings at threshold / operational error,
 | `sysmlpy parse FILE` | Parse and print repr / `--dump` / `--json` |
 | `sysmlpy format FILE...` | Canonicalize in place (`-i`) or verify (`--check`); alias `fmt` |
 | `sysmlpy trace FILE [FILE...]` | Requirement traceability & verification coverage report; `--format text\|markdown\|json`, `--fail-on uncovered`, `-o FILE` |
+| `sysmlpy export FILE [FILE...]` | SysML → JSON interchange (JSON-LD-style `@graph` of `@id`/`@type` elements); `--compact`, `-o FILE` |
+| `sysmlpy import FILE.json` | JSON interchange → SysML v2 text; `-o FILE` |
 
 The legacy flat form (`sysmlpy FILE --dump`) is preserved with its
 original exit codes. Example CI usage:
@@ -134,6 +136,31 @@ original exit codes. Example CI usage:
 sysmlpy analyze model/*.sysml --format json --fail-on error
 sysmlpy trace model/*.sysml --fail-on uncovered --format markdown -o coverage.md
 ```
+
+### JSON Interchange (v0.63.0 — Adoption Roadmap Goal 3)
+
+Models exchange as JSON-LD-style partition documents in the style of the
+SysML v2 spec's JSON interchange: a flat `@graph` of elements, each with
+a deterministic `@id` (uuid5 from tree position) and `@type` (the
+abstract-syntax metaclass name), scalar properties inline, structural
+properties as `{"@id": ...}` references:
+
+```bash
+sysmlpy export model.sysml -o model.json      # SysML text → interchange JSON
+sysmlpy import model.json -o roundtrip.sysml  # interchange JSON → SysML text
+```
+
+```python
+from sysmlpy import loads, to_interchange, from_interchange
+model = loads("package P { part def V; }")
+doc = to_interchange(model)          # dict; json.dumps for wire format
+same = from_interchange(doc)         # live Model, losslessly rebuilt
+assert same.dump() == model.dump()
+```
+
+Export is lossless: the rebuilt model's `dump()` text, grammar-object
+tree, and traceability report are identical to the original, and
+re-exporting a rebuilt model reproduces byte-identical JSON.
 
 ### Requirement Traceability (v0.62.0 — Adoption Roadmap Goal 2)
 
@@ -230,13 +257,14 @@ The `analyze()` function now includes stylistic checks that warn about naming co
 | Storage backends | 97 | ✅ pass (optional deps skipped if missing) |
 | Programmatic API | 75 | ✅ 75 pass |
 | Traceability | 46 | ✅ 46 pass |
+| JSON interchange | 38 | ✅ 38 pass |
 | Model navigation | 42 | ✅ 42 pass |
 | CLI | 39 | ✅ 39 pass |
 | Validator | 34 | ✅ 34 pass |
 | Import resolution | 31 | ✅ 31 pass |
 | Multi-file loading | 17 | ✅ 17 pass |
 | Conformance | 123 | ✅ 123 pass |
-| **Total** | **1080** | **957 fast + 123 conformance pass** |
+| **Total** | **1096** | **973 fast + 123 conformance pass** |
 
 ---
 

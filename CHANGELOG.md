@@ -1,5 +1,52 @@
 # CHANGELOG
 
+## v0.63.0 (2026-09-02)
+
+### :white_check_mark: SysML v2 JSON interchange (Adoption Roadmap Goal 3)
+
+Models can now be exchanged as JSON in the style of the SysML v2 spec's
+JSON partition interchange — a flat ``@graph`` of elements identified by
+``@id`` / typed by ``@type`` (the abstract-syntax metaclass name), with
+scalar properties inline and structural properties as ``{"@id": ...}``
+cross-references:
+
+- **New `sysmlpy.interchange` module** (exported from the package root):
+  - `to_interchange(model_or_text)` — export a loaded ``Model`` (from
+    `loads()` / `load_files()` / programmatic construction) or fresh
+    SysML text to the interchange dict. Element ``@id``s are ``uuid5``-
+    derived from tree position, so exporting the same model twice yields
+    byte-identical JSON (diff-friendly — feeds roadmap Goal 8).
+  - `from_interchange(document_or_json_text)` — rebuild a live ``Model``
+    from an interchange document. Lossless: the rebuilt model's text
+    (``dump()``), grammar-object tree, and traceability report are all
+    identical to the original.
+  - `interchange_to_json_text(document, indent=2)` — serialization
+    helper.
+- **Fidelity guarantee:** export flattens the *raw parser dictionary*
+  (via the canonical ``dump()`` text), not the grammar classes'
+  ``get_definition()`` serialization — the latter normalizes the tree
+  (adds ``ownedRelationship`` keys, unwraps ``OccurrenceUsageElement``),
+  which changes class re-dispatch on import (satisfy wrappers were
+  silently lost before this was caught by the traceability round-trip
+  test).
+- **`Model._load_definition()`** extracted from `Model.load` — the
+  dict→model construction path is now shared by fresh parses and the
+  interchange importer.
+- **CLI:**
+  - `sysmlpy export FILE [FILE...] [-o OUT.json] [--compact] [-l LIBRARY]`
+    — load files as one merged model, emit the interchange JSON (exit 2
+    on parse failure).
+  - `sysmlpy import FILE.json [-o OUT.sysml]` — rebuild the model and
+    print or write the equivalent SysML v2 text (exit 2 on invalid
+    input; cycle and dangling-reference detection).
+- `sysmlpy parse FILE --json` still emits the internal dict; `export`
+  is the spec-style exchange format.
+
+New `tests/interchange_test.py` — 38 tests (document shape, deterministic
+ids, scalar/null handling, no dangling references, lossless round-trips
+incl. traceability interop, error handling, CLI). Fast suite now 973
+tests + 123 conformance = 1096 total.
+
 ## v0.62.0 (2026-09-02)
 
 ### :white_check_mark: Requirement traceability & verification coverage (Adoption Roadmap Goal 2)

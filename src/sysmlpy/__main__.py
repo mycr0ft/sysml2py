@@ -31,7 +31,7 @@ import sysmlpy
 from sysmlpy import loads
 
 # Subcommand table, also used to detect the legacy flat invocation form.
-SUBCOMMANDS = ("parse", "analyze", "view", "trace", "format", "fmt")
+SUBCOMMANDS = ("parse", "analyze", "view", "trace", "export", "import", "format", "fmt")
 
 
 # ---------------------------------------------------------------------------
@@ -317,6 +317,71 @@ def cmd_trace(args) -> int:
     return 0
 
 
+def cmd_export(args) -> int:
+    """SysML text → JSON interchange document (v0.63.0, Goal 3)."""
+    from sysmlpy.interchange import to_interchange, interchange_to_json_text
+
+    paths = [Path(f) for f in args.files]
+    for p in _missing_files(paths):
+        print(f"Error: File '{p}' not found.", file=sys.stderr)
+        return 2
+
+    try:
+        model = sysmlpy.load_files(paths, library=args.library)
+    except Exception as e:
+        print(f"Parse error: {e}", file=sys.stderr)
+        return 2
+
+    try:
+        document = to_interchange(model)
+    except Exception as e:
+        print(f"Error: export failed on this model: {e}", file=sys.stderr)
+        return 1
+
+    output = interchange_to_json_text(document, indent=None if args.compact else 2)
+    if args.output:
+        Path(args.output).write_text(output + "\n", encoding="utf-8")
+        print(f"Wrote {args.output}")
+    else:
+        print(output)
+    return 0
+
+
+def cmd_import(args) -> int:
+    """JSON interchange document → SysML text (v0.63.0, Goal 3)."""
+    from sysmlpy.interchange import from_interchange
+
+    path = Path(args.file)
+    if not path.exists():
+        print(f"Error: File '{path}' not found.", file=sys.stderr)
+        return 2
+
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError as e:
+        print(f"Error reading file: {e}", file=sys.stderr)
+        return 2
+
+    try:
+        model = from_interchange(content)
+    except ValueError as e:
+        print(f"Error: invalid interchange document: {e}", file=sys.stderr)
+        return 2
+    except json.JSONDecodeError as e:
+        print(f"Error: not valid JSON: {e}", file=sys.stderr)
+        return 2
+
+    output = model.dump()
+    if args.output:
+        if not output.endswith("\n"):
+            output += "\n"
+        Path(args.output).write_text(output, encoding="utf-8")
+        print(f"Wrote {args.output}")
+    else:
+        print(output)
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # legacy flat invocation (kept for backward compatibility)
 # ---------------------------------------------------------------------------
@@ -540,6 +605,43 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to SysML v2 library files to use for parsing",
     )
     p_trace.set_defaults(func=cmd_trace)
+
+    p_export = sub.add_parser(
+        "export",
+        help="Export SysML to the JSON interchange format",
+        description="Load the files as one merged model and emit a "
+                    "JSON-LD-style partition interchange document "
+                    "(flat @graph of elements with @id/@type). Exit 2 "
+                    "on parse failure.",
+    )
+    p_export.add_argument("files", nargs="+", help="SysML v2 file(s)")
+    p_export.add_argument(
+        "-o", "--output",
+        help="Write the JSON document to a file instead of stdout",
+    )
+    p_export.add_argument(
+        "--compact", action="store_true",
+        help="Emit compact JSON (no indentation)",
+    )
+    p_export.add_argument(
+        "-l", "--library",
+        help="Path to SysML v2 library files to use for parsing",
+    )
+    p_export.set_defaults(func=cmd_export)
+
+    p_import = sub.add_parser(
+        "import",
+        help="Import a JSON interchange document as SysML text",
+        description="Rebuild a model from a JSON interchange document "
+                    "(sysmlpy export format) and print or write the "
+                    "equivalent SysML v2 text. Exit 2 on invalid input.",
+    )
+    p_import.add_argument("file", help="Interchange JSON file")
+    p_import.add_argument(
+        "-o", "--output",
+        help="Write the SysML text to a file instead of stdout",
+    )
+    p_import.set_defaults(func=cmd_import)
 
     return parser
 

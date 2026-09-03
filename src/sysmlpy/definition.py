@@ -93,7 +93,15 @@ class Model(Searchable):
                 raise ValueError("Base Model must be encapsulated by a package.")
         
         definition = load_grammar_antlr(s, library=library)["ownedRelationship"]
+        return self._load_definition(definition)
 
+    def _load_definition(self: type[ModelType], definition) -> ModelType:
+        """Build the model from a parsed definition-dict member list.
+
+        Shared by :meth:`load` (fresh parse) and the JSON interchange
+        importer (v0.63.0 — ``from_interchange`` feeds the rebuilt dict
+        straight into this path).
+        """
         member_grammar = []
         found_package = False
         for member in definition:
