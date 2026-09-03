@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.63.0** (2026-09-02)
+Current version: **v0.64.0** (2026-09-02)
 
 ---
 
@@ -73,6 +73,11 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   `from_interchange()`): JSON-LD-style partition documents (flat
   ``@graph``, ``@id``/``@type`` elements, deterministic uuid5 ids) with
   lossless import back to a live model (v0.63.0).
+- **Expression evaluator** — `sysmlpy.evaluator`
+  (`collect_values()` / `evaluate_expression()` /
+  `evaluate_calculation()` / `check_constraints()`): pint-bound
+  evaluation of attribute defaults, calc results and constraint bodies,
+  with what-if bindings; `sysmlpy eval` CLI (v0.64.0).
 - **ANTLR4 parser** — default parser, using OMG grammar v2026.03.0
   - `load()`, `loads()`, `parse()`, `load_grammar()` (public API)
   - `load_antlr()`, `load_grammar_antlr()` (explicit ANTLR4 path)
@@ -222,6 +227,7 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 | `tests/class_test.py` | 75 | ✅ All pass |
 | `tests/traceability_test.py` | 46 | ✅ All pass |
 | `tests/interchange_test.py` | 38 | ✅ All pass |
+| `tests/evaluator_test.py` | 44 | ✅ All pass |
 | `tests/navigate_test.py` | 42 | ✅ All pass |
 | `tests/cli_test.py` | 39 | ✅ All pass |
 | `tests/validator_test.py` | 34 | ✅ All pass |
@@ -236,7 +242,7 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 | `tests/main_test.py` | 7 | ✅ All pass |
 | `tests/partial_test.py` | 6 | ✅ All pass |
 | `tests/conformance_test.py` | 123 | ✅ All pass (100%) |
-| **Total** | **1096** | **973 fast + 123 conformance pass** |
+| **Total** | **1140** | **1017 fast + 123 conformance pass** |
 
 ### Documentation
 

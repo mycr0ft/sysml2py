@@ -128,6 +128,7 @@ codes (0 = success/clean, 1 = findings at threshold / operational error,
 | `sysmlpy trace FILE [FILE...]` | Requirement traceability & verification coverage report; `--format text\|markdown\|json`, `--fail-on uncovered`, `-o FILE` |
 | `sysmlpy export FILE [FILE...]` | SysML → JSON interchange (JSON-LD-style `@graph` of `@id`/`@type` elements); `--compact`, `-o FILE` |
 | `sysmlpy import FILE.json` | JSON interchange → SysML v2 text; `-o FILE` |
+| `sysmlpy eval FILE [FILE...]` | Evaluate expressions / attribute values / constraints; `--expr X --set n=v --element Q --constraints`; exit 1 on failed constraint |
 
 The legacy flat form (`sysmlpy FILE --dump`) is preserved with its
 original exit codes. Example CI usage:
@@ -136,6 +137,32 @@ original exit codes. Example CI usage:
 sysmlpy analyze model/*.sysml --format json --fail-on error
 sysmlpy trace model/*.sysml --fail-on uncovered --format markdown -o coverage.md
 ```
+
+### Expression Evaluation (v0.64.0 — Adoption Roadmap Goal 4)
+
+Attribute values (pint `Quantity`-aware) bind into expression
+evaluation — the bridge from "is this well-formed" to trade studies:
+
+```bash
+sysmlpy eval model.sysml                                     # dump all attribute values
+sysmlpy eval model.sysml --expr "mass * speed" --element P::Vehicle
+sysmlpy eval model.sysml --expr "mass * speed" --element P::Vehicle --set speed=80
+sysmlpy eval model.sysml --constraints                       # PASS/FAIL report; exit 1 on failure
+```
+
+```python
+from sysmlpy import loads, evaluate_expression, check_constraints
+model = loads("package P { part def V { attribute m : Real := 1200; "
+              "constraint c { m > 1000 } } }")
+evaluate_expression("m / 4", model=model, bindings={"m": 1200})  # 300.0
+report = check_constraints(model)
+print(report.to_text())   # [PASS] P::V::c: m > 1000
+```
+
+Supported: literals, `[unit]` values, `+ - * / % **`, comparisons,
+`and or not`, functions (`sqrt abs min max floor ceil round pow`),
+feature chains (`wheels.mass`). Values are lazily evaluated with
+cycle detection; unknown names raise `UnknownNameError`.
 
 ### JSON Interchange (v0.63.0 — Adoption Roadmap Goal 3)
 
@@ -258,13 +285,14 @@ The `analyze()` function now includes stylistic checks that warn about naming co
 | Programmatic API | 75 | ✅ 75 pass |
 | Traceability | 46 | ✅ 46 pass |
 | JSON interchange | 38 | ✅ 38 pass |
+| Expression evaluator | 44 | ✅ 44 pass |
 | Model navigation | 42 | ✅ 42 pass |
 | CLI | 39 | ✅ 39 pass |
 | Validator | 34 | ✅ 34 pass |
 | Import resolution | 31 | ✅ 31 pass |
 | Multi-file loading | 17 | ✅ 17 pass |
 | Conformance | 123 | ✅ 123 pass |
-| **Total** | **1096** | **973 fast + 123 conformance pass** |
+| **Total** | **1140** | **1017 fast + 123 conformance pass** |
 
 ---
 

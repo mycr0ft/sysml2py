@@ -31,7 +31,7 @@ import sysmlpy
 from sysmlpy import loads
 
 # Subcommand table, also used to detect the legacy flat invocation form.
-SUBCOMMANDS = ("parse", "analyze", "view", "trace", "export", "import", "format", "fmt")
+SUBCOMMANDS = ("parse", "analyze", "view", "trace", "export", "import", "eval", "format", "fmt")
 
 
 # ---------------------------------------------------------------------------
@@ -382,6 +382,102 @@ def cmd_import(args) -> int:
     return 0
 
 
+def _parse_eval_value(text):
+    """Parse a --set NAME=VALUE literal (number / bool / string / unit)."""
+    from sysmlpy.usage import ureg
+    raw = text
+    low = raw.strip().lower()
+    if low == "true":
+        return True
+    if low == "false":
+        return False
+    try:
+        return int(raw)
+    except ValueError:
+        pass
+    try:
+        return float(raw)
+    except ValueError:
+        pass
+    try:
+        return ureg(raw)
+    except Exception:
+        pass
+    return raw
+
+
+def cmd_eval(args) -> int:
+    """Expression evaluation / constraint checking (v0.64.0, Goal 4)."""
+    from sysmlpy.evaluator import (
+        evaluate_expression, collect_values, check_constraints,
+        EvaluationError,
+    )
+
+    paths = [Path(f) for f in args.files]
+    for p in _missing_files(paths):
+        print(f"Error: File '{p}' not found.", file=sys.stderr)
+        return 2
+
+    try:
+        model = sysmlpy.load_files(paths, library=args.library)
+    except Exception as e:
+        print(f"Parse error: {e}", file=sys.stderr)
+        return 2
+
+    bindings = {}
+    for spec in args.set or []:
+        if "=" not in spec:
+            print(f"Error: --set expects NAME=VALUE, got {spec!r}",
+                  file=sys.stderr)
+            return 2
+        name, _, raw = spec.partition("=")
+        bindings[name.strip()] = _parse_eval_value(raw)
+
+    if args.expr is not None:
+        try:
+            value = evaluate_expression(
+                args.expr, model=model, element=args.element,
+                bindings=bindings,
+            )
+        except EvaluationError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+        print(_format_value(value))
+        return 0
+
+    if args.constraints:
+        report = check_constraints(model, bindings=bindings)
+        output = report.to_text()
+        if args.output:
+            Path(args.output).write_text(output + "\n", encoding="utf-8")
+            print(f"Wrote {args.output}")
+        else:
+            print(output)
+        if report.failed or report.errored:
+            return 1
+        return 0
+
+    # default: dump all attribute values
+    values = collect_values(model, bindings=bindings)
+    lines = [f"{name} = {_format_value(value)}"
+             for name, value in sorted(values.items())]
+    output = "\n".join(lines) if lines else "(no attribute values)"
+    if args.output:
+        Path(args.output).write_text(output + "\n", encoding="utf-8")
+        print(f"Wrote {args.output}")
+    else:
+        print(output)
+    return 0
+
+
+def _format_value(value):
+    if isinstance(value, bool):
+        return str(value)
+    if value is None:
+        return "null"
+    return str(value)
+
+
 # ---------------------------------------------------------------------------
 # legacy flat invocation (kept for backward compatibility)
 # ---------------------------------------------------------------------------
@@ -642,6 +738,42 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the SysML text to a file instead of stdout",
     )
     p_import.set_defaults(func=cmd_import)
+
+    p_eval = sub.add_parser(
+        "eval",
+        help="Evaluate expressions, attribute values and constraints",
+        description="Bind pint attribute values and evaluate SysML "
+                    "expressions, calc results, or constraint bodies. "
+                    "Exit codes: 0 clean, 1 constraint failed / "
+                    "evaluation error, 2 parse error.",
+    )
+    p_eval.add_argument("files", nargs="+", help="SysML v2 file(s)")
+    p_eval.add_argument(
+        "--expr",
+        help="Evaluate this expression against the model scope",
+    )
+    p_eval.add_argument(
+        "--set", action="append", metavar="NAME=VALUE",
+        help="Override a name for this evaluation (repeatable; values "
+             "may be numbers, true/false, or unit strings like '80 km/h')",
+    )
+    p_eval.add_argument(
+        "--element",
+        help="Qualified element name whose scope to evaluate in",
+    )
+    p_eval.add_argument(
+        "--constraints", action="store_true",
+        help="Evaluate all constraint bodies; exit 1 on any failure",
+    )
+    p_eval.add_argument(
+        "-o", "--output",
+        help="Write the report/value to a file instead of stdout",
+    )
+    p_eval.add_argument(
+        "-l", "--library",
+        help="Path to SysML v2 library files to use for parsing",
+    )
+    p_eval.set_defaults(func=cmd_eval)
 
     return parser
 

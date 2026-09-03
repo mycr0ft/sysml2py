@@ -12732,6 +12732,17 @@ def _visit_nested_definition_element(def_elem):
         return _make_port_definition_dict(def_elem.portDefinition(), None)
     elif hasattr(def_elem, 'interfaceDefinition') and def_elem.interfaceDefinition():
         return _make_interface_definition_dict(def_elem.interfaceDefinition(), None)
+    elif hasattr(def_elem, 'calculationDefinition') and def_elem.calculationDefinition():
+        # v0.64.0 (Goal 4): calc defs inside part/item/etc. bodies were
+        # silently dropped (returned None), losing the result expression
+        # the evaluator needs.
+        return _make_calculation_definition_dict(
+            def_elem.calculationDefinition(), None
+        )
+    elif hasattr(def_elem, 'constraintDefinition') and def_elem.constraintDefinition():
+        return _make_constraint_definition_dict(
+            def_elem.constraintDefinition(), None
+        )
     elif hasattr(def_elem, 'annotatingElement') and def_elem.annotatingElement():
         ann_ctx = def_elem.annotatingElement()
         ann_dict = _visit_annotating_element_dict(ann_ctx)

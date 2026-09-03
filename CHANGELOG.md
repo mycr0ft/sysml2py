@@ -1,5 +1,52 @@
 # CHANGELOG
 
+## v0.64.0 (2026-09-02)
+
+### :white_check_mark: Expression evaluator — pint-bound calc/constraint evaluation (Adoption Roadmap Goal 4)
+
+`analyze()` now goes beyond "is this well-formed": attribute defaults,
+``calc`` result expressions and ``constraint`` bodies are **evaluated**
+with names resolved against the model's own values (pint
+``Quantity``-aware), enabling what-if runs and trade studies.
+
+- **New `sysmlpy.evaluator` module** (exported from the package root):
+  - `collect_values(model, bindings=None)` — evaluate every attribute
+    default; returns qualified-name (``"Pkg::Part::attr"``) and bare-name
+    keys → values (pint Quantities, numbers, booleans, strings).
+  - `evaluate_expression(expr, model=None, element=None, bindings=None)`
+    — evaluate a standalone expression against a model scope (or
+    nothing); bindings override names for what-if runs.
+  - `evaluate_calculation(model, calc_name, bindings=None)` — evaluate a
+    named ``calc def`` result expression.
+  - `check_constraints(model, bindings=None)` — evaluate every
+    constraint body → `ConstraintReport` with per-constraint
+    PASS/FAIL/ERROR results, `to_text()` and `to_json()`.
+- **Supported expression subset**: int/real/string/boolean/null/infinity
+  literals; `[unit]` values; `+ - * / % **`; `== != < <= > >=`;
+  `and or not` (short-circuit); function calls (`sqrt abs min max floor
+  ceil round pow`); feature references through the ownership chain and
+  dotted chains (`wheels.mass`) with type fallback (`part w : W` →
+  `W`'s values). Unsupported constructs raise a clear
+  `UnsupportedExpressionError`.
+- **Evaluator works on the raw parser dictionary** (collected into a
+  namespace tree, evaluated lazily with memoization and cycle
+  detection) — the public-API object tree drops some body content.
+- **Parser/grammar fixes needed for evaluation:**
+  - `calc def` inside `part def` bodies was silently dropped by the
+    visitor (`_visit_nested_definition_element` had no
+    calculationDefinition branch) and by `Part.load_from_grammar` —
+    calc defs now survive into the object tree and `dump()`.
+  - Glued unit expressions (`mass / 4 [kg]` collapsing to one name) are
+    split and evaluated in scope, mirroring `const_fold`'s strategy.
+- **CLI: `sysmlpy eval FILE...`** — `--expr EXPR [--element QNAME]
+  [--set NAME=VALUE ...]` for what-if evaluation, `--constraints` for a
+  PASS/FAIL report (exit 1 on any failure), default dumps all attribute
+  values. Exit codes: 0 clean, 1 failed constraint / evaluation error,
+  2 parse error.
+
+New `tests/evaluator_test.py` — 44 tests. Fast suite now 1017 tests +
+123 conformance = 1140 total.
+
 ## v0.63.0 (2026-09-02)
 
 ### :white_check_mark: SysML v2 JSON interchange (Adoption Roadmap Goal 3)

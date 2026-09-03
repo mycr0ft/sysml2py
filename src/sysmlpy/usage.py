@@ -961,6 +961,14 @@ class Usage(Searchable):
             if hasattr(child, 'definition'):
                 # It's a Definition (PartDefinition, ItemDefinition, etc.)
                 sc = child
+            elif child.__class__.__name__ in (
+                "CalculationDefinition", "ConstraintDefinition",
+            ):
+                # v0.64.0 (Goal 4): definitions without a .definition
+                # wrapper (calc def / constraint def) — dispatch on the
+                # class itself rather than falling into the .children
+                # branch which turns ``sc`` into a list.
+                sc = child
             elif hasattr(child, 'children'):
                 # It's a StructureUsageElement or similar
                 sc = child.children if hasattr(child, 'children') else child
@@ -972,6 +980,13 @@ class Usage(Searchable):
 
             if class_name == "PartDefinition":
                 c = Part(definition=True).load_from_grammar(sc)
+                c.parent = self
+                self.children.append(c)
+            elif class_name == "CalculationDefinition":
+                # v0.64.0 (Goal 4): calc defs inside part/item bodies were
+                # dropped from the object tree (and thus from dump()); the
+                # evaluator needs their result expressions.
+                c = Calculation(definition=True).load_from_grammar(sc)
                 c.parent = self
                 self.children.append(c)
             elif class_name == "ItemDefinition":
