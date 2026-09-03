@@ -5450,6 +5450,14 @@
   Transition resolution gained a last-segment fallback so
   <code>transition Running then Stopped;</code> (target nested in Running)
   resolves from the enclosing level. 24 adapter tests.</li>
+<li><strong>Boxes-backed interconnection view</strong> —
+  <code>as_interconnection_view_boxes()</code> renders part usages as boxes with
+  boundary ports and <code>connection</code> usages as port-to-port edges
+  (Z-routed); endpoints chained through ports
+  (<code>connect engine.powerOut to drivetrain.powerIn</code>) create the ports;
+  <code>focus=</code> filters by part; braille + SVG render helpers. Ports use
+  the new diagramboxes <code>label_inside</code> placement so labels stay clear
+  of the box text. 8 more tests (32 total).</li>
 </ul>
 <h2 id="v0670-2026-09-03">v0.67.0 (2026-09-03)<a class="headerlink" href="#v0670-2026-09-03" title="Permanent link">&para;</a></h2>
 <h3 id="white_check_mark-plantuml-notation-fidelity-official-sysml-v2-graphical-conventions-adoption-roadmap-goal-6-phase-1">:white_check_mark: PlantUML notation fidelity — official SysML v2 graphical conventions (Adoption Roadmap Goal 6, phase 1)<a class="headerlink" href="#white_check_mark-plantuml-notation-fidelity-official-sysml-v2-graphical-conventions-adoption-roadmap-goal-6-phase-1" title="Permanent link">&para;</a></h3>
