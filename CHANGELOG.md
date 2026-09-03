@@ -6,6 +6,14 @@
   PyPI name collision. `sysmlpy.boxes_view` imports the new name and
   the ImportError hint is updated; the 19 boxes-adapter tests now run
   (they were skipping against a stale install).
+- **Nested composite states in the boxes view** (diagramboxes v0.4.0
+  layout pass): `as_state_transition_view_boxes` now renders composite
+  states as real containment (sub-states drawn inside the parent box,
+  parented initial/final pseudostates, internal transitions routed
+  inside the composite) instead of flattening `Parent.Sub` labels.
+  Transition resolution gained a last-segment fallback so
+  `transition Running then Stopped;` (target nested in Running)
+  resolves from the enclosing level. 24 adapter tests.
 
 ## v0.67.0 (2026-09-03)
 

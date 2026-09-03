@@ -13,6 +13,19 @@ import pytest
 
 boxes = pytest.importorskip("diagramboxes")
 
+NESTED_SM = '''
+state def SM {
+    state Idle;
+    state Running {
+        state Spinning;
+        state Stopped;
+    }
+    transition t1 first Idle then Running;
+    transition Running then Idle;
+    transition Running then Stopped;
+}
+'''
+
 import sysmlpy  # noqa: E402
 from sysmlpy.boxes_view import (  # noqa: E402
     as_state_transition_view_boxes,
@@ -324,3 +337,57 @@ def test_full_omg_state_test_model_parses():
     # Render should not throw
     out = render_state_transition_view(text, routing="orthogonal")
     assert "S1" in out and "S2" in out
+
+class TestNestedComposites:
+    """Composite states render nested inside their parent (diagramboxes
+    v0.4.0 nesting) — not flattened as Parent.Sub labels."""
+
+    NESTED = """
+    state def SM {
+        state Idle;
+        state Running {
+            state Spinning;
+            state Stopped;
+        }
+        transition t1 first Idle then Running;
+        transition Running then Idle;
+        transition Running then Stopped;
+    }
+    """
+
+    def _diagram(self):
+        return as_state_transition_view_boxes(NESTED_SM)
+
+    def test_composite_children_nested(self):
+        d = as_state_transition_view_boxes(self.NESTED)
+        run = next(n for n in d.nodes if n.name == "Running")
+        names = {c.name for c in run.children}
+        assert names == {"Spinning", "Stopped"}
+        for c in run.children:
+            assert c.parent is run
+
+    def test_children_inside_parent_after_layout(self):
+        d = as_state_transition_view_boxes(self.NESTED)
+        d.layout(routing="orthogonal")
+        run = next(n for n in d.nodes if n.name == "Running")
+        for c in run.children:
+            assert (run.x <= c.x and c.x + c.w <= run.x + run.w
+                    and run.y <= c.y and c.y + c.h <= run.y + run.h)
+
+    def test_no_dotted_names(self):
+        d = as_state_transition_view_boxes(self.NESTED)
+        assert not any("." in n.name for n in d.nodes)
+
+    def test_cross_level_transition_resolves(self):
+        d = as_state_transition_view_boxes(self.NESTED)
+        d.layout(routing="orthogonal")
+        # `transition Running then Stopped` resolved across levels
+        stopped_edges = [e for e in d.edges
+                         if getattr(e.target, "name", "") == "Stopped"]
+        assert stopped_edges
+
+    def test_braille_render(self):
+        out = render_state_transition_view(self.NESTED)
+        for name in ("Running", "Spinning", "Stopped", "Idle", "t1"):
+            assert name in out
+        assert "." not in out.replace("«state»", "")

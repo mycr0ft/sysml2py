@@ -679,15 +679,17 @@ def as_state_transition_view_boxes(
             attrs.append(f"exit / {level['exit']}" if level["exit"] else "exit /")
         return attrs
 
-    def _build(level: dict, namespace: str):
+    def _build(level: dict, namespace: str, parent_node=None):
         """Emit states + transitions for one level of the state machine.
 
-        Composite (nested) states are emitted as <StateNode> instances and
-        then their sub-states and transitions are emitted as siblings,
-        each name-qualified by the parent state, with simple, dotted
-        reference tracking.  Transition endpoints that resolve via
-        unqualified NAME are matched locally; if not found locally they
-        fall back to being prefixed with the parent namespace.
+        Composite (nested) states are emitted as <StateNode> instances
+        *nested inside their parent node* (diagramboxes v0.4.0 composite
+        structure), and their sub-states and transitions are emitted as
+        children of the composite.  Names stay namespace-qualified in
+        ``state_nodes`` for resolution.  Transition endpoints that
+        resolve via unqualified NAME are matched locally; if not found
+        locally they fall back to being prefixed with the parent
+        namespace.
         """
         composite_names = {comp["name"] for comp in level.get("composites", [])}
 
@@ -711,13 +713,15 @@ def as_state_transition_view_boxes(
                     comp["name"],
                     stereotypes=["state", "parallel"],
                     attributes=attrs, rounded=True,
+                    parent=parent_node,
                 )
             else:
                 state_nodes[comp_full] = d.add_node(
                     comp["name"], stereotypes=["state"],
                     attributes=attrs, rounded=True,
+                    parent=parent_node,
                 )
-            _build(comp, namespace=comp_full)
+            _build(comp, namespace=comp_full, parent_node=state_nodes[comp_full])
 
         # Emit plain (non-composite) states so they're registered.
         # Prefer the dict form for entry/do/exit attribute population.
@@ -729,6 +733,7 @@ def as_state_transition_view_boxes(
             attrs = _state_attributes(state)
             state_nodes[full] = d.add_node(
                 sname, stereotypes=["state"], attributes=attrs, rounded=True,
+                parent=parent_node,
             )
 
     _build(sm, namespace="")
@@ -743,10 +748,12 @@ def as_state_transition_view_boxes(
         namespace.
         """
         if name == "done":
-            # Synthesize / reuse a final-state bullseye for this region.
+            # Synthesize / reuse a final-state bullseye for this region,
+            # nested inside the region's composite state (v0.4.0).
             key = namespace or "_top"
             if key not in final_cache:
-                final_cache[key] = d.add_final_state()
+                region_node = state_nodes.get(namespace)
+                final_cache[key] = d.add_final_state(parent=region_node)
             return final_cache[key]
         if name in state_nodes:
             return state_nodes[name]
@@ -759,6 +766,19 @@ def as_state_transition_view_boxes(
                 candidate = f"{'.'.join(parts[:i])}.{name}"
                 if candidate in state_nodes:
                     return state_nodes[candidate]
+        # Last-segment fallback (diagramboxes v0.4.0 nesting): an
+        # unqualified name may refer to a state nested inside a
+        # composite declared in this region (e.g. `transition Running
+        # then Stopped;` where Stopped lives inside Running).
+        cands = [full for full in state_nodes if full.endswith("." + name)]
+        if len(cands) == 1:
+            return state_nodes[cands[0]]
+        if len(cands) > 1:
+            if namespace:
+                pref = [c for c in cands if c.startswith(namespace + ".")]
+                cands = pref or cands
+            print(f"[boxes_view] ambiguous endpoint {name!r}: {cands}; using {cands[0]!r}")
+            return state_nodes[cands[0]]
         return None
 
     def _emit_transitions(level: dict, namespace: str):
@@ -774,7 +794,8 @@ def as_state_transition_view_boxes(
                 most_recent_state = state_nodes[full]
 
         if level["initial"] is not None:
-            initial_node = d.add_initial()
+            region_node = state_nodes.get(namespace)
+            initial_node = d.add_initial(parent=region_node)
             tgt = _resolve(level["initial"], namespace)
             if tgt is not None:
                 d.add_edge(initial_node, tgt, source_style=NONE, target_style=NONE)
