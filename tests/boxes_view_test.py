@@ -29,8 +29,11 @@ state def SM {
 import sysmlpy  # noqa: E402
 from sysmlpy.boxes_view import (  # noqa: E402
     as_state_transition_view_boxes,
+    as_interconnection_view_boxes,
     render_state_transition_view,
     render_state_transition_view_svg,
+    render_interconnection_view_boxes,
+    render_interconnection_view_boxes_svg,
     _collect_state_machine,
 )
 
@@ -391,3 +394,71 @@ class TestNestedComposites:
         for name in ("Running", "Spinning", "Stopped", "Idle", "t1"):
             assert name in out
         assert "." not in out.replace("«state»", "")
+
+
+IV_MODEL = """
+package V {
+    part def Engine { port powerOut; attribute power : Real; }
+    part def Drivetrain { port powerIn; attribute ratio : Real; }
+    part engine: Engine;
+    part drivetrain: Drivetrain;
+    part pump;
+    part tank;
+    connection clutch connect engine.powerOut to drivetrain.powerIn;
+    connection feed connect pump to tank;
+}
+"""
+
+
+class TestInterconnectionBoxes:
+    """Boxes-backed interconnection view (ports + port-to-port edges)."""
+
+    def test_ports_from_chained_endpoints(self):
+        d = as_interconnection_view_boxes(IV_MODEL)
+        engine = next(n for n in d.nodes if n.name == "engine")
+        drivetrain = next(n for n in d.nodes if n.name == "drivetrain")
+        assert [p.label for p in engine.ports] == ["powerOut"]
+        assert [p.label for p in drivetrain.ports] == ["powerIn"]
+        assert engine.ports[0].side == "right"
+        assert drivetrain.ports[0].side == "left"
+
+    def test_port_to_port_edge(self):
+        d = as_interconnection_view_boxes(IV_MODEL)
+        clutch = next(e for e in d.edges if e.label == "clutch")
+        assert clutch.source_port is not None
+        assert clutch.target_port is not None
+        assert clutch.source_port.label == "powerOut"
+        assert clutch.target_port.label == "powerIn"
+
+    def test_plain_connection_direct_edge(self):
+        d = as_interconnection_view_boxes(IV_MODEL)
+        feed = next(e for e in d.edges if e.label == "feed")
+        assert feed.source_port is None and feed.target_port is None
+        assert feed.source.name == "pump" and feed.target.name == "tank"
+
+    def test_stereotypes_from_typed_by(self):
+        d = as_interconnection_view_boxes(IV_MODEL)
+        engine = next(n for n in d.nodes if n.name == "engine")
+        assert "Engine" in engine.stereotypes
+
+    def test_focus_filters(self):
+        d = as_interconnection_view_boxes(IV_MODEL, focus="engine")
+        names = {n.name for n in d.nodes}
+        assert names == {"engine", "drivetrain"}
+
+    def test_no_connections_raises(self):
+        import pytest
+        with pytest.raises(ValueError):
+            as_interconnection_view_boxes(
+                "package P { part a; part b; }")
+
+    def test_braille_render(self):
+        out = render_interconnection_view_boxes(IV_MODEL)
+        for t in ("engine", "drivetrain", "clutch", "feed",
+                  "powerOut", "powerIn"):
+            assert t in out
+
+    def test_svg_render(self):
+        out = render_interconnection_view_boxes_svg(IV_MODEL)
+        for t in ("powerOut", "powerIn", "clutch"):
+            assert t in out

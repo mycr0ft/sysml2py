@@ -862,3 +862,149 @@ __all__ = [
     "FinalState", "TerminatePseudostate",
     "HistoryPseudostate", "EntryPoint", "ExitPoint", "StateNode",
 ]
+
+
+def as_interconnection_view_boxes(
+    model: Union[str, "sysmlpy.Model", dict],
+    focus: Optional[str] = None,
+    include_external: bool = False,
+) -> "Diagram":
+    """Build a boxes (diagramboxes) interconnection diagram from a model.
+
+    Renders part usages as boxes, their boundary ports as small port
+    markers (``node.add_port``), and ``connection`` usages as port-to-port
+    edges (Z-routed by the layout engine).  Endpoints chained through
+    ports (``connection clutch connect engine.powerOut to
+    drivetrain.powerIn``) create the ports; plain connections
+    (``connect engine to drivetrain``) become direct node-to-node edges.
+
+    Parameters
+    ----------
+    model : str, sysmlpy.Model, or dict
+        SysML v2 text, a loaded Model, or a parsed definition dict.
+    focus : str, optional
+        Restrict the view to connections touching this part.
+    include_external : bool, optional
+        If True (default False), parts outside the focus scope that
+        still participate in connections are included.
+
+    Returns
+    -------
+    diagramboxes.Diagram
+    """
+    from sysmlpy.plantuml import _extract_connections
+
+    import sysmlpy as _sysmlpy
+    if isinstance(model, str):
+        model = _sysmlpy.loads(model)
+    elif isinstance(model, dict):
+        model = _sysmlpy.loads(_sysmlpy.dump(model))
+
+    def _parts_from(model):
+        if hasattr(model, "all") and callable(model.all):
+            try:
+                return [p for p in model.all("part") if not p.is_definition]
+            except Exception:
+                return []
+        return []
+
+    parts = _parts_from(model)
+    by_name = {getattr(p, "name", None): p for p in parts if getattr(p, "name", None)}
+
+    conns = []
+    for from_names, to_names, cname in _extract_connections(model):
+        if not from_names or not to_names:
+            continue
+        if focus is not None:
+            focus_root = focus.split(".")[0]
+            ends = (from_names[0], to_names[0])
+            if focus_root not in ends:
+                continue
+        conns.append((from_names, to_names, cname))
+
+    if not conns:
+        raise ValueError(
+            "as_interconnection_view_boxes: no connections found"
+            + (f" touching {focus!r}" if focus else "")
+        )
+
+    included: set = set()
+    for from_names, to_names, _ in conns:
+        included.add(from_names[0])
+        included.add(to_names[0])
+
+    d = Diagram()
+    nodes: dict[str, Node] = {}
+
+    for name in sorted(included):
+        part = by_name.get(name)
+        stereotypes = ["part"]
+        attributes = []
+        if part is not None:
+            typed = getattr(part, "typed_by_name", None)
+            if typed:
+                stereotypes.append(typed.split("::")[-1])
+            for att in (getattr(part, "attributes", None) or []):
+                aname = getattr(att, "name", None)
+                if aname:
+                    attributes.append(f"+ {aname}")
+        nodes[name] = d.add_node(name, stereotypes=stereotypes,
+                                 attributes=attributes, rounded=True)
+
+    # Assign each chained endpoint port to a side: source-side ports sit
+    # on the right of the source box, target-side ports on the left of
+    # the target box.  A port used in both roles defaults to the right.
+    port_of: dict[tuple, object] = {}
+
+    def _port(node: Node, label: str, is_source: bool):
+        if not label:
+            return None
+        key = (node.name, label)
+        if key in port_of:
+            return port_of[key]
+        side = "right" if is_source else "left"
+        same = [p for p in node.ports if p.side == side]
+        offset = (len(same) + 1) / 4.0 if same else None
+        if offset is not None and offset > 1.0:
+            offset = 0.5
+        p = node.add_port(label, side=side,
+                          offset=None if len(same) == 0 else offset,
+                          label_inside=True)
+        port_of[key] = p
+        return p
+
+    for from_names, to_names, cname in conns:
+        src = nodes[from_names[0]]
+        dst = nodes[to_names[0]]
+        sp = _port(src, from_names[1] if len(from_names) > 1 else "", True)
+        tp = _port(dst, to_names[1] if len(to_names) > 1 else "", False)
+        if sp is not None and tp is not None:
+            d.add_edge(src, dst, source_port=sp, target_port=tp,
+                       label=cname, target_style=OPEN)
+        else:
+            d.add_edge(src, dst, label=cname, target_style=OPEN)
+
+    return d
+
+
+def render_interconnection_view_boxes(
+    model: Union[str, "sysmlpy.Model", dict],
+    focus: Optional[str] = None,
+    routing: str = "orthogonal",
+    **layout_kw,
+) -> str:
+    """Convenience: build + render the boxes interconnection view (braille)."""
+    d = as_interconnection_view_boxes(model, focus=focus)
+    return d.render(routing=routing, **layout_kw)
+
+
+def render_interconnection_view_boxes_svg(
+    model: Union[str, "sysmlpy.Model", dict],
+    focus: Optional[str] = None,
+    routing: str = "orthogonal",
+    scale: float = 1.5,
+    **layout_kw,
+) -> str:
+    """Convenience: build + render the boxes interconnection view as SVG."""
+    d = as_interconnection_view_boxes(model, focus=focus)
+    return d.render_svg(routing=routing, scale=scale, **layout_kw)

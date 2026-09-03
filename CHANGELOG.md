@@ -14,6 +14,14 @@
   Transition resolution gained a last-segment fallback so
   `transition Running then Stopped;` (target nested in Running)
   resolves from the enclosing level. 24 adapter tests.
+- **Boxes-backed interconnection view** —
+  `as_interconnection_view_boxes()` renders part usages as boxes with
+  boundary ports and `connection` usages as port-to-port edges
+  (Z-routed); endpoints chained through ports
+  (`connect engine.powerOut to drivetrain.powerIn`) create the ports;
+  `focus=` filters by part; braille + SVG render helpers. Ports use
+  the new diagramboxes `label_inside` placement so labels stay clear
+  of the box text. 8 more tests (32 total).
 
 ## v0.67.0 (2026-09-03)
 
