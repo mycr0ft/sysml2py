@@ -6550,6 +6550,55 @@ def _make_requirement_usage_dict(ctx, prefix=None):
 def _make_connection_usage_dict(ctx, prefix=None):
     """Create a ConnectionUsage dictionary."""
     name, shortname = _get_usage_identification(ctx)
+
+    # Parse the connector part (``connect X to Y``) so endpoints survive
+    # into the grammar object tree (v0.67.0 — fixes the "part": None stub)
+    # connectionUsage: occurrenceUsagePrefix ( CONNECTION usageDeclaration?
+    #     valuePart? ( CONNECT connectorPart )? | CONNECT connectorPart ) usageBody
+    # — the connectorPart sits directly on the connectionUsage ctx.
+    conn_part_dict = None
+    if ctx is not None:
+        cp = None
+        if hasattr(ctx, 'connectorPart') and ctx.connectorPart():
+            cp = ctx.connectorPart()
+            if isinstance(cp, list):
+                cp = cp[0] if cp else None
+            if cp:
+                end_members = []
+                if hasattr(cp, 'binaryConnectorPart') and cp.binaryConnectorPart():
+                    bcp = cp.binaryConnectorPart()
+                    if isinstance(bcp, list):
+                        bcp = bcp[0] if bcp else None
+                    if bcp and hasattr(bcp, 'connectorEndMember') and bcp.connectorEndMember():
+                        ems = bcp.connectorEndMember()
+                        if isinstance(ems, list):
+                            for em in ems:
+                                end = _visit_connector_end_member(em)
+                                if end:
+                                    end_members.append(end)
+                elif hasattr(cp, 'naryConnectorPart') and cp.naryConnectorPart():
+                    ncp = cp.naryConnectorPart()
+                    if isinstance(ncp, list):
+                        ncp = ncp[0] if ncp else None
+                    if ncp and hasattr(ncp, 'connectorEndMember') and ncp.connectorEndMember():
+                        ems = ncp.connectorEndMember()
+                        if isinstance(ems, list):
+                            for em in ems:
+                                end = _visit_connector_end_member(em)
+                                if end:
+                                    end_members.append(end)
+                if end_members:
+                    conn_part_dict = {
+                        "name": "ConnectorPart",
+                        "part": {
+                            "name": "BinaryConnectorPart",
+                            "ownedRelationship": end_members,
+                        },
+                    }
+                else:
+                    conn_part_dict = None
+    else:
+        conn_part_dict = None
     
     return {
         "name": "PackageMember",
@@ -6575,7 +6624,7 @@ def _make_connection_usage_dict(ctx, prefix=None):
                                 "specialization": None
                             }
                         },
-                        "part": None,
+                        "part": conn_part_dict,
                         "body": {
                             "name": "UsageBody",
                             "body": {

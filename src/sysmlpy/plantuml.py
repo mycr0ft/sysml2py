@@ -21,7 +21,10 @@ from sysmlpy.definition import Model, Package
 
 # ============================================================
 # Relationship Arrow Mappings
-# Based on the official org.omg.sysml.plantuml reference impl
+# Ground truth: the official org.omg.sysml.plantuml reference impl
+# (SysML2PlantUMLStyle.StyleRelDefaultSwitch, B&W default style) and
+# the OMG "Intro to the SysML v2 Language — Graphical Notation"
+# figures (v0.67.0 — Goal 6 notation fidelity).
 # ============================================================
 
 ARROW_STYLES = {
@@ -30,28 +33,46 @@ ARROW_STYLES = {
     "shared":         "o--",       # hollow diamond (isComposite=False)
     "owning":         "+--",       # plus sign (owning membership)
     "non_owning":     "+..",       # dotted plus (non-owning membership)
+    "variant":        "+---",      # variant membership (official: +---)
 
     # Typing / Specialization
     "typing":         "--:|>",     # colon + block arrow (feature typing)
     "specialization": "--|>",      # block arrow (general specialization)
-    "redefinition":   "--||>",     # double bar + block arrow
+    "redefinition":   "--||>",     # double bar + block arrow (distinct!)
 
     # Connections
-    "binding":        "-[thickness=4,#E74C3C]-",   # thick red line, no arrowhead
-    "connector":      "-[thickness=2,#3498DB]->",  # medium blue arrow
-    "flow":           "-->",       # dotted arrow
-    "succession":     "-->",       # dotted arrow
-    "allocation":     "-[thickness=3,dotted,#9B59B6]->",  # thick dotted purple
+    "binding":        "-[thickness=5]-",   # thick plain line: «bind»/=
+                                           # (both sides asserted equal)
+    "connector":      "-[thickness=3]-",   # thick plain line, no arrowhead
+                                           # (arrow only when it carries
+                                           # metadata — official convention)
+    "connector_directed": "-[thickness=3]->",
+    "flow":           "-->",       # solid thin arrow (item flow)
+    "succession":     "-->",       # solid thin arrow (succession)
+    "succession_flow": "..>",      # dotted arrow (SuccessionFlowUsage)
+    "allocation":     "-[thickness=5,dotted]->",  # thick dotted arrow
 
     # Dependencies
     "dependency":     "..>>",      # dotted double-arrow
-    "satisfy":        "-->",       # dotted arrow
-    "verify":         "-->",       # dotted arrow
-    "derive":         "*--",       # composite containment
+    "satisfy":        "-->",       # solid arrow (SatisfyRequirementUsage)
+    "verify":         "-->",       # solid arrow
+    "derive":         "..>",       # dashed line, «derive»/#derive label
+                                   # (spec figure; official pilot omits it)
     "refine":         "..>>",      # dotted double-arrow
+    "perform":        "-->",       # PerformActionUsage
+    "exhibit":        "-->",       # ExhibitStateUsage
+    "include_use_case": "-->",     # IncludeUseCaseUsage
+
+    # Actions (asynchronous messages)
+    "send_action":    "..>>",      # send action: dotted double-arrow out
+    "accept_action":  "<<..",      # accept action: reversed (arrives here)
+
+    # Requirements extras
+    "objective":      "-->>",      # objective membership (req objectives)
 
     # Comments / Annotations
     "comment":        "..",        # dotted line, no arrowhead
+    "metadata":       "..@",       # metadata annotation
     "import":         "..>",       # dotted arrow
 }
 
@@ -1384,10 +1405,11 @@ def as_interconnection_diagram(model, focus=None, elements=None, style="bw",
             "legend right",
             "  <b>Interconnection Legend</b>",
             "  Relationship: Notation",
-            "  Binding: -[thickness=4]-",
-            "  Connector: -[thickness=2]->",
+            "  Binding (==): -[thickness=5]-",
+            "  Connection: -[thickness=3]-",
             "  Flow Transfer: -->",
-            "  Allocation: -[dotted]->",
+            "  Succession Flow: ..>",
+            "  Allocation: -[thickness=5,dotted]->",
             "  Feature Typing: --:|> ",
             "  Composite (owns): *--",
             "  | Specialization | --|> |",
@@ -1662,7 +1684,9 @@ def as_action_flow_view(model, focus=None, elements=None, style="bw", direction=
             "  <b>Action Flow Legend</b>",
             "  Relationship: Notation",
             "  Flow Transfer: -->",
-            "  Binding: -[thickness=4]-",
+            "  Succession Flow: ..>",
+            "  Binding (==): -[thickness=5]-",
+            "  Connection: -[thickness=3]-",
             "  Composite (owns): *--",
             "  Feature Typing: --:|> ",
             "endlegend",
@@ -1801,6 +1825,79 @@ def _extract_flow_connections(model):
 
     for child in getattr(model, 'children', []):
         _scan_element(child)
+
+    return connections
+
+
+def _extract_connection_endpoints(conn_element):
+    """Extract (from_names, to_names) from a ConnectionUsage's grammar.
+
+    Navigates ConnectionUsage → ConnectorPart → BinaryConnectorPart →
+    ConnectorEndMember → ConnectorEnd → OwnedReferenceSubsetting to
+    recover the endpoint reference name paths (v0.67.0).
+
+    Returns (from_names, to_names) as lists of name segments, or
+    (None, None) when the grammar does not carry both ends.
+    """
+    g = getattr(conn_element, 'grammar', None)
+    if g is None:
+        return None, None
+    part = getattr(g, 'part', None)
+    binpart = getattr(part, 'part', None) if part is not None else None
+    if binpart is None or binpart.__class__.__name__ != 'BinaryConnectorPart':
+        return None, None
+    members = getattr(binpart, 'children', None) or []
+    ends = []
+    for member in members:
+        names = None
+        for end in (getattr(member, 'children', None) or []):
+            for sub in (getattr(end, 'children', None) or []):
+                if sub.__class__.__name__ == 'OwnedReferenceSubsetting':
+                    seg = []
+                    ref = getattr(sub, 'referencedFeature', None)
+                    if ref is not None and getattr(ref, 'names', None):
+                        seg.extend(ref.names)
+                    for chain in (getattr(sub, 'elements', None) or []):
+                        fc = getattr(chain, 'feature', None)
+                        for oc in (getattr(fc, 'children', None) or []):
+                            cf = getattr(oc, 'chainingFeature', None)
+                            if cf is not None and getattr(cf, 'names', None):
+                                seg.extend(cf.names)
+                    if seg:
+                        names = seg
+        ends.append(names)
+    if len(ends) >= 2 and ends[0] and ends[1]:
+        return ends[0], ends[1]
+    return None, None
+
+
+def _extract_connections(model):
+    """Scan the model for all connector usages (``connection`` elements).
+
+    Returns a list of ``(from_names, to_names, connection_name)``
+    tuples.  Connection edges render as a thick plain line
+    (``-[thickness=3]-``) per the official notation (v0.67.0).
+    """
+    connections = []
+    visited = set()
+
+    def _scan(element):
+        elem_id = id(element)
+        if elem_id in visited:
+            return
+        visited.add(elem_id)
+
+        if getattr(element, 'sysml_type', '') == 'connection':
+            from_names, to_names = _extract_connection_endpoints(element)
+            if from_names and to_names:
+                connections.append((from_names, to_names,
+                                    getattr(element, 'name', None)))
+
+        for child in getattr(element, 'children', []) or []:
+            _scan(child)
+
+    for child in getattr(model, 'children', []) or []:
+        _scan(child)
 
     return connections
 
@@ -2040,18 +2137,58 @@ def as_state_transition_view(model, focus=None, elements=None, style="bw",
     terminal_states = []
     focus_name = getattr(focus, 'name', None) if focus else None
     
-    # Render state elements using PlantUML state keyword for proper state diagram support
+    # Render state elements using PlantUML state keyword for proper state
+    # diagram support; composite states nest their children via state blocks
+    # (official stv notation — v0.67.0)
+    type_by_alias = {}
+    name_by_alias = {}
     for alias, name, stereotype, elem, is_included in elements_list:
-        sysml_type = getattr(elem, 'sysml_type', '')
+        type_by_alias[alias] = getattr(elem, 'sysml_type', '')
+        name_by_alias[alias] = name
+
+    # State containment hierarchy (composite edges between states)
+    state_children = {}
+    for src, arrow, dst, label, is_external in relationships:
+        if (not is_external and arrow == ARROW_STYLES["composite"]
+                and type_by_alias.get(src) == 'state'
+                and type_by_alias.get(dst) == 'state'):
+            state_children.setdefault(src, []).append(dst)
+
+    nested_child_aliases = {c for kids in state_children.values()
+                            for c in kids}
+    emitted = set()
+
+    def _emit_state_block(alias, depth):
+        """Recursively emit a state and its nested child states."""
+        emitted.add(alias)
+        nonlocal first_state_alias
+        name = name_by_alias.get(alias, alias)
+        pad = "  " * depth
+        kids = state_children.get(alias, [])
+        if kids:
+            lines.append(f'{pad}state "{name}" as {alias} {{')
+            for kid in kids:
+                _emit_state_block(kid, depth + 1)
+            lines.append(f'{pad}}}')
+        else:
+            lines.append(f'{pad}state "{name}" as {alias}')
+        # Track terminal states for final marker
+        if name in ('Stopped', 'Error', 'Final'):
+            terminal_states.append(alias)
+        # Skip the focus element itself (parent container); find first
+        # child state for the initial marker
+        if (first_state_alias is None
+                and name not in ('Stopped', 'Error', 'Final')
+                and name != focus_name):
+            first_state_alias = alias
+
+    for alias, name, stereotype, elem, is_included in elements_list:
+        sysml_type = type_by_alias[alias]
         if sysml_type == 'state':
+            if alias in emitted or alias in nested_child_aliases:
+                continue
             # Use state keyword for proper state diagram support (initial/final markers)
-            lines.append(f'state "{name}" as {alias}')
-            # Skip the focus element itself (parent container), find first child state
-            if first_state_alias is None and name not in ('Stopped', 'Error', 'Final') and name != focus_name:
-                first_state_alias = alias
-            # Track terminal states for final marker
-            if name in ('Stopped', 'Error', 'Final'):
-                terminal_states.append(alias)
+            _emit_state_block(alias, 0)
         elif sysml_type in stv_types:
             lines.append(f'rectangle "{name}" as {alias}')
         else:
@@ -2064,8 +2201,11 @@ def as_state_transition_view(model, focus=None, elements=None, style="bw",
         lines.append("[*] --> " + first_state_alias)
         lines.append("")
 
-    # Render containment relationships using simple arrows
+    # Render non-containment relationships (state hierarchy is expressed by
+    # nesting above, not by transition arrows — v0.67.0)
     for src, arrow, dst, label, is_external in relationships:
+        if arrow == ARROW_STYLES["composite"]:
+            continue  # containment shown as nested state blocks
         if is_external and not show_external:
             continue
         if is_external:
@@ -2105,8 +2245,8 @@ def as_state_transition_view(model, focus=None, elements=None, style="bw",
         lines.extend([
             "legend right",
             "  <b>State Transition Legend</b>",
-            "  State Transition: thick green arrow",
-            "  Containment: simple arrow",
+            "  State Transition: -->",
+            "  Composite states: nested state blocks",
             "endlegend",
         ])
         lines.append("")
@@ -2492,7 +2632,8 @@ def as_textual_notation(model, focus=None, style="bw", custom_style=None):
 
 def as_general_view(model, focus=None, elements=None, style="bw", direction="TB",
                     include_legend=True, max_depth=None, show_external=False,
-                    custom_style=None, show_multiplicity=False):
+                    custom_style=None, show_multiplicity=False,
+                    auto_include_connections=False):
     """Generate a General View (GV) diagram.
 
     Corresponds to SysML v2 ``GeneralView`` (short name ``gv``).
@@ -2511,6 +2652,9 @@ def as_general_view(model, focus=None, elements=None, style="bw", direction="TB"
         show_external: Show relationships to elements outside selection
         custom_style: Optional PlantUML style lines to append
         show_multiplicity: Append multiplicity like [4] to element labels
+        auto_include_connections: Render connector edges (``-[thickness=3]-``
+            thick plain lines, official notation) between parts whose both
+            endpoints are already in the view (v0.67.0)
 
     Returns:
         str: PlantUML text
@@ -2754,6 +2898,30 @@ def as_general_view(model, focus=None, elements=None, style="bw", direction="TB"
 
     lines.append("")
 
+    # Render connector edges between parts already in the view
+    # (official: thick plain line, no arrowhead — ConnectionUsage)
+    if auto_include_connections:
+        for from_names, to_names, conn_name in _extract_connections(model):
+            from_elem = (_find_element_by_qualified_name(model, from_names)
+                         if from_names else None)
+            to_elem = (_find_element_by_qualified_name(model, to_names)
+                       if to_names else None)
+            # NOTE: grammar objects may be falsy (they define __len__ for
+            # children) — membership checks must use "is not None" (v0.67.0)
+            from_alias = (id_map.get(id(from_elem))
+                          if from_elem is not None else None)
+            to_alias = (id_map.get(id(to_elem))
+                        if to_elem is not None else None)
+            if from_alias and to_alias:
+                if conn_name:
+                    lines.append(
+                        f'{from_alias} {ARROW_STYLES["connector"]} '
+                        f'{to_alias} : {conn_name}')
+                else:
+                    lines.append(
+                        f'{from_alias} {ARROW_STYLES["connector"]} {to_alias}')
+        lines.append("")
+
     if include_legend:
         lines.extend([
             "legend right",
@@ -2765,11 +2933,16 @@ def as_general_view(model, focus=None, elements=None, style="bw", direction="TB"
             "  Feature Typing: --:|> ",
             "  | Specialization | --|> |",
             "  | Redefinition | --||> |",
-            "  Binding: -[thickness=4]-",
-            "  Connector: -[thickness=2]->",
+            "  Binding (==): -[thickness=5]-",
+            "  Connection: -[thickness=3]-",
             "  Flow Transfer: -->",
-            "  Allocation: -[dotted]->",
+            "  Succession Flow: ..>",
+            "  Allocation: -[thickness=5,dotted]->",
             "  Dependency: ..>>",
+            "  Send Action: ..>>",
+            "  Accept Action: <<..",
+            "  Variant: +---",
+            "  Metadata: ..@",
             "endlegend",
         ])
         lines.append("")

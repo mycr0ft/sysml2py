@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.66.0** (2026-09-03)
+Current version: **v0.67.0** (2026-09-03)
 
 ---
 
@@ -88,6 +88,12 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   optional openpyxl extra), and spreadsheet value import into
   evaluator bindings (`eval --set-file`, `import_values_csv()`)
   (v0.66.0).
+- **Official SysML v2 notation fidelity** — edge encodings aligned to
+  the OMG pilot's PlantUML generator (thick plain connection lines,
+  heaviest binding lines, distinct redefinition arrow, send/accept
+  action edges, variant/objective/metadata edges); connection
+  endpoints now parse (was a parse stub); stv renders composite
+  states as nested blocks; gv renders connector edges (v0.67.0).
 - **ANTLR4 parser** — default parser, using OMG grammar v2026.03.0
   - `load()`, `loads()`, `parse()`, `load_grammar()` (public API)
   - `load_antlr()`, `load_grammar_antlr()` (explicit ANTLR4 path)
@@ -232,7 +238,7 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 |---|---|---|
 | `tests/grammar_test.py` | 143 | ✅ All pass (100%) |
 | `tests/semantic_test.py` | 170 | ✅ All pass |
-| `tests/plantuml_test.py` | 122 | ✅ All pass |
+| `tests/plantuml_test.py` | 131 | ✅ All pass (incl. official-notation tests) |
 | `tests/store_test.py` | 97 | Pass (optional deps skipped if not installed) |
 | `tests/class_test.py` | 75 | ✅ All pass |
 | `tests/traceability_test.py` | 46 | ✅ All pass |
@@ -254,7 +260,7 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 | `tests/main_test.py` | 7 | ✅ All pass |
 | `tests/partial_test.py` | 6 | ✅ All pass |
 | `tests/conformance_test.py` | 123 | ✅ All pass (100%) |
-| **Total** | **1193** | **1070 fast + 123 conformance pass (25 skipped: optional deps)** |
+| **Total** | **1205** | **1082 fast + 123 conformance pass (25 skipped: optional deps)** |
 
 ### Documentation
 

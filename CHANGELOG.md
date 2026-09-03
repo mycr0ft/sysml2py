@@ -1,5 +1,50 @@
 # CHANGELOG
 
+## v0.67.0 (2026-09-03)
+
+### :white_check_mark: PlantUML notation fidelity — official SysML v2 graphical conventions (Adoption Roadmap Goal 6, phase 1)
+
+Ground truth: the OMG pilot implementation's PlantUML generator
+(`SysML2PlantUMLStyle`) and the "Intro to the SysML v2 Language —
+Graphical Notation" figures (Release 2026-04). A research corpus is
+kept at `~/research/notation_corpus/` (123 rasterized official
+notation pages + 646 named spec figures + an edge-encoding analysis;
+the SysML v2 Book is a secondary source with known non-standard
+figures).
+
+- **Edge encodings aligned to the official reference**
+  (`ARROW_STYLES`): connections are thick *plain* lines
+  (`-[thickness=3]-`, arrowhead only when metadata is present);
+  bindings/feature values are the heaviest line (`-[thickness=5]-`,
+  «bind»/`=`); allocation is `thickness=5,dotted`; typing keeps its
+  own arrow (`--:|>`); redefinition is visually distinct from
+  specialization (`--||>` vs `--|>`).
+- **New edge types**: send action `..>>`, accept action `<<..`
+  (reversed), variant membership `+---`, objective membership `-->>`,
+  metadata annotation `..@`, succession flow `..>`, perform/exhibit/
+  include-use-case `-->`; `derive` corrected from a misleading
+  `*--` to the labeled dashed form (spec figure).
+- **Connection endpoints now parse** — the visitor's `ConnectionUsage`
+  stub (`"part": None`) is fixed: `connect X to Y` is captured via
+  ConnectorPart → BinaryConnectorPart → ConnectorEndMember →
+  ConnectorEnd → OwnedReferenceSubsetting (reuses the existing
+  `_visit_connector_end_member`/`_visit_connector_end` visitors used
+  by transition successions). Round-trip intact (143 grammar tests).
+- **General View (gv) renders connector edges** — new
+  `auto_include_connections=True` flag emits `E1 -[thickness=3]- E2 :
+  clutch` edges (opt-in, backwards compatible).
+- **State Transition View (stv) renders composite states as nested
+  PlantUML state blocks** (official containment notation) instead of
+  flattening them and drawing containment as fake transition arrows.
+  Initial/final markers, transition labels, and legends updated.
+- **Legends updated** in gv/iv/afv/stv to the official encodings.
+
+New `tests/plantuml_test.py::TestOfficialNotationV067` — 9 tests
+(arrow table, endpoint extraction, gv connection edges, legends,
+nested states, no fake containment transitions, initial/final
+markers). Fast suite now 1082 passed + 25 skipped + 123 conformance =
+1205 total, all passing.
+
 ## v0.66.0 (2026-09-03)
 
 ### :white_check_mark: Spreadsheet bridge — CSV/XLSX export, value import (Adoption Roadmap Goal 7)

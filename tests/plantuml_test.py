@@ -2121,3 +2121,119 @@ class TestBrowserView:
         assert "A" in puml
         assert "B" in puml
         assert "bv [part def] A [Browser View]" in puml
+
+
+class TestOfficialNotationV067:
+    """Official SysML v2 notation fidelity (v0.67.0 — Goal 6).
+
+    Ground truth: org.omg.sysml.plantuml (SysML2PlantUMLStyle) and the
+    OMG "Intro to the SysML v2 Language — Graphical Notation" figures.
+    """
+
+    MODEL = """
+    package V {
+        part def Engine { attribute power : Real; }
+        part def Drivetrain { attribute ratio : Real; }
+        part engine: Engine;
+        part drivetrain: Drivetrain;
+        connection clutch connect engine to drivetrain;
+    }
+    """
+
+    STATE_MODEL = """
+    package P {
+        state def SM {
+            state Idle;
+            state Running {
+                state Spinning;
+                state Stopped;
+            }
+            transition t1 first Idle then Running;
+            transition Running then Idle;
+            transition Running then Stopped;
+        }
+    }
+    """
+
+    def test_arrow_styles_match_official(self):
+        """Edge encodings match the official reference implementation."""
+        from sysmlpy.plantuml import ARROW_STYLES
+        assert ARROW_STYLES["typing"] == "--:|>"
+        assert ARROW_STYLES["specialization"] == "--|>"
+        assert ARROW_STYLES["redefinition"] == "--||>"
+        assert ARROW_STYLES["connector"] == "-[thickness=3]-"
+        assert ARROW_STYLES["binding"] == "-[thickness=5]-"
+        assert ARROW_STYLES["allocation"] == "-[thickness=5,dotted]->"
+        assert ARROW_STYLES["send_action"] == "..>>"
+        assert ARROW_STYLES["accept_action"] == "<<.."
+        assert ARROW_STYLES["variant"] == "+---"
+        assert ARROW_STYLES["objective"] == "-->>"
+        assert ARROW_STYLES["metadata"] == "..@"
+        assert ARROW_STYLES["succession_flow"] == "..>"
+
+    def test_extract_connections(self):
+        """Connector endpoints survive parsing (was a parse stub)."""
+        from sysmlpy.plantuml import _extract_connections
+        model = sysmlpy.loads(self.MODEL)
+        conns = _extract_connections(model)
+        assert conns == [(['engine'], ['drivetrain'], 'clutch')]
+
+    def test_gv_connection_edges(self):
+        """General View renders connections as thick plain lines."""
+        model = sysmlpy.loads(self.MODEL)
+        puml = sysmlpy.as_general_view(model, auto_include_connections=True)
+        assert "-[thickness=3]-" in puml
+        assert ": clutch" in puml
+
+    def test_gv_connections_off_by_default(self):
+        """Connection edges are opt-in for backwards compatibility."""
+        model = sysmlpy.loads(self.MODEL)
+        puml = sysmlpy.as_general_view(model)
+        assert "thickness=3]- E" not in puml.replace(
+            "Connection: -[thickness=3]-", "")
+
+    def test_gv_legend_updated(self):
+        """Legend reflects official edge encodings."""
+        model = sysmlpy.loads(self.MODEL)
+        puml = sysmlpy.as_general_view(model)
+        assert "Binding (==): -[thickness=5]-" in puml
+        assert "Connection: -[thickness=3]-" in puml
+        assert "Accept Action: <<.." in puml
+        assert "Variant: +---" in puml
+        # old encodings are gone
+        assert "thickness=4" not in puml
+        assert "thickness=2" not in puml
+
+    def test_stv_nested_states(self):
+        """Composite states render as nested state blocks (official)."""
+        puml = sysmlpy.as_state_transition_view(
+            sysmlpy.loads(self.STATE_MODEL))
+        assert 'state "SM" as' in puml
+        assert 'state "Running" as' in puml
+        # nesting braces present: Running contains Spinning/Stopped
+        assert 'state "Spinning" as' in puml
+        assert '}' in puml
+
+    def test_stv_containment_not_fake_transitions(self):
+        """Hierarchy is nesting, not transition arrows (v0.67.0)."""
+        puml = sysmlpy.as_state_transition_view(
+            sysmlpy.loads(self.STATE_MODEL))
+        # the composite edges must not appear as transition arrows
+        lines = puml.splitlines()
+        # transitions: Idle->Running (t1), Running->Idle, Running->Stopped
+        trans_lines = [l for l in lines if l.strip().startswith("E")
+                       and "-->" in l and "[*]" not in l]
+        # exactly 3 transitions, no part->state containment arrows
+        assert len(trans_lines) == 3
+
+    def test_stv_initial_and_final_markers(self):
+        puml = sysmlpy.as_state_transition_view(
+            sysmlpy.loads(self.STATE_MODEL))
+        assert "[*] -->" in puml          # initial marker
+        assert "--> [*]" in puml          # final marker (Stopped)
+
+    def test_stv_legend_updated(self):
+        puml = sysmlpy.as_state_transition_view(
+            sysmlpy.loads(self.STATE_MODEL))
+        assert "Composite states: nested state blocks" in puml
+        assert "Containment: simple arrow" not in puml

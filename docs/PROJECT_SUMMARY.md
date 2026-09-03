@@ -138,6 +138,19 @@ sysmlpy analyze model/*.sysml --format json --fail-on error
 sysmlpy trace model/*.sysml --fail-on uncovered --format markdown -o coverage.md
 ```
 
+### Official SysML v2 Notation Fidelity (v0.67.0 — Goal 6 phase 1)
+
+Edge encodings follow the OMG pilot's PlantUML generator: connections
+are thick plain lines (`-[thickness=3]-`, arrow only with metadata),
+bindings are the heaviest lines (`-[thickness=5]-`, «bind»/`=`),
+redefinition is distinct from specialization (`--||>` vs `--|>`),
+send/accept actions use `..>>`/`<<..`. Connection endpoints now parse
+(`connection clutch connect engine to drivetrain` survives into the
+object tree); `as_general_view(..., auto_include_connections=True)`
+emits connection edges; `as_state_transition_view` nests composite
+states as PlantUML state blocks. Research corpus + edge table:
+`~/research/notation_corpus/NOTATION_RESEARCH.md`.
+
 ### Spreadsheet Bridge (v0.66.0 — Adoption Roadmap Goal 7)
 
 ```bash
@@ -329,7 +342,7 @@ The `analyze()` function now includes stylistic checks that warn about naming co
 | Import resolution | 31 | ✅ 31 pass |
 | Multi-file loading | 17 | ✅ 17 pass |
 | Conformance | 123 | ✅ 123 pass |
-| **Total** | **1193** | **1070 fast + 123 conformance pass (25 skipped: optional deps)** |
+| **Total** | **1205** | **1082 fast + 123 conformance pass (25 skipped: optional deps)** |
 
 ---
 

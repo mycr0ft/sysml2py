@@ -18,7 +18,15 @@ are complete.  Follow-up work is organized under the
 - [x] **Goal 3 — JSON interchange format** *(v0.63.0: `sysmlpy.interchange` module — `to_interchange()` / `from_interchange()` JSON-LD-style partition documents (flat `@graph`, `@id`/`@type` elements, deterministic uuid5 ids); lossless import back to a live model via the shared `Model._load_definition()` path; `sysmlpy export` / `sysmlpy import` CLI commands; 38 tests in `tests/interchange_test.py`. Spec-normative JSON-LD context mapping (OMG property IRIs) tracked as follow-up.)*
 - [x] **Goal 4 — Expression evaluator** *(v0.64.0: `sysmlpy.evaluator` — `collect_values()` / `evaluate_expression()` / `evaluate_calculation()` / `check_constraints()`; pint attribute values bind into calc/constraint evaluation with what-if `bindings`; feature-chain resolution with type fallback; glued unit-expression handling; `sysmlpy eval` CLI with `--expr`/`--set`/`--constraints`; calc defs inside part bodies no longer dropped by the visitor/object tree; 44 tests in `tests/evaluator_test.py`. Conditional expressions and calc `in` parameters tracked as follow-up.)*
 - [x] **Goal 5 — LSP server** *(v0.65.0: `sysmlpy.lsp` package — dependency-free LSP 3.17 subset over stdio JSON-RPC; `publishDiagnostics` (exact ANTLR syntax ranges + `analyze()` issues located via quoted-name heuristic), `documentSymbol` outline, `hover` (kind/type/value), `definition` (usage→decl, type name→type def), keyword+member `completion`, FULL text sync, UTF-16 positions; `sysmlpy-lsp` console script + `python -m sysmlpy.lsp`; VS Code extension scaffold `editors/vscode/sysmlpy-lsp/`; Neovim recipes in `docs/LSP.md`; 37 tests in `tests/lsp_test.py`. Follow-ups: incremental sync, position-tracked semantic diagnostics, workspace/symbol, `.`-completion.)*
-- [ ] **Goal 6 — Rendering without Java** (native SVG / Mermaid output; boxes covers state machines only)
+- [~] **Goal 6 — Rendering without Java** (native SVG / Mermaid output; boxes covers state machines only)
+  - [x] **Phase 1 (v0.67.0)** — PlantUML notation fidelity: edge encodings aligned to the OMG pilot
+    (thick plain connections, heaviest bindings, `--:|>` typing, `--||>` redefinition, send/accept
+    actions, variant/objective/metadata, succession flow); connection endpoints now parse (visitor
+    stub fixed); gv `auto_include_connections` edges; stv nested composite-state blocks; legends
+    updated. Ground truth: OMG pilot PlantUML generator + official Graphical Notation figures;
+    research corpus at `~/research/notation_corpus/` (NOTATION_RESEARCH.md). Next: boxes engine
+    (rename pending — PyPI name collision) for Java-free SVG/braille; traceability matrix md/html
+    already exists in `traceability.py`.
 - [x] **Goal 7 — Spreadsheet bridge** *(v0.66.0: `sysmlpy.spreadsheet` — CSV export of tabular/data-value/matrix views (`output_format="csv"`, `view --format csv`), `write_xlsx()` workbook export + `sysmlpy xlsx` CLI (optional `openpyxl` extra `sysmlpy[xlsx]`), value import into evaluator bindings (`import_values_csv()`/`import_values_xlsx()`, `eval --set-file`, `parse_value_literal()`); 37 tests in `tests/spreadsheet_test.py`.)*
 - [ ] **Goal 8 — Semantic model diff** (review workflows)
 - [ ] **Goal 9 — Validator depth** (more OCL well-formedness checks)
