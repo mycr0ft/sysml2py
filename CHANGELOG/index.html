@@ -431,6 +431,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0650-2026-09-03" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.65.0 (2026-09-03)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.65.0 (2026-09-03)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-lsp-server-editor-integration-adoption-roadmap-goal-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: LSP server — editor integration (Adoption Roadmap Goal 5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0640-2026-09-02" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2832,6 +2860,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0650-2026-09-03" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.65.0 (2026-09-03)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.65.0 (2026-09-03)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-lsp-server-editor-integration-adoption-roadmap-goal-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: LSP server — editor integration (Adoption Roadmap Goal 5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0640-2026-09-02" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5192,6 +5248,47 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0650-2026-09-03">v0.65.0 (2026-09-03)<a class="headerlink" href="#v0650-2026-09-03" title="Permanent link">&para;</a></h2>
+<h3 id="white_check_mark-lsp-server-editor-integration-adoption-roadmap-goal-5">:white_check_mark: LSP server — editor integration (Adoption Roadmap Goal 5)<a class="headerlink" href="#white_check_mark-lsp-server-editor-integration-adoption-roadmap-goal-5" title="Permanent link">&para;</a></h3>
+<p>sysmlpy now speaks the Language Server Protocol: live diagnostics and
+model navigation in any LSP editor (VS Code, Neovim, Emacs, …).</p>
+<ul>
+<li><strong>New <code>sysmlpy.lsp</code> package</strong> (dependency-free — hand-rolled LSP 3.17
+  subset over JSON-RPC <code>Content-Length</code> stdio framing):</li>
+<li><code>protocol.py</code> — byte-stream framing (encode/read, tolerant header
+    parsing), LSP error codes and symbol kinds.</li>
+<li><code>server.py</code> — transport-agnostic <code>SysmlLanguageServer</code> (message
+    dict in → message dicts out) and <code>DocumentIndex</code> (one cached
+    parse+analyze snapshot per document version feeding all features).</li>
+<li><code>stdio.py</code> — stdio transport loop; <code>sysmlpy-lsp</code> console script
+    (new in pyproject) and <code>python -m sysmlpy.lsp</code>; <code>--log FILE</code> for
+    protocol traces, <code>--version</code>.</li>
+<li><strong>Features</strong>:</li>
+<li><code>publishDiagnostics</code> — ANTLR syntax errors with exact line:column
+    ranges; semantic issues from <code>analyze()</code> located in the text via a
+    quoted-name heuristic (position-tracked parser tracked as
+    follow-up; syntax positions are exact).</li>
+<li><code>documentSymbol</code> — hierarchical outline with LSP SymbolKind mapping
+    (package→Package, defs→Class, attributes→Field, …) and brace-
+    balanced ranges.</li>
+<li><code>hover</code> — markdown card: kind, name, qualified name, <code>typed by</code>,
+    literal value via <code>get_value()</code>.</li>
+<li><code>definition</code> — usage name → its declaration; type name → the
+    type's definition.</li>
+<li><code>completion</code> — SysML v2 keywords + all named model elements.</li>
+<li>FULL text sync; UTF-16 position encoding; lifecycle per spec
+    (uninitialized requests rejected, shutdown/exit honored, unknown
+    methods get -32601, analyzer failures never crash the session).</li>
+<li><strong>Editor integrations</strong>: <code>editors/vscode/sysmlpy-lsp/</code> — ready-to-
+  package VS Code extension (plain JS, vscode-languageclient, <code>.sysml</code>
+  grammar association, <code>sysmlpy.serverPath</code>/<code>serverArgs</code> settings);
+  <code>docs/LSP.md</code> documents Neovim setup (built-in <code>vim.lsp.config</code> for
+  0.11+ and nvim-lspconfig for 0.8–0.10) and other editors.</li>
+</ul>
+<p>New <code>tests/lsp_test.py</code> — 37 tests (framing round-trips incl. non-ASCII
+and malformed headers, lifecycle guards, diagnostic ranges, all
+features, in-memory stdio session, real subprocess run of
+<code>python -m sysmlpy.lsp</code>). Fast suite now 1054 + 123 conformance.</p>
 <h2 id="v0640-2026-09-02">v0.64.0 (2026-09-02)<a class="headerlink" href="#v0640-2026-09-02" title="Permanent link">&para;</a></h2>
 <h3 id="white_check_mark-expression-evaluator-pint-bound-calcconstraint-evaluation-adoption-roadmap-goal-4">:white_check_mark: Expression evaluator — pint-bound calc/constraint evaluation (Adoption Roadmap Goal 4)<a class="headerlink" href="#white_check_mark-expression-evaluator-pint-bound-calcconstraint-evaluation-adoption-roadmap-goal-4" title="Permanent link">&para;</a></h3>
 <p><code>analyze()</code> now goes beyond "is this well-formed": attribute defaults,
