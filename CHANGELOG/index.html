@@ -431,6 +431,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0640-2026-09-02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.64.0 (2026-09-02)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.64.0 (2026-09-02)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-expression-evaluator-pint-bound-calcconstraint-evaluation-adoption-roadmap-goal-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Expression evaluator — pint-bound calc/constraint evaluation (Adoption Roadmap Goal 4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0630-2026-09-02" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2804,6 +2832,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0640-2026-09-02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.64.0 (2026-09-02)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.64.0 (2026-09-02)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-expression-evaluator-pint-bound-calcconstraint-evaluation-adoption-roadmap-goal-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Expression evaluator — pint-bound calc/constraint evaluation (Adoption Roadmap Goal 4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0630-2026-09-02" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5136,6 +5192,50 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0640-2026-09-02">v0.64.0 (2026-09-02)<a class="headerlink" href="#v0640-2026-09-02" title="Permanent link">&para;</a></h2>
+<h3 id="white_check_mark-expression-evaluator-pint-bound-calcconstraint-evaluation-adoption-roadmap-goal-4">:white_check_mark: Expression evaluator — pint-bound calc/constraint evaluation (Adoption Roadmap Goal 4)<a class="headerlink" href="#white_check_mark-expression-evaluator-pint-bound-calcconstraint-evaluation-adoption-roadmap-goal-4" title="Permanent link">&para;</a></h3>
+<p><code>analyze()</code> now goes beyond "is this well-formed": attribute defaults,
+<code>calc</code> result expressions and <code>constraint</code> bodies are <strong>evaluated</strong>
+with names resolved against the model's own values (pint
+<code>Quantity</code>-aware), enabling what-if runs and trade studies.</p>
+<ul>
+<li><strong>New <code>sysmlpy.evaluator</code> module</strong> (exported from the package root):</li>
+<li><code>collect_values(model, bindings=None)</code> — evaluate every attribute
+    default; returns qualified-name (<code>"Pkg::Part::attr"</code>) and bare-name
+    keys → values (pint Quantities, numbers, booleans, strings).</li>
+<li><code>evaluate_expression(expr, model=None, element=None, bindings=None)</code>
+    — evaluate a standalone expression against a model scope (or
+    nothing); bindings override names for what-if runs.</li>
+<li><code>evaluate_calculation(model, calc_name, bindings=None)</code> — evaluate a
+    named <code>calc def</code> result expression.</li>
+<li><code>check_constraints(model, bindings=None)</code> — evaluate every
+    constraint body → <code>ConstraintReport</code> with per-constraint
+    PASS/FAIL/ERROR results, <code>to_text()</code> and <code>to_json()</code>.</li>
+<li><strong>Supported expression subset</strong>: int/real/string/boolean/null/infinity
+  literals; <code>[unit]</code> values; <code>+ - * / % **</code>; <code>== != &lt; &lt;= &gt; &gt;=</code>;
+  <code>and or not</code> (short-circuit); function calls (<code>sqrt abs min max floor
+  ceil round pow</code>); feature references through the ownership chain and
+  dotted chains (<code>wheels.mass</code>) with type fallback (<code>part w : W</code> →
+  <code>W</code>'s values). Unsupported constructs raise a clear
+  <code>UnsupportedExpressionError</code>.</li>
+<li><strong>Evaluator works on the raw parser dictionary</strong> (collected into a
+  namespace tree, evaluated lazily with memoization and cycle
+  detection) — the public-API object tree drops some body content.</li>
+<li><strong>Parser/grammar fixes needed for evaluation:</strong></li>
+<li><code>calc def</code> inside <code>part def</code> bodies was silently dropped by the
+    visitor (<code>_visit_nested_definition_element</code> had no
+    calculationDefinition branch) and by <code>Part.load_from_grammar</code> —
+    calc defs now survive into the object tree and <code>dump()</code>.</li>
+<li>Glued unit expressions (<code>mass / 4 [kg]</code> collapsing to one name) are
+    split and evaluated in scope, mirroring <code>const_fold</code>'s strategy.</li>
+<li><strong>CLI: <code>sysmlpy eval FILE...</code></strong> — <code>--expr EXPR [--element QNAME]
+  [--set NAME=VALUE ...]</code> for what-if evaluation, <code>--constraints</code> for a
+  PASS/FAIL report (exit 1 on any failure), default dumps all attribute
+  values. Exit codes: 0 clean, 1 failed constraint / evaluation error,
+  2 parse error.</li>
+</ul>
+<p>New <code>tests/evaluator_test.py</code> — 44 tests. Fast suite now 1017 tests +
+123 conformance = 1140 total.</p>
 <h2 id="v0630-2026-09-02">v0.63.0 (2026-09-02)<a class="headerlink" href="#v0630-2026-09-02" title="Permanent link">&para;</a></h2>
 <h3 id="white_check_mark-sysml-v2-json-interchange-adoption-roadmap-goal-3">:white_check_mark: SysML v2 JSON interchange (Adoption Roadmap Goal 3)<a class="headerlink" href="#white_check_mark-sysml-v2-json-interchange-adoption-roadmap-goal-3" title="Permanent link">&para;</a></h3>
 <p>Models can now be exchanged as JSON in the style of the SysML v2 spec's

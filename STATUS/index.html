@@ -1210,7 +1210,7 @@
 
 
 <h1 id="sysmlpy-project-status">sysmlpy — Project Status<a class="headerlink" href="#sysmlpy-project-status" title="Permanent link">&para;</a></h1>
-<p>Current version: <strong>v0.63.0</strong> (2026-09-02)</p>
+<p>Current version: <strong>v0.64.0</strong> (2026-09-02)</p>
 <hr />
 <h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
 <h3 id="public-api-classes">Public API Classes<a class="headerlink" href="#public-api-classes" title="Permanent link">&para;</a></h3>
@@ -1419,6 +1419,11 @@
   <code>from_interchange()</code>): JSON-LD-style partition documents (flat
   <code>@graph</code>, <code>@id</code>/<code>@type</code> elements, deterministic uuid5 ids) with
   lossless import back to a live model (v0.63.0).</li>
+<li><strong>Expression evaluator</strong> — <code>sysmlpy.evaluator</code>
+  (<code>collect_values()</code> / <code>evaluate_expression()</code> /
+  <code>evaluate_calculation()</code> / <code>check_constraints()</code>): pint-bound
+  evaluation of attribute defaults, calc results and constraint bodies,
+  with what-if bindings; <code>sysmlpy eval</code> CLI (v0.64.0).</li>
 <li><strong>ANTLR4 parser</strong> — default parser, using OMG grammar v2026.03.0</li>
 <li><code>load()</code>, <code>loads()</code>, <code>parse()</code>, <code>load_grammar()</code> (public API)</li>
 <li><code>load_antlr()</code>, <code>load_grammar_antlr()</code> (explicit ANTLR4 path)</li>
@@ -1857,6 +1862,11 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 <td>✅ All pass</td>
 </tr>
 <tr>
+<td><code>tests/evaluator_test.py</code></td>
+<td>44</td>
+<td>✅ All pass</td>
+</tr>
+<tr>
 <td><code>tests/navigate_test.py</code></td>
 <td>42</td>
 <td>✅ All pass</td>
@@ -1928,8 +1938,8 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><strong>Total</strong></td>
-<td><strong>1096</strong></td>
-<td><strong>973 fast + 123 conformance pass</strong></td>
+<td><strong>1140</strong></td>
+<td><strong>1017 fast + 123 conformance pass</strong></td>
 </tr>
 </tbody>
 </table>
