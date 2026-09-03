@@ -485,6 +485,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0670-2026-09-03" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.67.0 (2026-09-03)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.67.0 (2026-09-03)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-plantuml-notation-fidelity-official-sysml-v2-graphical-conventions-adoption-roadmap-goal-6-phase-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: PlantUML notation fidelity — official SysML v2 graphical conventions (Adoption Roadmap Goal 6, phase 1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0660-2026-09-03" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2942,6 +2970,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0670-2026-09-03" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.67.0 (2026-09-03)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.67.0 (2026-09-03)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-plantuml-notation-fidelity-official-sysml-v2-graphical-conventions-adoption-roadmap-goal-6-phase-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: PlantUML notation fidelity — official SysML v2 graphical conventions (Adoption Roadmap Goal 6, phase 1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0660-2026-09-03" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5358,6 +5414,48 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0670-2026-09-03">v0.67.0 (2026-09-03)<a class="headerlink" href="#v0670-2026-09-03" title="Permanent link">&para;</a></h2>
+<h3 id="white_check_mark-plantuml-notation-fidelity-official-sysml-v2-graphical-conventions-adoption-roadmap-goal-6-phase-1">:white_check_mark: PlantUML notation fidelity — official SysML v2 graphical conventions (Adoption Roadmap Goal 6, phase 1)<a class="headerlink" href="#white_check_mark-plantuml-notation-fidelity-official-sysml-v2-graphical-conventions-adoption-roadmap-goal-6-phase-1" title="Permanent link">&para;</a></h3>
+<p>Ground truth: the OMG pilot implementation's PlantUML generator
+(<code>SysML2PlantUMLStyle</code>) and the "Intro to the SysML v2 Language —
+Graphical Notation" figures (Release 2026-04). A research corpus is
+kept at <code>~/research/notation_corpus/</code> (123 rasterized official
+notation pages + 646 named spec figures + an edge-encoding analysis;
+the SysML v2 Book is a secondary source with known non-standard
+figures).</p>
+<ul>
+<li><strong>Edge encodings aligned to the official reference</strong>
+  (<code>ARROW_STYLES</code>): connections are thick <em>plain</em> lines
+  (<code>-[thickness=3]-</code>, arrowhead only when metadata is present);
+  bindings/feature values are the heaviest line (<code>-[thickness=5]-</code>,
+  «bind»/<code>=</code>); allocation is <code>thickness=5,dotted</code>; typing keeps its
+  own arrow (<code>--:|&gt;</code>); redefinition is visually distinct from
+  specialization (<code>--||&gt;</code> vs <code>--|&gt;</code>).</li>
+<li><strong>New edge types</strong>: send action <code>..&gt;&gt;</code>, accept action <code>&lt;&lt;..</code>
+  (reversed), variant membership <code>+---</code>, objective membership <code>--&gt;&gt;</code>,
+  metadata annotation <code>..@</code>, succession flow <code>..&gt;</code>, perform/exhibit/
+  include-use-case <code>--&gt;</code>; <code>derive</code> corrected from a misleading
+  <code>*--</code> to the labeled dashed form (spec figure).</li>
+<li><strong>Connection endpoints now parse</strong> — the visitor's <code>ConnectionUsage</code>
+  stub (<code>"part": None</code>) is fixed: <code>connect X to Y</code> is captured via
+  ConnectorPart → BinaryConnectorPart → ConnectorEndMember →
+  ConnectorEnd → OwnedReferenceSubsetting (reuses the existing
+  <code>_visit_connector_end_member</code>/<code>_visit_connector_end</code> visitors used
+  by transition successions). Round-trip intact (143 grammar tests).</li>
+<li><strong>General View (gv) renders connector edges</strong> — new
+  <code>auto_include_connections=True</code> flag emits <code>E1 -[thickness=3]- E2 :
+  clutch</code> edges (opt-in, backwards compatible).</li>
+<li><strong>State Transition View (stv) renders composite states as nested
+  PlantUML state blocks</strong> (official containment notation) instead of
+  flattening them and drawing containment as fake transition arrows.
+  Initial/final markers, transition labels, and legends updated.</li>
+<li><strong>Legends updated</strong> in gv/iv/afv/stv to the official encodings.</li>
+</ul>
+<p>New <code>tests/plantuml_test.py::TestOfficialNotationV067</code> — 9 tests
+(arrow table, endpoint extraction, gv connection edges, legends,
+nested states, no fake containment transitions, initial/final
+markers). Fast suite now 1082 passed + 25 skipped + 123 conformance =
+1205 total, all passing.</p>
 <h2 id="v0660-2026-09-03">v0.66.0 (2026-09-03)<a class="headerlink" href="#v0660-2026-09-03" title="Permanent link">&para;</a></h2>
 <h3 id="white_check_mark-spreadsheet-bridge-csvxlsx-export-value-import-adoption-roadmap-goal-7">:white_check_mark: Spreadsheet bridge — CSV/XLSX export, value import (Adoption Roadmap Goal 7)<a class="headerlink" href="#white_check_mark-spreadsheet-bridge-csvxlsx-export-value-import-adoption-roadmap-goal-7" title="Permanent link">&para;</a></h3>
 <p>Also: <strong><code>docs/LSP_EDITORS.md</code></strong> — a practical setup guide for using the

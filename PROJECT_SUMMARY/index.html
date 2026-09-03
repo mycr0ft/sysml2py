@@ -601,6 +601,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#official-sysml-v2-notation-fidelity-v0670-goal-6-phase-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Official SysML v2 Notation Fidelity (v0.67.0 — Goal 6 phase 1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#spreadsheet-bridge-v0660-adoption-roadmap-goal-7" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1342,6 +1353,17 @@ original exit codes. Example CI usage:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sysmlpy<span class="w"> </span>analyze<span class="w"> </span>model/*.sysml<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span>--fail-on<span class="w"> </span>error
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>sysmlpy<span class="w"> </span>trace<span class="w"> </span>model/*.sysml<span class="w"> </span>--fail-on<span class="w"> </span>uncovered<span class="w"> </span>--format<span class="w"> </span>markdown<span class="w"> </span>-o<span class="w"> </span>coverage.md
 </code></pre></div>
+<h3 id="official-sysml-v2-notation-fidelity-v0670-goal-6-phase-1">Official SysML v2 Notation Fidelity (v0.67.0 — Goal 6 phase 1)<a class="headerlink" href="#official-sysml-v2-notation-fidelity-v0670-goal-6-phase-1" title="Permanent link">&para;</a></h3>
+<p>Edge encodings follow the OMG pilot's PlantUML generator: connections
+are thick plain lines (<code>-[thickness=3]-</code>, arrow only with metadata),
+bindings are the heaviest lines (<code>-[thickness=5]-</code>, «bind»/<code>=</code>),
+redefinition is distinct from specialization (<code>--||&gt;</code> vs <code>--|&gt;</code>),
+send/accept actions use <code>..&gt;&gt;</code>/<code>&lt;&lt;..</code>. Connection endpoints now parse
+(<code>connection clutch connect engine to drivetrain</code> survives into the
+object tree); <code>as_general_view(..., auto_include_connections=True)</code>
+emits connection edges; <code>as_state_transition_view</code> nests composite
+states as PlantUML state blocks. Research corpus + edge table:
+<code>~/research/notation_corpus/NOTATION_RESEARCH.md</code>.</p>
 <h3 id="spreadsheet-bridge-v0660-adoption-roadmap-goal-7">Spreadsheet Bridge (v0.66.0 — Adoption Roadmap Goal 7)<a class="headerlink" href="#spreadsheet-bridge-v0660-adoption-roadmap-goal-7" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>sysmlpy<span class="w"> </span>view<span class="w"> </span>model.sysml<span class="w"> </span>--view<span class="w"> </span>tabular<span class="w"> </span>--format<span class="w"> </span>csv<span class="w">        </span><span class="c1"># CSV export</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>sysmlpy<span class="w"> </span>xlsx<span class="w"> </span>model.sysml<span class="w"> </span>-o<span class="w"> </span>model.xlsx<span class="w">                      </span><span class="c1"># Excel workbook (needs 'sysmlpy[xlsx]')</span>
@@ -1711,8 +1733,8 @@ feed a traceability reporting module:</p>
 </tr>
 <tr>
 <td><strong>Total</strong></td>
-<td><strong>1193</strong></td>
-<td><strong>1070 fast + 123 conformance pass (25 skipped: optional deps)</strong></td>
+<td><strong>1205</strong></td>
+<td><strong>1082 fast + 123 conformance pass (25 skipped: optional deps)</strong></td>
 </tr>
 </tbody>
 </table>
