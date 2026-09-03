@@ -3139,6 +3139,22 @@ def _format_table_rows_plantuml(header, rows):
     return lines
 
 
+def _format_table_rows_csv(header, rows):
+    """Format header + rows as CSV text (v0.66.0, Goal 7).
+
+    Uses the ``csv`` module for proper quoting/escaping.  Returns a
+    trailing-newline-free string with LF line endings.
+    """
+    import csv as _csv
+    import io as _io
+
+    buf = _io.StringIO()
+    writer = _csv.writer(buf, lineterminator="\n")
+    writer.writerow(header)
+    writer.writerows(rows)
+    return buf.getvalue().rstrip("\n")
+
+
 def _format_table_rows_markdown(header, rows, align=None):
     """Format a markdown table from header and rows."""
     if align is None:
@@ -3250,6 +3266,9 @@ def as_tabular_view(model, focus=None, style="bw", output_format="markdown",
                 row.append("")
         rows.append(row)
 
+    if output_format == "csv":
+        return _format_table_rows_csv(header, rows)
+
     if output_format == "markdown":
         align = []
         for col in columns:
@@ -3348,6 +3367,9 @@ def as_data_value_tabular_view(model, focus=None, style="bw",
         typed_by = _get_typedby_name(element) or ""
         row = [parent_name, name, val_str, unit_str, typed_by]
         rows.append(row)
+
+    if output_format == "csv":
+        return _format_table_rows_csv(header, rows)
 
     if output_format == "markdown":
         align = [":---", ":---", ":--", ":--", ":---"]
@@ -3515,6 +3537,9 @@ def as_relationship_matrix_view(model, focus=None, style="bw",
             else:
                 row.append("")
         matrix_rows.append(row)
+
+    if output_format == "csv":
+        return _format_table_rows_csv(header, matrix_rows)
 
     if output_format == "markdown":
         parts = _format_table_rows_markdown(header, matrix_rows, align=None)

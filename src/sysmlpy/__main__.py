@@ -31,7 +31,7 @@ import sysmlpy
 from sysmlpy import loads
 
 # Subcommand table, also used to detect the legacy flat invocation form.
-SUBCOMMANDS = ("parse", "analyze", "view", "trace", "export", "import", "eval", "format", "fmt")
+SUBCOMMANDS = ("parse", "analyze", "view", "trace", "export", "import", "eval", "xlsx", "format", "fmt")
 
 
 # ---------------------------------------------------------------------------
@@ -433,6 +433,26 @@ def cmd_eval(args) -> int:
         name, _, raw = spec.partition("=")
         bindings[name.strip()] = _parse_eval_value(raw)
 
+    if getattr(args, "set_file", None):
+        from sysmlpy.spreadsheet import import_values_csv, import_values_xlsx
+        setfile = Path(args.set_file)
+        if not setfile.exists():
+            print(f"Error: --set-file '{setfile}' not found.", file=sys.stderr)
+            return 2
+        try:
+            if setfile.suffix.lower() == ".xlsx":
+                file_bindings = import_values_xlsx(setfile)
+            else:
+                # utf-8-sig tolerates Excel's BOM on CSV exports
+                file_bindings = import_values_csv(
+                    setfile.read_text(encoding="utf-8-sig")
+                )
+        except (ValueError, ImportError, OSError) as e:
+            print(f"Error: --set-file: {e}", file=sys.stderr)
+            return 1
+        # --set flags win over spreadsheet values
+        bindings = {**file_bindings, **bindings}
+
     if args.expr is not None:
         try:
             value = evaluate_expression(
@@ -476,6 +496,36 @@ def _format_value(value):
     if value is None:
         return "null"
     return str(value)
+
+
+def cmd_xlsx(args) -> int:
+    """Export tabular views to an Excel workbook (v0.66.0, Goal 7)."""
+    from sysmlpy.spreadsheet import write_xlsx
+
+    paths = [Path(f) for f in args.files]
+    for p in _missing_files(paths):
+        print(f"Error: File '{p}' not found.", file=sys.stderr)
+        return 2
+
+    try:
+        model = sysmlpy.load_files(paths, library=args.library)
+    except Exception as e:
+        print(f"Parse error: {e}", file=sys.stderr)
+        return 2
+
+    include = tuple(s.strip() for s in args.sheets.split(",") if s.strip())
+    try:
+        out = write_xlsx(model, args.output, include=include,
+                         focus=args.focus)
+    except ImportError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+    except Exception as e:
+        print(f"Error: xlsx export failed: {type(e).__name__}: {e}",
+              file=sys.stderr)
+        return 1
+    print(f"Wrote {out}")
+    return 0
 
 
 # ---------------------------------------------------------------------------
@@ -642,8 +692,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Graph direction (graph views only)",
     )
     p_view.add_argument(
-        "--format", choices=("plantuml", "markdown", "html"),
-        help="Output format for tabular/datavalue/matrix views",
+        "--format", choices=("plantuml", "markdown", "html", "csv"),
+        help="Output format for tabular/datavalue/matrix views "
+             "(csv added in v0.66.0)",
     )
     p_view.add_argument(
         "-l", "--library",
@@ -758,6 +809,12 @@ def build_parser() -> argparse.ArgumentParser:
              "may be numbers, true/false, or unit strings like '80 km/h')",
     )
     p_eval.add_argument(
+        "--set-file", metavar="FILE",
+        help="Load bindings from a CSV/XLSX values file "
+             "(v0.66.0; headers: Name,Value[,Unit] or "
+             "Element,Attribute,Value[,Unit])",
+    )
+    p_eval.add_argument(
         "--element",
         help="Qualified element name whose scope to evaluate in",
     )
@@ -774,6 +831,35 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to SysML v2 library files to use for parsing",
     )
     p_eval.set_defaults(func=cmd_eval)
+
+    # -- xlsx (v0.66.0, Goal 7) -------------------------------------------------
+    p_xlsx = sub.add_parser(
+        "xlsx",
+        help="Export tabular views to an Excel workbook",
+        description="Write the Tabular / DataValues / Matrix views into "
+                    "an .xlsx workbook (requires the 'openpyxl' extra: "
+                    "pip install 'sysmlpy[xlsx]'). Exit codes: 0 clean, "
+                    "1 error, 2 parse error.",
+    )
+    p_xlsx.add_argument("files", nargs="+", help="SysML v2 file(s)")
+    p_xlsx.add_argument(
+        "-o", "--output", required=True,
+        help="Output .xlsx file path",
+    )
+    p_xlsx.add_argument(
+        "--sheets", default="tabular,data_value,matrix",
+        help="Comma-separated sheet selection: tabular,data_value,matrix "
+             "(default: all)",
+    )
+    p_xlsx.add_argument(
+        "--focus",
+        help="Focus element for the tabular views",
+    )
+    p_xlsx.add_argument(
+        "-l", "--library",
+        help="Path to SysML v2 library files to use for parsing",
+    )
+    p_xlsx.set_defaults(func=cmd_xlsx)
 
     return parser
 

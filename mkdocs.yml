@@ -32,6 +32,8 @@ nav:
   - Home: index.md
   - Tutorial: TUTORIAL.md
   - Quick Start: quickstart.md
+  - LSP Server: LSP.md
+  - LSP in Neovim & VS Code: LSP_EDITORS.md
   - Status: STATUS.md
   - Changelog: CHANGELOG.md
   - TODO: TODO.md

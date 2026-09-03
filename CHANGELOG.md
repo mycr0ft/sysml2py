@@ -1,5 +1,48 @@
 # CHANGELOG
 
+## v0.66.0 (2026-09-03)
+
+### :white_check_mark: Spreadsheet bridge — CSV/XLSX export, value import (Adoption Roadmap Goal 7)
+
+Also: **`docs/LSP_EDITORS.md`** — a practical setup guide for using the
+LSP server in Neovim (0.11+ `vim.lsp.config` and 0.8–0.10
+nvim-lspconfig) and VS Code (dev host + .vsix packaging, settings
+reference), registered in the MkDocs nav.
+
+- **New `sysmlpy.spreadsheet` module** (exported from the package
+  root):
+  - CSV export of the three tabular views: new `output_format="csv"`
+    on `as_tabular_view` / `as_data_value_tabular_view` /
+    `as_relationship_matrix_view` (shared `_format_table_rows_csv`
+    helper, proper quoting via the `csv` module), plus thin wrappers
+    `tabular_view_to_csv()` / `data_value_tabular_to_csv()` /
+    `relationship_matrix_to_csv()`.
+  - `write_xlsx(model, path, include=…)` — Excel workbook with one
+    bold-headed sheet per view (Tabular / DataValues / Matrix);
+    requires the new optional **`xlsx` extra** (`pip install
+    'sysmlpy[xlsx]'` → openpyxl ≥ 3.1); a missing openpyxl raises a
+    clear `ImportError` instead of failing mid-export.
+  - **Value import**: `import_values_csv()` / `import_values_xlsx()`
+    parse spreadsheet rows into evaluator **bindings** — headers
+    `Name,Value[,Unit]` or `Element,Attribute,Value[,Unit]`; values
+    parse via `parse_value_literal()` (bool → int → float → pint
+    quantity → string). Compose with the Goal 4 evaluator:
+    `check_constraints(model, bindings=import_values_csv("v.csv"))` —
+    spreadsheet-driven constraint gates.
+- **CLI**:
+  - `sysmlpy view FILE --view tabular --format csv` (and data-value /
+    matrix views) — new `csv` output format.
+  - `sysmlpy eval FILE --constraints --set-file values.csv` — load
+    what-if values from CSV/XLSX (BOM-tolerant; `--set` flags win over
+    file values; exit 1 on constraint failures).
+  - New **`sysmlpy xlsx FILE -o model.xlsx [--sheets …] [--focus …]`**
+    subcommand for the workbook export.
+
+New `tests/spreadsheet_test.py` — 37 tests (CSV quoting, header/row
+shape, focus behavior, XLSX sheets/selection/bold headers, import
+layouts incl. units, CLI integration; openpyxl-dependent tests skip
+gracefully). Fast suite: 1070 passed + 25 skipped (optional-dep guards) + 123 conformance = 1193 total.
+
 ## v0.65.0 (2026-09-03)
 
 ### :white_check_mark: LSP server — editor integration (Adoption Roadmap Goal 5)

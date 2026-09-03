@@ -22,6 +22,9 @@ __all__ = [
     "to_interchange", "from_interchange", "interchange_to_json_text",
     "evaluate_expression", "evaluate_calculation", "collect_values",
     "check_constraints", "ConstraintReport", "ConstraintResult",
+    "tabular_view_to_csv", "data_value_tabular_to_csv",
+    "relationship_matrix_to_csv", "write_xlsx",
+    "import_values_csv", "import_values_xlsx", "parse_value_literal",
     "analyze", "AnalysisResult", "SemanticIssue", "SemanticAnalyzer",
     "SysMLSyntaxError", "PartialParseError",
     "loads_partial", "load_partial",
@@ -30,7 +33,7 @@ __all__ = [
     "render_state_transition_view_svg", "boxes_view",
 ]
 __author__ = "Jon Fox"
-__version__ = "0.65.0"
+__version__ = "0.66.0"
 
 from sysmlpy.usage import (
     Item, Attribute, Part, Port, Action, Reference, UseCase, Requirement, Interface, Message,
@@ -56,6 +59,11 @@ from sysmlpy.interchange import (
 from sysmlpy.evaluator import (
     evaluate_expression, evaluate_calculation, collect_values,
     check_constraints, ConstraintReport, ConstraintResult,
+)
+from sysmlpy.spreadsheet import (
+    tabular_view_to_csv, data_value_tabular_to_csv,
+    relationship_matrix_to_csv, write_xlsx,
+    import_values_csv, import_values_xlsx, parse_value_literal,
 )
 
 

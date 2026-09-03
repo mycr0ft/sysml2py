@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.65.0** (2026-09-03)
+Current version: **v0.66.0** (2026-09-03)
 
 ---
 
@@ -83,6 +83,11 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   text sync) over stdio; `sysmlpy-lsp` console script + `python -m
   sysmlpy.lsp`; VS Code extension scaffold in `editors/vscode/`;
   Neovim recipes in `docs/LSP.md` (v0.65.0).
+- **Spreadsheet bridge** — `sysmlpy.spreadsheet`: CSV export of the
+  tabular views (`--format csv`), XLSX workbook export (`sysmlpy xlsx`,
+  optional openpyxl extra), and spreadsheet value import into
+  evaluator bindings (`eval --set-file`, `import_values_csv()`)
+  (v0.66.0).
 - **ANTLR4 parser** — default parser, using OMG grammar v2026.03.0
   - `load()`, `loads()`, `parse()`, `load_grammar()` (public API)
   - `load_antlr()`, `load_grammar_antlr()` (explicit ANTLR4 path)
@@ -234,6 +239,7 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 | `tests/interchange_test.py` | 38 | ✅ All pass |
 | `tests/evaluator_test.py` | 44 | ✅ All pass |
 | `tests/lsp_test.py` | 37 | ✅ All pass |
+| `tests/spreadsheet_test.py` | 37 | ✅ 35 pass, 2 skip (no openpyxl) |
 | `tests/navigate_test.py` | 42 | ✅ All pass |
 | `tests/cli_test.py` | 39 | ✅ All pass |
 | `tests/validator_test.py` | 34 | ✅ All pass |
@@ -248,7 +254,7 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 | `tests/main_test.py` | 7 | ✅ All pass |
 | `tests/partial_test.py` | 6 | ✅ All pass |
 | `tests/conformance_test.py` | 123 | ✅ All pass (100%) |
-| **Total** | **1177** | **1054 fast + 123 conformance pass** |
+| **Total** | **1193** | **1070 fast + 123 conformance pass (25 skipped: optional deps)** |
 
 ### Documentation
 

@@ -138,6 +138,24 @@ sysmlpy analyze model/*.sysml --format json --fail-on error
 sysmlpy trace model/*.sysml --fail-on uncovered --format markdown -o coverage.md
 ```
 
+### Spreadsheet Bridge (v0.66.0 — Adoption Roadmap Goal 7)
+
+```bash
+sysmlpy view model.sysml --view tabular --format csv        # CSV export
+sysmlpy xlsx model.sysml -o model.xlsx                      # Excel workbook (needs 'sysmlpy[xlsx]')
+sysmlpy eval model.sysml --constraints --set-file values.csv  # what-if from a sheet
+```
+
+```python
+from sysmlpy import loads, check_constraints, import_values_csv
+model = loads(sysml_text)
+bindings = import_values_csv("values.csv")   # Name,Value[,Unit] rows
+report = check_constraints(model, bindings=bindings)  # sheet-driven gate
+```
+
+Import headers: `Name,Value[,Unit]` or `Element,Attribute,Value[,Unit]`;
+values parse as bool/int/float/pint-unit/string.
+
 ### Language Server Protocol (v0.65.0 — Adoption Roadmap Goal 5)
 
 Editor integration: diagnostics, outline, hover, go-to-definition and
@@ -304,13 +322,14 @@ The `analyze()` function now includes stylistic checks that warn about naming co
 | JSON interchange | 38 | ✅ 38 pass |
 | Expression evaluator | 44 | ✅ 44 pass |
 | LSP server | 37 | ✅ 37 pass |
+| Spreadsheet bridge | 37 | ✅ 35 pass, 2 skip |
 | Model navigation | 42 | ✅ 42 pass |
 | CLI | 39 | ✅ 39 pass |
 | Validator | 34 | ✅ 34 pass |
 | Import resolution | 31 | ✅ 31 pass |
 | Multi-file loading | 17 | ✅ 17 pass |
 | Conformance | 123 | ✅ 123 pass |
-| **Total** | **1177** | **1054 fast + 123 conformance pass** |
+| **Total** | **1193** | **1070 fast + 123 conformance pass (25 skipped: optional deps)** |
 
 ---
 
