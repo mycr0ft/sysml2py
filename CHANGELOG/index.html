@@ -5442,6 +5442,14 @@
   PyPI name collision. <code>sysmlpy.boxes_view</code> imports the new name and
   the ImportError hint is updated; the 19 boxes-adapter tests now run
   (they were skipping against a stale install).</li>
+<li><strong>Nested composite states in the boxes view</strong> (diagramboxes v0.4.0
+  layout pass): <code>as_state_transition_view_boxes</code> now renders composite
+  states as real containment (sub-states drawn inside the parent box,
+  parented initial/final pseudostates, internal transitions routed
+  inside the composite) instead of flattening <code>Parent.Sub</code> labels.
+  Transition resolution gained a last-segment fallback so
+  <code>transition Running then Stopped;</code> (target nested in Running)
+  resolves from the enclosing level. 24 adapter tests.</li>
 </ul>
 <h2 id="v0670-2026-09-03">v0.67.0 (2026-09-03)<a class="headerlink" href="#v0670-2026-09-03" title="Permanent link">&para;</a></h2>
 <h3 id="white_check_mark-plantuml-notation-fidelity-official-sysml-v2-graphical-conventions-adoption-roadmap-goal-6-phase-1">:white_check_mark: PlantUML notation fidelity — official SysML v2 graphical conventions (Adoption Roadmap Goal 6, phase 1)<a class="headerlink" href="#white_check_mark-plantuml-notation-fidelity-official-sysml-v2-graphical-conventions-adoption-roadmap-goal-6-phase-1" title="Permanent link">&para;</a></h3>
