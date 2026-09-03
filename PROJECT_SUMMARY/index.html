@@ -547,6 +547,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#requirement-traceability-v0620-adoption-roadmap-goal-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirement Traceability (v0.62.0 — Adoption Roadmap Goal 2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#plantuml-view-renderings-v0252-v0270" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1210,12 +1221,33 @@ codes (0 = success/clean, 1 = findings at threshold / operational error,
 <td><code>sysmlpy format FILE...</code></td>
 <td>Canonicalize in place (<code>-i</code>) or verify (<code>--check</code>); alias <code>fmt</code></td>
 </tr>
+<tr>
+<td><code>sysmlpy trace FILE [FILE...]</code></td>
+<td>Requirement traceability &amp; verification coverage report; <code>--format text\|markdown\|json</code>, <code>--fail-on uncovered</code>, <code>-o FILE</code></td>
+</tr>
 </tbody>
 </table>
 <p>The legacy flat form (<code>sysmlpy FILE --dump</code>) is preserved with its
 original exit codes. Example CI usage:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sysmlpy<span class="w"> </span>analyze<span class="w"> </span>model/*.sysml<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span>--fail-on<span class="w"> </span>error
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>sysmlpy<span class="w"> </span>trace<span class="w"> </span>model/*.sysml<span class="w"> </span>--fail-on<span class="w"> </span>uncovered<span class="w"> </span>--format<span class="w"> </span>markdown<span class="w"> </span>-o<span class="w"> </span>coverage.md
 </code></pre></div>
+<h3 id="requirement-traceability-v0620-adoption-roadmap-goal-2">Requirement Traceability (v0.62.0 — Adoption Roadmap Goal 2)<a class="headerlink" href="#requirement-traceability-v0620-adoption-roadmap-goal-2" title="Permanent link">&para;</a></h3>
+<p>The satisfy / verify / verification relationships parse, round-trip, and
+feed a traceability reporting module:</p>
+<ul>
+<li><code>extract_traceability(model)</code> → <code>TraceabilityReport</code> with per-
+  requirement traces (qualified name, doc text, subject, <code>satisfied_by</code>,
+  <code>verified_by</code>, status <code>covered</code> / <code>partial</code> / <code>uncovered</code>) and coverage
+  queries (<code>coverage()</code>, <code>uncovered()</code>, <code>unsatisfied()</code>, <code>unverified()</code>).</li>
+<li>Output as text, Markdown, JSON (<code>to_text()</code> / <code>to_markdown()</code> /
+  <code>to_json()</code>) or a matrix view (<code>as_traceability_matrix_view</code>, formats:
+  markdown / html / plantuml).</li>
+<li>Requirement constructs: <code>subject : T;</code> / <code>subject v : T;</code> extraction,
+  <code>verify</code> members (reference and inline-declaration forms),
+  <code>verification def</code> definitions and package-level <code>verification</code>
+  usages — all with stable round-trip.</li>
+</ul>
 <h3 id="plantuml-view-renderings-v0252-v0270">PlantUML View Renderings (v0.25.2 → v0.27.0)<a class="headerlink" href="#plantuml-view-renderings-v0252-v0270" title="Permanent link">&para;</a></h3>
 <p>Eight view rendering functions across two releases:</p>
 <table>
@@ -1430,24 +1462,34 @@ original exit codes. Example CI usage:</p>
 <td>✅ 143 pass (100%)</td>
 </tr>
 <tr>
-<td>Programmatic API</td>
-<td>54</td>
-<td>✅ 54 pass</td>
-</tr>
-<tr>
-<td>Integration (main)</td>
-<td>7</td>
-<td>✅ 7 pass</td>
-</tr>
-<tr>
-<td>PlantUML rendering</td>
-<td>108</td>
-<td>✅ 108 pass</td>
-</tr>
-<tr>
 <td>Semantic analysis</td>
 <td>170</td>
 <td>✅ 170 pass</td>
+</tr>
+<tr>
+<td>PlantUML rendering</td>
+<td>122</td>
+<td>✅ 122 pass</td>
+</tr>
+<tr>
+<td>Storage backends</td>
+<td>97</td>
+<td>✅ pass (optional deps skipped if missing)</td>
+</tr>
+<tr>
+<td>Programmatic API</td>
+<td>75</td>
+<td>✅ 75 pass</td>
+</tr>
+<tr>
+<td>Traceability</td>
+<td>46</td>
+<td>✅ 46 pass</td>
+</tr>
+<tr>
+<td>Model navigation</td>
+<td>42</td>
+<td>✅ 42 pass</td>
 </tr>
 <tr>
 <td>CLI</td>
@@ -1455,29 +1497,19 @@ original exit codes. Example CI usage:</p>
 <td>✅ 39 pass</td>
 </tr>
 <tr>
-<td>Multi-file loading</td>
-<td>17</td>
-<td>✅ 17 pass</td>
-</tr>
-<tr>
-<td>Model navigation</td>
-<td>33</td>
-<td>✅ 33 pass</td>
-</tr>
-<tr>
-<td>Import resolution</td>
-<td>16</td>
-<td>✅ 16 pass</td>
-</tr>
-<tr>
 <td>Validator</td>
 <td>34</td>
 <td>✅ 34 pass</td>
 </tr>
 <tr>
-<td>Storage backends</td>
-<td>46</td>
-<td>✅ pass (optional deps skipped if missing)</td>
+<td>Import resolution</td>
+<td>31</td>
+<td>✅ 31 pass</td>
+</tr>
+<tr>
+<td>Multi-file loading</td>
+<td>17</td>
+<td>✅ 17 pass</td>
 </tr>
 <tr>
 <td>Conformance</td>
@@ -1486,8 +1518,8 @@ original exit codes. Example CI usage:</p>
 </tr>
 <tr>
 <td><strong>Total</strong></td>
-<td><strong>805</strong></td>
-<td><strong>805 pass</strong></td>
+<td><strong>1080</strong></td>
+<td><strong>957 fast + 123 conformance pass</strong></td>
 </tr>
 </tbody>
 </table>

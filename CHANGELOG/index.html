@@ -431,6 +431,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0620-2026-09-02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.62.0 (2026-09-02)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.62.0 (2026-09-02)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-requirement-traceability-verification-coverage-adoption-roadmap-goal-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Requirement traceability &amp; verification coverage (Adoption Roadmap Goal 2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0610-2026-09-02" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2748,6 +2776,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0620-2026-09-02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.62.0 (2026-09-02)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.62.0 (2026-09-02)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-requirement-traceability-verification-coverage-adoption-roadmap-goal-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Requirement traceability &amp; verification coverage (Adoption Roadmap Goal 2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0610-2026-09-02" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5024,6 +5080,52 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0620-2026-09-02">v0.62.0 (2026-09-02)<a class="headerlink" href="#v0620-2026-09-02" title="Permanent link">&para;</a></h2>
+<h3 id="white_check_mark-requirement-traceability-verification-coverage-adoption-roadmap-goal-2">:white_check_mark: Requirement traceability &amp; verification coverage (Adoption Roadmap Goal 2)<a class="headerlink" href="#white_check_mark-requirement-traceability-verification-coverage-adoption-roadmap-goal-2" title="Permanent link">&para;</a></h3>
+<p>The satisfy / verify / verification relationships now parse, round-trip,
+and feed a new traceability reporting module:</p>
+<ul>
+<li><strong>Parser / grammar:</strong></li>
+<li><code>verification def</code> definitions and package-level
+    <code>verification &lt;name&gt; : &lt;Type&gt;;</code> usages parse and round-trip (the
+    usage dispatch was previously missing; new
+    <code>RequirementVerificationMember</code> grammar class).</li>
+<li><code>verify</code> members inside requirement bodies round-trip in both legal
+    forms — reference (<code>verify massCheck;</code>) and inline declaration
+    (<code>verify requirement v2 : VDef;</code>) — via the new
+    <code>VerifyRequirementUsage</code> grammar class. (Verified empirically: <code>verify</code>
+    is only legal inside requirement bodies, not verification bodies.)</li>
+<li><code>VerificationCaseDefinition</code> now dumps keyword <code>verification def</code>
+    (previously <code>verification case def</code>, which did not re-parse) and its
+    case bodies are parsed instead of hardcoded empty.</li>
+<li>Requirement subjects (<code>subject : Vehicle;</code> and
+    <code>subject v : Vehicle;</code>) are extracted as <code>(name, type)</code> tuples.</li>
+<li><strong>Programmatic API:</strong> <code>Requirement.verified_by</code> (names from <code>verify</code>
+  members), <code>Requirement.subject</code>, satisfy edges via the existing
+  <code>SatisfyRequirementUsage</code> grammar wrapper (<code>.ors</code> requirement ref,
+  <code>.ssm</code> subject chain).</li>
+<li><strong>New <code>sysmlpy.traceability</code> module</strong> (also exported from the package
+  root):</li>
+<li><code>extract_traceability(model)</code> builds a <code>TraceabilityReport</code> of
+    per-requirement <code>RequirementTrace</code> records: qualified name,
+    documentation text, subject, <code>satisfied_by</code> / <code>verified_by</code> edges,
+    and a computed status (<code>covered</code> / <code>partial</code> / <code>uncovered</code>).
+    Undeclared (forward-referenced) satisfy targets still appear in the
+    report so edges are never silently dropped.</li>
+<li>Coverage queries: <code>coverage()</code>, <code>uncovered()</code>, <code>unsatisfied()</code>,
+    <code>unverified()</code>, <code>by_name()</code>.</li>
+<li>Output: <code>to_text()</code>, <code>to_markdown()</code>, <code>to_json()</code>.</li>
+<li><code>as_traceability_matrix_view(model, output_format=...)</code> renders a
+    requirements × coverage matrix as Markdown, HTML, or PlantUML, with
+    <code>focus</code> / <code>elements</code> filtering, <code>show_text</code>, and <code>style="color"</code>.</li>
+<li><strong>CLI:</strong> <code>sysmlpy trace FILE... [--format text|markdown|json]
+  [--fail-on uncovered] [-o FILE] [-l LIBRARY]</code> — exit 0 clean, 1 when
+  uncovered requirements exist under <code>--fail-on uncovered</code>, 2 on parse
+  failure. Fits the Goal-1 exit-code contract for CI gates.</li>
+</ul>
+<p>New <code>tests/traceability_test.py</code> — 46 tests covering construct
+round-trips, trace extraction, coverage queries, matrix views, and the
+<code>trace</code> CLI. Fast suite now 957 tests + 123 conformance = 1080 total.</p>
 <h2 id="v0610-2026-09-02">v0.61.0 (2026-09-02)<a class="headerlink" href="#v0610-2026-09-02" title="Permanent link">&para;</a></h2>
 <h3 id="white_check_mark-cli-analyze-view-commands-with-ci-friendly-exit-codes-adoption-roadmap-goal-1">:white_check_mark: CLI: <code>analyze</code> + <code>view</code> commands with CI-friendly exit codes (Adoption Roadmap Goal 1)<a class="headerlink" href="#white_check_mark-cli-analyze-view-commands-with-ci-friendly-exit-codes-adoption-roadmap-goal-1" title="Permanent link">&para;</a></h3>
 <p>The CLI (<code>src/sysmlpy/__main__.py</code>, console script <code>sysmlpy</code>) was
