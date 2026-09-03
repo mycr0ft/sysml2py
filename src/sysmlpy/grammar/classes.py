@@ -9650,9 +9650,93 @@ class CaseDefinition(_DeclaredDefinitionBase):
     body_class = CaseBody
 
 
+class VerifyRequirementUsage:
+    # requirementVerificationUsage :
+    # 	ownedReferenceSubsetting featureSpecialization* requirementBody
+    #   | ( usageExtensionKeyword* REQUIREMENT | usageExtensionKeyword+ )
+    #     constraintUsageDeclaration requirementBody
+    # ;
+    """A `verify <ref>` member inside a requirement body (v0.62.0).
+
+    Asserts that the referenced verification case verifies the owning
+    requirement; the requirement-keyword form declares an inline
+    verification usage.
+    """
+    def __init__(self, definition=None):
+        self.keyword = "verify"
+        self.ors = None
+        self.fsp = []
+        self.declaration = None
+        self.body = RequirementBody(None)
+        if definition is not None and valid_definition(definition, self.__class__.__name__):
+            if definition.get("ors") is not None:
+                self.ors = OwnedReferenceSubsetting(definition["ors"])
+            for spec in (definition.get("fsp") or []):
+                self.fsp.append(FeatureSpecializationPart(spec))
+            if definition.get("declaration") is not None:
+                decl_dict = definition["declaration"]
+                if decl_dict.get("name") == "CalculationUsageDeclaration":
+                    # Already CUD-shaped (get_definition round-trip)
+                    self.declaration = CalculationUsageDeclaration(decl_dict)
+                else:
+                    self.declaration = CalculationUsageDeclaration(
+                        {"name": "CalculationUsageDeclaration",
+                         "declaration": decl_dict,
+                         "valuepart": None}
+                    )
+            if definition.get("body") is not None:
+                self.body = RequirementBody(definition["body"])
+
+    def dump(self):
+        output = [self.keyword]
+        if self.ors is not None:
+            output.append(self.ors.dump())
+            for spec in self.fsp:
+                output.append(spec.dump())
+        elif self.declaration is not None:
+            output.append("requirement")
+            output.append(self.declaration.dump())
+        output.append(self.body.dump())
+        return " ".join(filter(None, output))
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ors": self.ors.get_definition() if self.ors else None,
+            "fsp": [spec.get_definition() for spec in self.fsp],
+            "declaration": self.declaration.get_definition() if self.declaration else None,
+            "body": self.body.get_definition() if hasattr(self.body, 'get_definition') else {"name": "RequirementBody", "item": []},
+        }
+
+
+class RequirementVerificationMember:
+    # RequirementVerificationMember :
+    # 	prefix=MemberPrefix VERIFY requirementVerificationUsage
+    # ;
+    def __init__(self, definition=None):
+        self.prefix = None
+        self.child = None
+        if definition is not None and valid_definition(definition, self.__class__.__name__):
+            if definition.get("prefix") is not None:
+                self.prefix = MemberPrefix(definition["prefix"])
+            self.child = VerifyRequirementUsage(definition["ownedRelatedElement"])
+
+    def dump(self):
+        if self.prefix is not None:
+            return " ".join(filter(None, [self.prefix.dump(), self.child.dump()]))
+        return self.child.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "prefix": self.prefix.get_definition() if self.prefix else None,
+            "ownedRelatedElement": self.child.get_definition() if self.child else None,
+        }
+
+
 class VerificationCaseDefinition(_DeclaredDefinitionBase):
     # verificationCaseDefinition : occurrenceDefinitionPrefix VERIFICATION DEF definitionDeclaration caseBody
-    keyword = "verification case def"
+    keyword = "verification def"
     body_class = CaseBody
 
 

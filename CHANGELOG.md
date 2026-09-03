@@ -1,5 +1,54 @@
 # CHANGELOG
 
+## v0.62.0 (2026-09-02)
+
+### :white_check_mark: Requirement traceability & verification coverage (Adoption Roadmap Goal 2)
+
+The satisfy / verify / verification relationships now parse, round-trip,
+and feed a new traceability reporting module:
+
+- **Parser / grammar:**
+  - `verification def` definitions and package-level
+    `verification <name> : <Type>;` usages parse and round-trip (the
+    usage dispatch was previously missing; new
+    `RequirementVerificationMember` grammar class).
+  - `verify` members inside requirement bodies round-trip in both legal
+    forms — reference (`verify massCheck;`) and inline declaration
+    (`verify requirement v2 : VDef;`) — via the new
+    `VerifyRequirementUsage` grammar class. (Verified empirically: `verify`
+    is only legal inside requirement bodies, not verification bodies.)
+  - `VerificationCaseDefinition` now dumps keyword `verification def`
+    (previously `verification case def`, which did not re-parse) and its
+    case bodies are parsed instead of hardcoded empty.
+  - Requirement subjects (`subject : Vehicle;` and
+    `subject v : Vehicle;`) are extracted as `(name, type)` tuples.
+- **Programmatic API:** `Requirement.verified_by` (names from `verify`
+  members), `Requirement.subject`, satisfy edges via the existing
+  `SatisfyRequirementUsage` grammar wrapper (`.ors` requirement ref,
+  `.ssm` subject chain).
+- **New `sysmlpy.traceability` module** (also exported from the package
+  root):
+  - `extract_traceability(model)` builds a `TraceabilityReport` of
+    per-requirement `RequirementTrace` records: qualified name,
+    documentation text, subject, `satisfied_by` / `verified_by` edges,
+    and a computed status (`covered` / `partial` / `uncovered`).
+    Undeclared (forward-referenced) satisfy targets still appear in the
+    report so edges are never silently dropped.
+  - Coverage queries: `coverage()`, `uncovered()`, `unsatisfied()`,
+    `unverified()`, `by_name()`.
+  - Output: `to_text()`, `to_markdown()`, `to_json()`.
+  - `as_traceability_matrix_view(model, output_format=...)` renders a
+    requirements × coverage matrix as Markdown, HTML, or PlantUML, with
+    `focus` / `elements` filtering, `show_text`, and `style="color"`.
+- **CLI:** `sysmlpy trace FILE... [--format text|markdown|json]
+  [--fail-on uncovered] [-o FILE] [-l LIBRARY]` — exit 0 clean, 1 when
+  uncovered requirements exist under `--fail-on uncovered`, 2 on parse
+  failure. Fits the Goal-1 exit-code contract for CI gates.
+
+New `tests/traceability_test.py` — 46 tests covering construct
+round-trips, trace extraction, coverage queries, matrix views, and the
+`trace` CLI. Fast suite now 957 tests + 123 conformance = 1080 total.
+
 ## v0.61.0 (2026-09-02)
 
 ### :white_check_mark: CLI: `analyze` + `view` commands with CI-friendly exit codes (Adoption Roadmap Goal 1)

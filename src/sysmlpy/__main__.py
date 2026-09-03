@@ -31,7 +31,7 @@ import sysmlpy
 from sysmlpy import loads
 
 # Subcommand table, also used to detect the legacy flat invocation form.
-SUBCOMMANDS = ("parse", "analyze", "view", "format", "fmt")
+SUBCOMMANDS = ("parse", "analyze", "view", "trace", "format", "fmt")
 
 
 # ---------------------------------------------------------------------------
@@ -277,6 +277,46 @@ def cmd_format(args) -> int:
     return exit_code
 
 
+def cmd_trace(args) -> int:
+    """Requirement traceability & verification coverage (v0.62.0, Goal 2)."""
+    from sysmlpy.traceability import extract_traceability
+
+    paths = [Path(f) for f in args.files]
+    for p in _missing_files(paths):
+        print(f"Error: File '{p}' not found.", file=sys.stderr)
+        return 2
+
+    try:
+        model = sysmlpy.load_files(paths, library=args.library)
+    except Exception as e:
+        print(f"Parse error: {e}", file=sys.stderr)
+        return 2
+
+    report = extract_traceability(model)
+
+    if args.format == "json":
+        output = json.dumps(report.to_json(), indent=2)
+    elif args.format == "markdown":
+        output = report.to_markdown()
+    else:
+        output = report.to_text()
+
+    if args.output:
+        Path(args.output).write_text(output + "\n", encoding="utf-8")
+        print(f"Wrote {args.output}")
+    else:
+        print(output)
+
+    if args.fail_on == "uncovered" and report.uncovered():
+        for trace in report.uncovered():
+            print(
+                f"uncovered: {trace.qualified_name or trace.name}",
+                file=sys.stderr,
+            )
+        return 1
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # legacy flat invocation (kept for backward compatibility)
 # ---------------------------------------------------------------------------
@@ -473,6 +513,33 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to SysML v2 library files to use for parsing",
     )
     p_format.set_defaults(func=cmd_format)
+
+    p_trace = sub.add_parser(
+        "trace",
+        help="Requirement traceability \u0026 verification coverage report",
+        description="Load the files as one merged model, extract satisfy "
+                    "and verify relationships, and report requirement "
+                    "coverage. Exit codes: 0 clean, 1 uncovered "
+                    "requirements (--fail-on uncovered), 2 parse error.",
+    )
+    p_trace.add_argument("files", nargs="+", help="SysML v2 file(s)")
+    p_trace.add_argument(
+        "--format", choices=("text", "markdown", "json"), default="text",
+        help="Report format (default: text)",
+    )
+    p_trace.add_argument(
+        "--fail-on", choices=("uncovered", "none"), default="none",
+        help="Exit 1 when uncovered requirements exist (default: none)",
+    )
+    p_trace.add_argument(
+        "-o", "--output",
+        help="Write the report to a file instead of stdout",
+    )
+    p_trace.add_argument(
+        "-l", "--library",
+        help="Path to SysML v2 library files to use for parsing",
+    )
+    p_trace.set_defaults(func=cmd_trace)
 
     return parser
 

@@ -125,13 +125,32 @@ codes (0 = success/clean, 1 = findings at threshold / operational error,
 | `sysmlpy view FILE --view NAME` | Render any of the 11 views (`gv`, `pv`, `afv`, `iv`, `stv`, `sv`, `cv`, `tabular`, `datavalue`, `matrix`, `browser`) to stdout or `-o FILE`; `--focus`, `--element`, `--style`, `--direction`, `--format` |
 | `sysmlpy parse FILE` | Parse and print repr / `--dump` / `--json` |
 | `sysmlpy format FILE...` | Canonicalize in place (`-i`) or verify (`--check`); alias `fmt` |
+| `sysmlpy trace FILE [FILE...]` | Requirement traceability & verification coverage report; `--format text\|markdown\|json`, `--fail-on uncovered`, `-o FILE` |
 
 The legacy flat form (`sysmlpy FILE --dump`) is preserved with its
 original exit codes. Example CI usage:
 
 ```bash
 sysmlpy analyze model/*.sysml --format json --fail-on error
+sysmlpy trace model/*.sysml --fail-on uncovered --format markdown -o coverage.md
 ```
+
+### Requirement Traceability (v0.62.0 — Adoption Roadmap Goal 2)
+
+The satisfy / verify / verification relationships parse, round-trip, and
+feed a traceability reporting module:
+
+- `extract_traceability(model)` → `TraceabilityReport` with per-
+  requirement traces (qualified name, doc text, subject, `satisfied_by`,
+  `verified_by`, status `covered` / `partial` / `uncovered`) and coverage
+  queries (`coverage()`, `uncovered()`, `unsatisfied()`, `unverified()`).
+- Output as text, Markdown, JSON (`to_text()` / `to_markdown()` /
+  `to_json()`) or a matrix view (`as_traceability_matrix_view`, formats:
+  markdown / html / plantuml).
+- Requirement constructs: `subject : T;` / `subject v : T;` extraction,
+  `verify` members (reference and inline-declaration forms),
+  `verification def` definitions and package-level `verification`
+  usages — all with stable round-trip.
 
 ### PlantUML View Renderings (v0.25.2 → v0.27.0)
 
@@ -206,18 +225,18 @@ The `analyze()` function now includes stylistic checks that warn about naming co
 | Suite | Count | Status |
 |-------|-------|--------|
 | Grammar round-trip | 143 | ✅ 143 pass (100%) |
-| Programmatic API | 54 | ✅ 54 pass |
-| Integration (main) | 7 | ✅ 7 pass |
-| PlantUML rendering | 108 | ✅ 108 pass |
 | Semantic analysis | 170 | ✅ 170 pass |
+| PlantUML rendering | 122 | ✅ 122 pass |
+| Storage backends | 97 | ✅ pass (optional deps skipped if missing) |
+| Programmatic API | 75 | ✅ 75 pass |
+| Traceability | 46 | ✅ 46 pass |
+| Model navigation | 42 | ✅ 42 pass |
 | CLI | 39 | ✅ 39 pass |
-| Multi-file loading | 17 | ✅ 17 pass |
-| Model navigation | 33 | ✅ 33 pass |
-| Import resolution | 16 | ✅ 16 pass |
 | Validator | 34 | ✅ 34 pass |
-| Storage backends | 46 | ✅ pass (optional deps skipped if missing) |
+| Import resolution | 31 | ✅ 31 pass |
+| Multi-file loading | 17 | ✅ 17 pass |
 | Conformance | 123 | ✅ 123 pass |
-| **Total** | **805** | **805 pass** |
+| **Total** | **1080** | **957 fast + 123 conformance pass** |
 
 ---
 

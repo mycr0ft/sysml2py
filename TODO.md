@@ -14,7 +14,7 @@ are complete.  Follow-up work is organized under the
 (§6 of the plan) — goals to make sysmlpy useful to systems engineers:
 
 - [x] **Goal 1 — CLI: `analyze` + `view` commands with exit codes** *(v0.61.0: `sysmlpy analyze FILE... [--format json] [--fail-on ...]`, `sysmlpy view FILE --view NAME [--focus ...] [-o ...]`, `parse`/`format` subcommands, documented 0/1/2 exit codes, legacy flat form preserved; 39 tests in `tests/cli_test.py`)*
-- [ ] **Goal 2 — Requirement traceability & verification coverage** (satisfy/verify/allocation traversal, coverage matrices, ReqIF)
+- [x] **Goal 2 — Requirement traceability & verification coverage** *(v0.62.0: `verification def`/`verification` usages and `verify` members (reference + inline declaration forms) parse and round-trip; `Requirement.subject`/`.verified_by` extraction; new `sysmlpy.traceability` module with `extract_traceability` → `TraceabilityReport` (coverage queries, text/markdown/json output) and `as_traceability_matrix_view` (markdown/html/plantuml); `sysmlpy trace` CLI with `--fail-on uncovered` exit gate; 46 tests in `tests/traceability_test.py`)*
 - [ ] **Goal 3 — JSON interchange format** (SysML v2 spec JSON exchange, not the internal dict)
 - [ ] **Goal 4 — Expression evaluator** (bind pint attribute values into calc/constraint evaluation → trade studies)
 - [ ] **Goal 5 — LSP server** (VS Code diagnostics from `parse()` + `analyze()`)

@@ -1281,6 +1281,22 @@ class Package(Searchable):
                         c.name = decl.identification.declaredName
                 c.parent = self
                 self.children.append(c)
+            elif inner_class == "VerificationCaseUsage":
+                # v0.62.0: `verification <name> : <Type>` usage at package
+                # level (requirement traceability support).
+                c = VerificationCase()
+                c.grammar = inner_element
+                if hasattr(inner_element, 'declaration') and inner_element.declaration:
+                    decl = inner_element.declaration
+                    # CalculationUsageDeclaration → UsageDeclaration →
+                    # FeatureDeclaration → Identification
+                    usage_decl = getattr(decl, 'declaration', None)
+                    if usage_decl := getattr(usage_decl, 'declaration', None) or usage_decl:
+                        feat_decl = usage_decl
+                        if hasattr(feat_decl, 'identification') and feat_decl.identification:
+                            c.name = feat_decl.identification.declaredName
+                c.parent = self
+                self.children.append(c)
             elif inner_class == "AnnotatingElement":
                 wrapper = _GrammarAnnotationWrapper(inner_element)
                 wrapper.parent = self

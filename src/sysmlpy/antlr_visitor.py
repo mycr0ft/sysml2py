@@ -2311,6 +2311,8 @@ def _visit_behavior_usage_member(bum_ctx):
             return _make_assert_constraint_usage_dict(bue.assertConstraintUsage(), prefix)
         elif hasattr(bue, 'satisfyRequirementUsage') and bue.satisfyRequirementUsage():
             return _make_satisfy_requirement_usage_dict(bue.satisfyRequirementUsage(), prefix)
+        elif hasattr(bue, 'verificationCaseUsage') and bue.verificationCaseUsage():
+            return _make_nested_verification_case_usage_dict(bue.verificationCaseUsage(), prefix)
     
     return None
 
@@ -7850,12 +7852,10 @@ def _make_verification_case_definition_dict(ctx, member_prefix=None):
     """
     name, shortname = _get_definition_identification(ctx)
     occ_prefix = _get_occurrence_definition_prefix(ctx)
-    # Get body items from definition body
-    body_items = []
-    if hasattr(ctx, "definition") and ctx.definition():
-        defn = ctx.definition()
-        if hasattr(defn, "definitionBody") and defn.definitionBody():
-            body_items = _visit_definition_body_dict(defn.definitionBody())
+    # Parse caseBody (subject members, action bodies, etc.) — v0.62.0
+    case_body = {"name": "CaseBody", "item": [], "ownedRelationship": None}
+    if hasattr(ctx, "caseBody") and ctx.caseBody():
+        case_body = _visit_case_body_dict(ctx.caseBody())
     if not name and not shortname:
         name = "VerificationCase_" + str(uuid.uuid4())[:8]
     return {
@@ -7875,11 +7875,7 @@ def _make_verification_case_definition_dict(ctx, member_prefix=None):
                     },
                     "subclassificationpart": _get_subclassification_part(ctx)
                 },
-                "body": {
-                    "name": "CaseBody",
-                    "item": [],
-                    "ownedRelationship": None
-                }
+                "body": case_body
             }
         }
     }
@@ -9258,9 +9254,138 @@ def _visit_requirement_body_item_dict(item_ctx):
     # Check for actorMember (skip for now)
     # Check for stakeholderMember (skip for now)
     # Check for framedConcernMember (skip for now)
-    # Check for requirementVerificationMember (skip for now)
+    # requirementVerificationMember (v0.62.0: requirement traceability)
+    if hasattr(item_ctx, 'requirementVerificationMember') and item_ctx.requirementVerificationMember():
+        rvm = item_ctx.requirementVerificationMember()
+        if isinstance(rvm, list):
+            rvm = rvm[0]
+        verify_dict = _visit_requirement_verification_member_dict(rvm)
+        if verify_dict:
+            return {
+                "name": "RequirementBodyItem",
+                "ownedRelationship": verify_dict
+            }
     
     return None
+
+
+def _visit_requirement_verification_member_dict(rvm_ctx):
+    """Visit a requirementVerificationMember and return its member dict.
+
+    Grammar:
+      requirementVerificationMember : memberPrefix VERIFY requirementVerificationUsage ;
+    """
+    if rvm_ctx is None:
+        return None
+
+    prefix = None
+    if hasattr(rvm_ctx, 'memberPrefix') and rvm_ctx.memberPrefix():
+        mp = rvm_ctx.memberPrefix()
+        if hasattr(mp, 'visibilityIndicator') and mp.visibilityIndicator():
+            prefix = {
+                "name": "MemberPrefix",
+                "visibility": _visit_visibility_indicator_dict(mp.visibilityIndicator())
+            }
+
+    vru = None
+    if hasattr(rvm_ctx, 'requirementVerificationUsage') and rvm_ctx.requirementVerificationUsage():
+        vru = rvm_ctx.requirementVerificationUsage()
+        if isinstance(vru, list):
+            vru = vru[0]
+        usage = _make_verify_requirement_usage_dict(vru)
+        if usage:
+            return {
+                "name": "RequirementVerificationMember",
+                "prefix": prefix,
+                "ownedRelatedElement": usage
+            }
+    return None
+
+
+def _make_verify_requirement_usage_dict(vru_ctx, prefix=None):
+    """Create a VerifyRequirementUsage dictionary.
+
+    Grammar:
+      requirementVerificationUsage
+        : ownedReferenceSubsetting featureSpecialization* requirementBody
+        | ( usageExtensionKeyword* REQUIREMENT | usageExtensionKeyword+ )
+          constraintUsageDeclaration requirementBody
+        ;
+
+    ``verify <ref>;`` references an existing verification case; the
+    requirement-keyword form declares an inline verification usage.
+    """
+    if vru_ctx is None:
+        return None
+
+    ors = None
+    fsp = None
+    declaration = None
+
+    if hasattr(vru_ctx, 'ownedReferenceSubsetting') and vru_ctx.ownedReferenceSubsetting():
+        ors = _build_owned_reference_subsetting_dict(vru_ctx.ownedReferenceSubsetting())
+        if hasattr(vru_ctx, 'featureSpecialization') and vru_ctx.featureSpecialization():
+            fs_list = vru_ctx.featureSpecialization()
+            if not isinstance(fs_list, list):
+                fs_list = [fs_list]
+            specs = []
+            for fs_ctx in fs_list:
+                spec = _build_full_specialization_from_fsp(fs_ctx)
+                if spec is not None:
+                    specs.append(spec)
+            if specs:
+                fsp = specs
+    elif hasattr(vru_ctx, 'constraintUsageDeclaration') and vru_ctx.constraintUsageDeclaration():
+        cud = vru_ctx.constraintUsageDeclaration()
+        name = None
+        shortname = None
+        if hasattr(cud, 'usageDeclaration') and cud.usageDeclaration():
+            ud = cud.usageDeclaration()
+            if hasattr(ud, 'identification') and ud.identification():
+                ident = ud.identification()
+                if hasattr(ident, 'name'):
+                    name_list = ident.name()
+                    if name_list and isinstance(name_list, list):
+                        if len(name_list) == 2:
+                            shortname = name_list[0].getText()
+                            name = name_list[1].getText()
+                        elif len(name_list) == 1:
+                            name_text = name_list[0].getText()
+                            name, shortname = _extract_name_shortname(name_text)
+
+        typed_by = _get_action_usage_typed_by(cud)
+        if typed_by is None:
+            typed_by = _get_action_usage_subsetted_by(cud)
+
+        specialization = _build_specialization(typed_by) if typed_by else None
+        declaration = {
+            "name": "UsageDeclaration",
+            "declaration": {
+                "name": "FeatureDeclaration",
+                "identification": {
+                    "name": "Identification",
+                    "declaredShortName": shortname,
+                    "declaredName": name
+                },
+                "specialization": specialization
+            }
+        }
+
+    body_items = []
+    if hasattr(vru_ctx, 'requirementBody') and vru_ctx.requirementBody():
+        body_items = _visit_requirement_body_dict(vru_ctx.requirementBody())
+
+    return {
+        "name": "VerifyRequirementUsage",
+        "prefix": prefix,
+        "ors": ors,
+        "fsp": fsp,
+        "declaration": declaration,
+        "body": {
+            "name": "RequirementBody",
+            "item": body_items
+        }
+    }
 
 
 def _visit_subject_member_dict(sm_ctx):
@@ -10150,6 +10275,9 @@ def _visit_nested_occurrence_usage(occ_elem):
                     }
                 }
             return None
+        elif hasattr(behav_elem, 'verificationCaseUsage') and behav_elem.verificationCaseUsage():
+            ctx = behav_elem.verificationCaseUsage()
+            return _make_nested_verification_case_usage_dict(ctx, None)
         elif hasattr(behav_elem, 'analysisCaseUsage') and behav_elem.analysisCaseUsage():
             ctx = behav_elem.analysisCaseUsage()
             return _make_nested_analysis_case_usage_dict(ctx, None)
@@ -13009,6 +13137,16 @@ def _visit_usage_element_dict(usage_elem_ctx, prefix=None):
                         }
                     }
                 return result
+            elif hasattr(behav_elem, 'verificationCaseUsage') and behav_elem.verificationCaseUsage():
+                ctx = behav_elem.verificationCaseUsage()
+                inner = _make_nested_verification_case_usage_dict(ctx, prefix)
+                if inner:
+                    return {
+                        "name": "PackageMember",
+                        "prefix": None,
+                        "ownedRelatedElement": inner
+                    }
+                return None
             elif hasattr(behav_elem, 'viewpointUsage') and behav_elem.viewpointUsage():
                 ctx = behav_elem.viewpointUsage()
                 return _make_viewpoint_usage_dict(ctx, prefix)
@@ -13018,6 +13156,9 @@ def _visit_usage_element_dict(usage_elem_ctx, prefix=None):
             elif hasattr(behav_elem, 'analysisCaseUsage') and behav_elem.analysisCaseUsage():
                 ctx = behav_elem.analysisCaseUsage()
                 return _make_nested_analysis_case_usage_dict(ctx, prefix)
+            elif hasattr(behav_elem, 'verificationCaseUsage') and behav_elem.verificationCaseUsage():
+                ctx = behav_elem.verificationCaseUsage()
+                return _make_nested_verification_case_usage_dict(ctx, prefix)
             elif hasattr(behav_elem, 'caseUsage') and behav_elem.caseUsage():
                 ctx = behav_elem.caseUsage()
                 return _make_nested_case_usage_dict(ctx, prefix)
@@ -14156,6 +14297,95 @@ def _build_full_specialization_from_fsp(fsp):
         "specialization2": None,
         "multiplicity": None,
         "multiplicity2": None
+    }
+
+
+def _make_nested_verification_case_usage_dict(ctx, prefix=None):
+    """Create a VerificationCaseUsage dict for nested usage (v0.62.0).
+
+    Grammar:
+      verificationCaseUsage : occurrenceUsagePrefix VERIFICATION
+          constraintUsageDeclaration caseBody ;
+
+    Mirrors _make_nested_analysis_case_usage_dict; the emitted
+    BehaviorUsageElement/VerificationCaseUsage pair is dispatched to the
+    existing VerificationCaseUsage grammar class.
+    """
+    if ctx is None:
+        return None
+    
+    # Extract name and specialization from constraintUsageDeclaration
+    name = None
+    shortname = None
+    specialization = None
+    
+    if hasattr(ctx, 'constraintUsageDeclaration') and ctx.constraintUsageDeclaration():
+        cud = ctx.constraintUsageDeclaration()
+        if isinstance(cud, list):
+            cud = cud[0] if cud else None
+        if cud is not None and hasattr(cud, 'usageDeclaration') and cud.usageDeclaration():
+            ud = cud.usageDeclaration()
+            if isinstance(ud, list):
+                ud = ud[0] if ud else None
+            if ud is not None and hasattr(ud, 'identification') and ud.identification():
+                ident = ud.identification()
+                if isinstance(ident, list):
+                    ident = ident[0] if ident else None
+                if ident is not None and hasattr(ident, 'name'):
+                    name_list = ident.name()
+                    if name_list and isinstance(name_list, list):
+                        if len(name_list) == 2:
+                            shortname = name_list[0].getText()
+                            name = name_list[1].getText()
+                        elif len(name_list) == 1:
+                            name_text = name_list[0].getText()
+                            name, shortname = _extract_name_shortname(name_text)
+        
+        # Extract specialization (typing) from constraintUsageDeclaration
+        typed_by = _get_action_usage_typed_by(cud)
+        if typed_by:
+            specialization = _build_specialization(typed_by)
+    
+    occ_prefix = _get_occurrence_usage_prefix(ctx) if ctx else None
+    
+    # Get body items from caseBody
+    body_items = []
+    if hasattr(ctx, 'caseBody') and ctx.caseBody():
+        cb = ctx.caseBody()
+        body_items = _visit_case_body_items(cb)
+    
+    return {
+        "name": "UsageElement",
+        "ownedRelatedElement": {
+            "name": "OccurrenceUsageElement",
+            "ownedRelatedElement": {
+                "name": "BehaviorUsageElement",
+                "ownedRelationship": {
+                    "name": "VerificationCaseUsage",
+                    "prefix": occ_prefix or prefix,
+                    "declaration": {
+                        "name": "CalculationUsageDeclaration",
+                        "declaration": {
+                            "name": "UsageDeclaration",
+                            "declaration": {
+                                "name": "FeatureDeclaration",
+                                "identification": {
+                                    "name": "Identification",
+                                    "declaredShortName": shortname,
+                                    "declaredName": name
+                                },
+                                "specialization": specialization
+                            }
+                        },
+                        "valuepart": None
+                    },
+                    "body": {
+                        "name": "CaseBody",
+                        "item": body_items
+                    }
+                }
+            }
+        }
     }
 
 

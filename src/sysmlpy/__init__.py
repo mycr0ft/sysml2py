@@ -16,7 +16,9 @@ __all__ = [
     "as_action_flow_view", "as_interconnection_view", "as_state_transition_view",
     "as_general_view", "as_package_view",
     "as_tabular_view", "as_data_value_tabular_view", "as_relationship_matrix_view",
+    "as_traceability_matrix_view",
     "as_sequence_view", "as_case_view", "as_browser_view",
+    "extract_traceability", "TraceabilityReport", "RequirementTrace",
     "analyze", "AnalysisResult", "SemanticIssue", "SemanticAnalyzer",
     "SysMLSyntaxError", "PartialParseError",
     "loads_partial", "load_partial",
@@ -25,7 +27,7 @@ __all__ = [
     "render_state_transition_view_svg", "boxes_view",
 ]
 __author__ = "Jon Fox"
-__version__ = "0.61.0"
+__version__ = "0.62.0"
 
 from sysmlpy.usage import (
     Item, Attribute, Part, Port, Action, Reference, UseCase, Requirement, Interface, Message,
@@ -41,6 +43,10 @@ from sysmlpy.store import Store, InMemoryStore, NetworkXStore, KuzuStore, Cayley
 
 from sysmlpy.usage import ureg
 from sysmlpy.antlr_parser import SysMLSyntaxError
+from sysmlpy.traceability import (
+    extract_traceability, TraceabilityReport, RequirementTrace,
+    as_traceability_matrix_view,
+)
 
 
 class PartialParseError(Exception):

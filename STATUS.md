@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.61.0** (2026-09-02)
+Current version: **v0.62.0** (2026-09-02)
 
 ---
 
@@ -58,8 +58,17 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   CI exit codes: 0 clean, 1 findings at `--fail-on` threshold, 2 parse
   error; text or `--format json`), `view --view NAME` (all 11 views,
   `--focus`, `--element`, `--style`, `--direction`, `--format`, `-o`),
-  `format` (alias `fmt`, multiple files). Legacy flat invocation
-  (`sysmlpy FILE --dump`) preserved with original exit codes.
+  `format` (alias `fmt`, multiple files), `trace` (requirement
+  traceability & verification coverage: `--format text|markdown|json`,
+  `--fail-on uncovered`, `-o`; exit 0 clean, 1 uncovered, 2 parse error).
+  Legacy flat invocation (`sysmlpy FILE --dump`) preserved with original
+  exit codes.
+- **Requirement traceability** — `sysmlpy.traceability`
+  (`extract_traceability()` → `TraceabilityReport` with per-requirement
+  traces, coverage queries, text/markdown/JSON output;
+  `as_traceability_matrix_view()` in markdown/html/plantuml). Satisfy /
+  verify / verification / subject relationships parse and round-trip
+  (v0.62.0).
 - **ANTLR4 parser** — default parser, using OMG grammar v2026.03.0
   - `load()`, `loads()`, `parse()`, `load_grammar()` (public API)
   - `load_antlr()`, `load_grammar_antlr()` (explicit ANTLR4 path)
@@ -203,20 +212,26 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 | Test file | Tests | Status |
 |---|---|---|
 | `tests/grammar_test.py` | 143 | ✅ All pass (100%) |
-| `tests/redefined_name_test.py` | 8 | ✅ All pass (100%) |
-| `tests/two_stage_parse_test.py` | 7 | ✅ All pass |
-| `tests/class_test.py` | 54 | ✅ All pass |
-| `tests/main_test.py` | 7 | ✅ All pass |
-| `tests/plantuml_test.py` | 108 | ✅ All pass |
 | `tests/semantic_test.py` | 170 | ✅ All pass |
-| `tests/navigate_test.py` | 33 | ✅ All pass |
-| `tests/import_test.py` | 16 | ✅ All pass |
-| `tests/validator_test.py` | 34 | ✅ All pass |
-| `tests/project_test.py` | 17 | ✅ All pass |
-| `tests/store_test.py` | 46 | Pass (optional deps skipped if not installed) |
+| `tests/plantuml_test.py` | 122 | ✅ All pass |
+| `tests/store_test.py` | 97 | Pass (optional deps skipped if not installed) |
+| `tests/class_test.py` | 75 | ✅ All pass |
+| `tests/traceability_test.py` | 46 | ✅ All pass |
+| `tests/navigate_test.py` | 42 | ✅ All pass |
 | `tests/cli_test.py` | 39 | ✅ All pass |
+| `tests/validator_test.py` | 34 | ✅ All pass |
+| `tests/repr_test.py` | 34 | ✅ All pass |
+| `tests/kuzu_store_test.py` | 32 | Pass (skipped if kuzu not installed) |
+| `tests/import_test.py` | 31 | ✅ All pass |
+| `tests/cayley_store_test.py` | 22 | Pass (skipped if cayley not installed) |
+| `tests/boxes_view_test.py` | 19 | Pass (skipped if boxes not installed) |
+| `tests/project_test.py` | 17 | ✅ All pass |
+| `tests/redefined_name_test.py` | 14 | ✅ All pass (100%) |
+| `tests/two_stage_parse_test.py` | 7 | ✅ All pass |
+| `tests/main_test.py` | 7 | ✅ All pass |
+| `tests/partial_test.py` | 6 | ✅ All pass |
 | `tests/conformance_test.py` | 123 | ✅ All pass (100%) |
-| **Total** | **805** | **805 pass** |
+| **Total** | **1080** | **957 fast + 123 conformance pass** |
 
 ### Documentation
 

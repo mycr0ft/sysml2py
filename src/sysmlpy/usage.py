@@ -33,6 +33,27 @@ def _is_uuid(s: str) -> bool:
     )
 
 
+def _declaration_name(elem):
+    """Extract a declared name from a grammar usage/definition object (v0.62.0).
+
+    Handles both declaration layouts: ``UsageDeclaration`` (identification
+    directly) and ``CalculationUsageDeclaration`` (nested ``declaration``).
+    Returns None when no declared name is present.
+    """
+    decl = getattr(elem, "declaration", None)
+    if decl is None:
+        return None
+    ident = getattr(decl, "identification", None)
+    if ident is not None and getattr(ident, "declaredName", None):
+        return ident.declaredName
+    inner = getattr(decl, "declaration", None)
+    if inner is not None:
+        ident = getattr(inner, "identification", None)
+        if ident is not None and getattr(ident, "declaredName", None):
+            return ident.declaredName
+    return None
+
+
 def _resolve_name_from_specialization(specialization):
     """Find the most user-visible identifier in a ``FeatureSpecializationPart``.
 
@@ -1280,6 +1301,18 @@ def _load_behavior_child(parent, inner, inner_name):
         c._extract_specialization_info(inner)
         return c
     if inner_name == "SatisfyRequirementUsage":
+        c = Requirement()
+        c.grammar = inner
+        c.name = _name_from_declaration(inner)
+        c._extract_specialization_info(inner)
+        return c
+    if inner_name == "VerificationCaseUsage":
+        c = VerificationCase()
+        c.grammar = inner
+        c.name = _name_from_declaration(inner)
+        c._extract_specialization_info(inner)
+        return c
+    if inner_name == "VerifyRequirementUsage":
         c = Requirement()
         c.grammar = inner
         c.name = _name_from_declaration(inner)
@@ -2857,6 +2890,7 @@ class Requirement(Usage):
         self.req_shortname = shortname
         self.subject = None
         self.actors = []
+        self.verified_by = []
         self.doc = None
         self.req_attributes = []
         self.req_constraints = []
@@ -3100,13 +3134,63 @@ class Requirement(Usage):
                     elif child_class == "RequirementConstraintMember":
                         pass  # could extract constraints
                     elif child_class == "SubjectMember":
-                        pass  # could extract subject
+                        self._extract_subject_member(item.child)
                     elif child_class == "ActorMember":
                         pass  # could extract actors
+                    elif child_class == "RequirementVerificationMember":
+                        self._extract_verification_member(item.child)
 
         self._extract_specialization_info(grammar)
 
         return self
+
+    def _extract_subject_member(self, subject_member):
+        """Extract (name, type) from a SubjectMember grammar object (v0.62.0).
+
+        ``subject v : Vehicle;`` → ("v", "Vehicle"); anonymous
+        ``subject : Vehicle;`` → ("Vehicle", "Vehicle") so traceability
+        reports still have a usable identifier.
+        """
+        try:
+            usage = subject_member.child          # SubjectUsage
+            usage_child = getattr(usage, 'child', None)  # Usage
+            if usage_child is None:
+                return
+            name = None
+            typed = None
+            decl = getattr(usage_child, 'declaration', None)
+            feat = getattr(decl, 'declaration', None)
+            ident = getattr(feat, 'identification', None)
+            if ident is not None:
+                name = getattr(ident, 'declaredName', None)
+            # Declared type lives in FeatureDeclaration.specialization
+            # (FeatureSpecializationPart dumping like ": Vehicle").
+            spec = getattr(feat, 'specialization', None)
+            if spec is not None and hasattr(spec, 'dump'):
+                text = (spec.dump() or "").strip().rstrip(';').strip()
+                if text.startswith(':'):
+                    text = text[1:].strip()
+                typed = text or None
+            if name or typed:
+                self.subject = (name or typed, typed)
+        except Exception as e:
+            print(f"[Requirement._extract_subject_member] {e}")
+
+    def _extract_verification_member(self, verification_member):
+        """Extract the verified target from a `verify <ref>` member (v0.62.0)."""
+        try:
+            child = verification_member.child
+            if child is None:
+                return
+            target = None
+            if getattr(child, 'ors', None) is not None:
+                target = child.ors.dump().strip()
+            elif getattr(child, 'declaration', None) is not None:
+                target = _declaration_name(child.declaration)
+            if target:
+                self.verified_by.append(target)
+        except Exception as e:
+            print(f"[Requirement._extract_verification_member] {e}")
 
     def _extract_nested_requirements(self, def_body_item):
         """Find nested requirement usages/definitions inside a DefinitionBodyItem.
