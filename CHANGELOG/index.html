@@ -431,6 +431,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0630-2026-09-02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.63.0 (2026-09-02)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.63.0 (2026-09-02)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-sysml-v2-json-interchange-adoption-roadmap-goal-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: SysML v2 JSON interchange (Adoption Roadmap Goal 3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0620-2026-09-02" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2776,6 +2804,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0630-2026-09-02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.63.0 (2026-09-02)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v0.63.0 (2026-09-02)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-sysml-v2-json-interchange-adoption-roadmap-goal-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: SysML v2 JSON interchange (Adoption Roadmap Goal 3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0620-2026-09-02" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5080,6 +5136,50 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0630-2026-09-02">v0.63.0 (2026-09-02)<a class="headerlink" href="#v0630-2026-09-02" title="Permanent link">&para;</a></h2>
+<h3 id="white_check_mark-sysml-v2-json-interchange-adoption-roadmap-goal-3">:white_check_mark: SysML v2 JSON interchange (Adoption Roadmap Goal 3)<a class="headerlink" href="#white_check_mark-sysml-v2-json-interchange-adoption-roadmap-goal-3" title="Permanent link">&para;</a></h3>
+<p>Models can now be exchanged as JSON in the style of the SysML v2 spec's
+JSON partition interchange — a flat <code>@graph</code> of elements identified by
+<code>@id</code> / typed by <code>@type</code> (the abstract-syntax metaclass name), with
+scalar properties inline and structural properties as <code>{"@id": ...}</code>
+cross-references:</p>
+<ul>
+<li><strong>New <code>sysmlpy.interchange</code> module</strong> (exported from the package root):</li>
+<li><code>to_interchange(model_or_text)</code> — export a loaded <code>Model</code> (from
+    <code>loads()</code> / <code>load_files()</code> / programmatic construction) or fresh
+    SysML text to the interchange dict. Element <code>@id</code>s are <code>uuid5</code>-
+    derived from tree position, so exporting the same model twice yields
+    byte-identical JSON (diff-friendly — feeds roadmap Goal 8).</li>
+<li><code>from_interchange(document_or_json_text)</code> — rebuild a live <code>Model</code>
+    from an interchange document. Lossless: the rebuilt model's text
+    (<code>dump()</code>), grammar-object tree, and traceability report are all
+    identical to the original.</li>
+<li><code>interchange_to_json_text(document, indent=2)</code> — serialization
+    helper.</li>
+<li><strong>Fidelity guarantee:</strong> export flattens the <em>raw parser dictionary</em>
+  (via the canonical <code>dump()</code> text), not the grammar classes'
+  <code>get_definition()</code> serialization — the latter normalizes the tree
+  (adds <code>ownedRelationship</code> keys, unwraps <code>OccurrenceUsageElement</code>),
+  which changes class re-dispatch on import (satisfy wrappers were
+  silently lost before this was caught by the traceability round-trip
+  test).</li>
+<li><strong><code>Model._load_definition()</code></strong> extracted from <code>Model.load</code> — the
+  dict→model construction path is now shared by fresh parses and the
+  interchange importer.</li>
+<li><strong>CLI:</strong></li>
+<li><code>sysmlpy export FILE [FILE...] [-o OUT.json] [--compact] [-l LIBRARY]</code>
+    — load files as one merged model, emit the interchange JSON (exit 2
+    on parse failure).</li>
+<li><code>sysmlpy import FILE.json [-o OUT.sysml]</code> — rebuild the model and
+    print or write the equivalent SysML v2 text (exit 2 on invalid
+    input; cycle and dangling-reference detection).</li>
+<li><code>sysmlpy parse FILE --json</code> still emits the internal dict; <code>export</code>
+  is the spec-style exchange format.</li>
+</ul>
+<p>New <code>tests/interchange_test.py</code> — 38 tests (document shape, deterministic
+ids, scalar/null handling, no dangling references, lossless round-trips
+incl. traceability interop, error handling, CLI). Fast suite now 973
+tests + 123 conformance = 1096 total.</p>
 <h2 id="v0620-2026-09-02">v0.62.0 (2026-09-02)<a class="headerlink" href="#v0620-2026-09-02" title="Permanent link">&para;</a></h2>
 <h3 id="white_check_mark-requirement-traceability-verification-coverage-adoption-roadmap-goal-2">:white_check_mark: Requirement traceability &amp; verification coverage (Adoption Roadmap Goal 2)<a class="headerlink" href="#white_check_mark-requirement-traceability-verification-coverage-adoption-roadmap-goal-2" title="Permanent link">&para;</a></h3>
 <p>The satisfy / verify / verification relationships now parse, round-trip,

@@ -547,6 +547,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#json-interchange-v0630-adoption-roadmap-goal-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSON Interchange (v0.63.0 — Adoption Roadmap Goal 3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#requirement-traceability-v0620-adoption-roadmap-goal-2" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1225,6 +1236,14 @@ codes (0 = success/clean, 1 = findings at threshold / operational error,
 <td><code>sysmlpy trace FILE [FILE...]</code></td>
 <td>Requirement traceability &amp; verification coverage report; <code>--format text\|markdown\|json</code>, <code>--fail-on uncovered</code>, <code>-o FILE</code></td>
 </tr>
+<tr>
+<td><code>sysmlpy export FILE [FILE...]</code></td>
+<td>SysML → JSON interchange (JSON-LD-style <code>@graph</code> of <code>@id</code>/<code>@type</code> elements); <code>--compact</code>, <code>-o FILE</code></td>
+</tr>
+<tr>
+<td><code>sysmlpy import FILE.json</code></td>
+<td>JSON interchange → SysML v2 text; <code>-o FILE</code></td>
+</tr>
 </tbody>
 </table>
 <p>The legacy flat form (<code>sysmlpy FILE --dump</code>) is preserved with its
@@ -1232,6 +1251,24 @@ original exit codes. Example CI usage:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sysmlpy<span class="w"> </span>analyze<span class="w"> </span>model/*.sysml<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span>--fail-on<span class="w"> </span>error
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>sysmlpy<span class="w"> </span>trace<span class="w"> </span>model/*.sysml<span class="w"> </span>--fail-on<span class="w"> </span>uncovered<span class="w"> </span>--format<span class="w"> </span>markdown<span class="w"> </span>-o<span class="w"> </span>coverage.md
 </code></pre></div>
+<h3 id="json-interchange-v0630-adoption-roadmap-goal-3">JSON Interchange (v0.63.0 — Adoption Roadmap Goal 3)<a class="headerlink" href="#json-interchange-v0630-adoption-roadmap-goal-3" title="Permanent link">&para;</a></h3>
+<p>Models exchange as JSON-LD-style partition documents in the style of the
+SysML v2 spec's JSON interchange: a flat <code>@graph</code> of elements, each with
+a deterministic <code>@id</code> (uuid5 from tree position) and <code>@type</code> (the
+abstract-syntax metaclass name), scalar properties inline, structural
+properties as <code>{"@id": ...}</code> references:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>sysmlpy<span class="w"> </span><span class="nb">export</span><span class="w"> </span>model.sysml<span class="w"> </span>-o<span class="w"> </span>model.json<span class="w">      </span><span class="c1"># SysML text → interchange JSON</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>sysmlpy<span class="w"> </span>import<span class="w"> </span>model.json<span class="w"> </span>-o<span class="w"> </span>roundtrip.sysml<span class="w">  </span><span class="c1"># interchange JSON → SysML text</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">loads</span><span class="p">,</span> <span class="n">to_interchange</span><span class="p">,</span> <span class="n">from_interchange</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">model</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="s2">"package P { part def V; }"</span><span class="p">)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">doc</span> <span class="o">=</span> <span class="n">to_interchange</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>          <span class="c1"># dict; json.dumps for wire format</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">same</span> <span class="o">=</span> <span class="n">from_interchange</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>         <span class="c1"># live Model, losslessly rebuilt</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="k">assert</span> <span class="n">same</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span> <span class="o">==</span> <span class="n">model</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
+</code></pre></div>
+<p>Export is lossless: the rebuilt model's <code>dump()</code> text, grammar-object
+tree, and traceability report are identical to the original, and
+re-exporting a rebuilt model reproduces byte-identical JSON.</p>
 <h3 id="requirement-traceability-v0620-adoption-roadmap-goal-2">Requirement Traceability (v0.62.0 — Adoption Roadmap Goal 2)<a class="headerlink" href="#requirement-traceability-v0620-adoption-roadmap-goal-2" title="Permanent link">&para;</a></h3>
 <p>The satisfy / verify / verification relationships parse, round-trip, and
 feed a traceability reporting module:</p>
@@ -1487,6 +1524,11 @@ feed a traceability reporting module:</p>
 <td>✅ 46 pass</td>
 </tr>
 <tr>
+<td>JSON interchange</td>
+<td>38</td>
+<td>✅ 38 pass</td>
+</tr>
+<tr>
 <td>Model navigation</td>
 <td>42</td>
 <td>✅ 42 pass</td>
@@ -1518,8 +1560,8 @@ feed a traceability reporting module:</p>
 </tr>
 <tr>
 <td><strong>Total</strong></td>
-<td><strong>1080</strong></td>
-<td><strong>957 fast + 123 conformance pass</strong></td>
+<td><strong>1096</strong></td>
+<td><strong>973 fast + 123 conformance pass</strong></td>
 </tr>
 </tbody>
 </table>
@@ -1782,42 +1824,42 @@ feed a traceability reporting module:</p>
 <hr />
 <h2 id="quick-reference">Quick Reference<a class="headerlink" href="#quick-reference" title="Permanent link">&para;</a></h2>
 <h3 id="running-tests">Running Tests<a class="headerlink" href="#running-tests" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># All tests</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>pytest<span class="w"> </span>tests/
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Specific suites</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>pytest<span class="w"> </span>tests/grammar_test.py<span class="w">        </span><span class="c1"># Round-trip</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>pytest<span class="w"> </span>tests/class_test.py<span class="w">          </span><span class="c1"># Programmatic API</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>pytest<span class="w"> </span>tests/semantic_test.py<span class="w">       </span><span class="c1"># Semantic analysis</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>pytest<span class="w"> </span>tests/project_test.py<span class="w">        </span><span class="c1"># Multi-file loading</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>pytest<span class="w"> </span>tests/store_test.py<span class="w">          </span><span class="c1"># Storage backends</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>pytest<span class="w"> </span>tests/conformance_test.py<span class="w">    </span><span class="c1"># OMG conformance (slow)</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c1"># Skip conformance (fast development)</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">"not conformance"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># All tests</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>pytest<span class="w"> </span>tests/
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Specific suites</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>pytest<span class="w"> </span>tests/grammar_test.py<span class="w">        </span><span class="c1"># Round-trip</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>pytest<span class="w"> </span>tests/class_test.py<span class="w">          </span><span class="c1"># Programmatic API</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>pytest<span class="w"> </span>tests/semantic_test.py<span class="w">       </span><span class="c1"># Semantic analysis</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>pytest<span class="w"> </span>tests/project_test.py<span class="w">        </span><span class="c1"># Multi-file loading</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>pytest<span class="w"> </span>tests/store_test.py<span class="w">          </span><span class="c1"># Storage backends</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>pytest<span class="w"> </span>tests/conformance_test.py<span class="w">    </span><span class="c1"># OMG conformance (slow)</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="c1"># Skip conformance (fast development)</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">"not conformance"</span>
 </code></pre></div>
 <h3 id="adding-a-new-ocl-constraint">Adding a New OCL Constraint<a class="headerlink" href="#adding-a-new-ocl-constraint" title="Permanent link">&para;</a></h3>
 <ol>
 <li>
 <p>Add a check method to <code>SemanticAnalyzer</code> in <code>semantic.py</code>:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_check_my_constraint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">symtab</span><span class="p">:</span> <span class="n">SymbolTable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">SemanticIssue</span><span class="p">]:</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">issues</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SemanticIssue</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="c1"># Walk model, check constraint, append issues</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="k">return</span> <span class="n">issues</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_check_my_constraint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">symtab</span><span class="p">:</span> <span class="n">SymbolTable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">SemanticIssue</span><span class="p">]:</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="n">issues</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SemanticIssue</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="c1"># Walk model, check constraint, append issues</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="k">return</span> <span class="n">issues</span>
 </code></pre></div></p>
 </li>
 <li>
 <p>Call it from <code>analyze()</code>:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">issues</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_check_my_constraint</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">symtab</span><span class="p">))</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">issues</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_check_my_constraint</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">symtab</span><span class="p">))</span>
 </code></pre></div></p>
 </li>
 <li>
 <p>Add tests to <code>tests/semantic_test.py</code>:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">TestMyConstraint</span><span class="p">:</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">test_violation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>        <span class="n">model</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="s2">"..."</span><span class="p">)</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>        <span class="n">issues</span> <span class="o">=</span> <span class="n">analyze</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>        <span class="k">assert</span> <span class="nb">any</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="s2">"MY_CONSTRAINT"</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">issues</span><span class="p">)</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">TestMyConstraint</span><span class="p">:</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">test_violation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>        <span class="n">model</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="s2">"..."</span><span class="p">)</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>        <span class="n">issues</span> <span class="o">=</span> <span class="n">analyze</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>        <span class="k">assert</span> <span class="nb">any</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="s2">"MY_CONSTRAINT"</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">issues</span><span class="p">)</span>
 </code></pre></div></p>
 </li>
 </ol>
@@ -1825,16 +1867,16 @@ feed a traceability reporting module:</p>
 <ol>
 <li>
 <p>Subclass <code>Store</code> in <code>store.py</code>:
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyStore</span><span class="p">(</span><span class="n">Store</span><span class="p">):</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span> <span class="o">...</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="c1"># ... implement all abstract methods</span>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyStore</span><span class="p">(</span><span class="n">Store</span><span class="p">):</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span> <span class="o">...</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="c1"># ... implement all abstract methods</span>
 </code></pre></div></p>
 </li>
 <li>
 <p>Register in <code>create_store()</code>:
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">elif</span> <span class="n">backend</span> <span class="o">==</span> <span class="s2">"my"</span><span class="p">:</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="k">return</span> <span class="n">MyStore</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">elif</span> <span class="n">backend</span> <span class="o">==</span> <span class="s2">"my"</span><span class="p">:</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="k">return</span> <span class="n">MyStore</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div></p>
 </li>
 <li>
