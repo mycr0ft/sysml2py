@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## v0.70.0 (2026-09-04)
+
+- **Goal 9 batch 3: trace-target checks** —
+  - `UNRESOLVED_TRACE_TARGET` (error): a `satisfy <req> by <part>`
+    target that names no declared requirement.  A typo'd target was
+    doubly silent before: the trace edge died quietly AND the Goal 2
+    coverage extractor materialized the dangling edge as a *phantom
+    requirement* — the real requirement read uncovered while a fake
+    one appeared traced.
+  - `TRACE_TARGET_NOT_REQUIREMENT` (warning): a target that resolves
+    but to a non-`Requirement` element.  Library-resolved targets are
+    left alone (conservative — no model element to inspect).
+- **Scoping note**: abstract-typing warnings were dropped from this
+  batch after probing — typing by an abstract definition inside an
+  abstract definition is legitimate modeling (redefinition is the
+  intended mechanism), so the rule needs spec research before it can
+  be implemented without false positives.
+- 4 new validator tests (53).
+
 ## v0.69.1 (2026-09-04)
 
 - **Goal 9 batch 2: trigger-payload and requirement-coverage checks** —

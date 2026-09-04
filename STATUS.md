@@ -132,7 +132,10 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   `analyze()` on the simulator's expanded machine descriptor.  Batch 2
   (v0.69.1) adds `UNRESOLVED_TRIGGER_PAYLOAD` (bare and guarded `accept`
   payloads resolve or error) and `REQUIREMENT_UNCOVERED` (requirement
-  usages with no satisfy/verify traces; defs exempt).
+  usages with no satisfy/verify traces; defs exempt).  Batch 3
+  (v0.70.0) adds `UNRESOLVED_TRACE_TARGET` / `TRACE_TARGET_NOT_REQUIREMENT`
+  on `satisfy` targets — dangling edges no longer materialize phantom
+  requirements in coverage reports un-flagged.
 - **Relationship legends opt-in** — `include_legend=False` by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome `bw` remains the default style

@@ -2380,6 +2380,7 @@ class SemanticAnalyzer:
         issues.extend(self._check_state_machines(model))
         issues.extend(self._check_trigger_payloads(model, symtab, lib_roots))
         issues.extend(self._check_requirement_coverage(model))
+        issues.extend(self._check_trace_targets(model, symtab, lib_roots))
 
         # Step 6: Stylistic checks (warnings, not errors)
         if style_checks:
@@ -3082,6 +3083,101 @@ class SemanticAnalyzer:
                 reference=trace.name,
             ))
         return issues
+
+    def _check_trace_targets(
+        self,
+        model: Any,
+        symtab: "SymbolTable",
+        lib_roots: list,
+    ) -> list[SemanticIssue]:
+        """Resolve ``satisfy <req> by <part>`` targets (Goal 9).
+
+        A typo'd satisfy target is silent today — worse, the Goal 2
+        traceability extractor materializes the dangling edge as a
+        *phantom requirement* in coverage reports, so the real
+        requirement reads uncovered while a fake one appears traced.
+        Each satisfy target reference is resolved against the symbol
+        table in the satisfying part's scope; unresolved targets
+        produce UNRESOLVED_TRACE_TARGET errors.
+        """
+        issues: list[SemanticIssue] = []
+        for element, scope_path in self._walk_usages(model):
+            grammar = getattr(element, "grammar", None)
+            if grammar is None or \
+                    grammar.__class__.__name__ != "SatisfyRequirementUsage":
+                continue
+            ors = getattr(grammar, "ors", None)
+            if ors is None:
+                continue
+            try:
+                ref = ors.dump().strip().rstrip(";").strip()
+            except Exception:
+                continue
+            if not ref:
+                continue
+            if self._is_resolved(ref, symtab, scope_path, lib_roots):
+                # Kind check: the target must be a requirement.
+                # (Library-resolved targets yield no element here and
+                # are left alone — conservative by design.)
+                found = self._resolve_element(ref, symtab, scope_path)
+                if found is not None and \
+                        type(found).__name__ != "Requirement":
+                    issues.append(SemanticIssue(
+                        severity="warning",
+                        code="TRACE_TARGET_NOT_REQUIREMENT",
+                        message=(
+                            f"satisfy target '{ref}' resolves to a "
+                            f"{type(found).__name__}, not a "
+                            "requirement"),
+                        element=element,
+                        reference=ref,
+                    ))
+                continue
+            issues.append(SemanticIssue(
+                severity="error",
+                code="UNRESOLVED_TRACE_TARGET",
+                message=(
+                    f"satisfy target '{ref}' in "
+                    f"{type(element).__name__} "
+                    f"'{getattr(element, 'name', '<anonymous>')}' does "
+                    "not resolve to a defined requirement"),
+                element=element,
+                reference=ref,
+            ))
+        return issues
+
+    @staticmethod
+    def _resolve_element(
+        ref_str: str,
+        symtab: "SymbolTable",
+        scope_path: list[str],
+    ):
+        """The model element *ref_str* resolves to, if any.
+
+        Mirrors the symbol-table walk of :meth:`_is_resolved` (without
+        the library-index shortcuts, which resolve to no model
+        element).
+        """
+        current = symtab
+        for scope_name in scope_path:
+            child = current._children.get(scope_name)
+            if child is not None:
+                current = child
+            else:
+                break
+        found = current.lookup(ref_str)
+        if found is not None:
+            return found
+        if "::" in ref_str:
+            parts = ref_str.split("::")
+            table = current
+            for part in parts[:-1]:
+                found = table.lookup(part)
+                if found is None:
+                    return None
+                table = table._children.get(part, table)
+            return table.lookup(parts[-1])
+        return None
 
     def _check_state_machines(self, model: Any) -> list[SemanticIssue]:
         """OCL well-formedness for ``state def`` machines (Goal 9).

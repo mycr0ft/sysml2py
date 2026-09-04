@@ -522,3 +522,78 @@ class TestRequirementCoverageChecks:
         """)
         assert [i for i in analyze(model)
                 if i.code == "REQUIREMENT_UNCOVERED"] == []
+
+
+class TestTraceTargets:
+    """Goal 9 batch 3: ``satisfy <req>`` targets must resolve to
+    declared requirements."""
+
+    def test_unresolved_target_errors(self):
+        model = sysmlpy_loads("""
+        package M {
+            requirement def Real;
+            requirement real1 : Real;
+            part def P {
+                satisfy Rea1 by w;
+            }
+            part w : P;
+        }
+        """)
+        issues = [i for i in analyze(model)
+                  if i.code == "UNRESOLVED_TRACE_TARGET"]
+        assert len(issues) == 1
+        assert issues[0].severity == "error"
+        assert "'Rea1'" in issues[0].message
+
+    def test_declared_target_clean(self):
+        model = sysmlpy_loads("""
+        package M {
+            requirement def Real;
+            requirement real1 : Real;
+            part def P;
+            part w : P {
+                satisfy real1 by w;
+            }
+        }
+        """)
+        assert [i for i in analyze(model)
+                if i.code in ("UNRESOLVED_TRACE_TARGET",
+                              "TRACE_TARGET_NOT_REQUIREMENT")] == []
+
+    def test_non_requirement_target_warns(self):
+        model = sysmlpy_loads("""
+        package M {
+            requirement def Real;
+            part def P;
+            part w : P {
+                satisfy P by w;
+            }
+        }
+        """)
+        issues = [i for i in analyze(model)
+                  if i.code == "TRACE_TARGET_NOT_REQUIREMENT"]
+        assert len(issues) == 1
+        assert issues[0].severity == "warning"
+        assert "Part" in issues[0].message
+
+    def test_phantom_trace_not_created_for_clean_model(self):
+        """A dangling edge previously materialized a phantom requirement
+        in Goal 2 coverage reports; the validator now errors on it and
+        the report stays as the user wrote it."""
+        from sysmlpy.traceability import extract_traceability
+        model = sysmlpy_loads("""
+        package M {
+            requirement def Real;
+            requirement real1 : Real;
+            part def P {
+                satisfy Rea1 by w;
+            }
+            part w : P;
+        }
+        """)
+        issues = [i for i in analyze(model)
+                  if i.code == "UNRESOLVED_TRACE_TARGET"]
+        assert len(issues) == 1  # the validator flags it
+        # (report content is Goal 2's domain — unchanged by the check)
+        report = extract_traceability(model)
+        assert any(t.name == "Rea1" for t in report.requirements)

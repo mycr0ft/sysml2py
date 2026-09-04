@@ -90,8 +90,14 @@ are complete.  Follow-up work is organized under the
     forms) and `REQUIREMENT_UNCOVERED` (warning; requirement usages
     only, defs exempt).  Also fixed an `UnboundLocalError` crash in
     `analyze()` when the optional `sim` extra is absent.
-  - [ ] **Batch 3 candidates** — abstract-typing warnings, connector
-    end direction checks, `satisfy` target-existence checks.
+  - [x] **Batch 3 (v0.70.0): trace targets** —
+    `UNRESOLVED_TRACE_TARGET` (error) and `TRACE_TARGET_NOT_REQUIREMENT`
+    (warning) on `satisfy <req> by <part>` targets; exposes the Goal 2
+    extractor's phantom-requirement behavior for dangling edges.
+  - [ ] **Batch 4 candidates** — connector end direction checks,
+    `verify` member target resolution; abstract-typing warnings
+    dropped from batch 3 (needs spec research: typing by abstract
+    defs inside abstract definitions is legitimate via redefinition).
 - [ ] **Goal 10 — Technical stubs** (connector-end compatibility, `*`/`/` unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)
 
 Legacy candidate follow-up work:
