@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Goal 9 begins: state-machine well-formedness checks** — three new
+  OCL rules in `analyze()`: `UNRESOLVED_TRANSITION_ENDPOINT` (error —
+  a transition endpoint that names no state in its machine),
+  `NO_INITIAL_STATE` (warning — >1 state and no `entry; then X;`), and
+  `UNREACHABLE_STATE` (warning — no path from the initial state).  All
+  three run on the simulator's expanded descriptor, so composite
+  regions, bare-name substate references and composite entry
+  retargeting are resolved the same way simulation resolves them.
+  Supporting change: `MachineDescriptor.skipped` now carries
+  transitions excluded from simulation as structured data (previously
+  note-text only), and machine-wide bare-name resolution replaced the
+  sim's implicit state addition — unknown endpoints are skipped
+  (diagnostics see them) instead of silently becoming states.
 - **State-machine simulation (MVP, `sysmlpy sim`)** — Cameo-style
   simulate-and-step for `state def` machines: `StateSimulator` builds an
   executable machine from a parsed model and drives it — `send(trigger)`

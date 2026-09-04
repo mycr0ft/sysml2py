@@ -350,10 +350,12 @@ class TestCompositeFlattening:
         }
         """)
         md = build_state_machine(model)
-        assert "inner" in md.states
+        # bare-name machine-level references resolve to the substate's
+        # qualified name (declared anywhere in the machine)
+        assert "b.inner" in md.states
         sim = StateSimulator(model)
         assert sim.send("Go") is True
-        assert sim.state == "inner"
+        assert sim.state == "b.inner"
 
 
 class TestCompositeRegions:

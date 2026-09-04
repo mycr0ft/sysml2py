@@ -79,7 +79,14 @@ are complete.  Follow-up work is organized under the
     already exists in `traceability.py`.
 - [x] **Goal 7 — Spreadsheet bridge** *(v0.66.0: `sysmlpy.spreadsheet` — CSV export of tabular/data-value/matrix views (`output_format="csv"`, `view --format csv`), `write_xlsx()` workbook export + `sysmlpy xlsx` CLI (optional `openpyxl` extra `sysmlpy[xlsx]`), value import into evaluator bindings (`import_values_csv()`/`import_values_xlsx()`, `eval --set-file`, `parse_value_literal()`); 37 tests in `tests/spreadsheet_test.py`.)*
 - [ ] **Goal 8 — Semantic model diff** (review workflows)
-- [ ] **Goal 9 — Validator depth** (more OCL well-formedness checks)
+- [~] **Goal 9 — Validator depth** (more OCL well-formedness checks)
+  - [x] **Batch 1 (v0.69.0): state machines** — `UNRESOLVED_TRANSITION_ENDPOINT`
+    (error), `NO_INITIAL_STATE` (warning), `UNREACHABLE_STATE`
+    (warning); run on the simulator's expanded descriptor so
+    composite semantics are shared with `sysmlpy sim`.
+  - [ ] **Batch 2 candidates** — unresolved `accept` signal/payload
+    references, requirement `satisfy`/`verify` coverage cross-checks,
+    abstract-typing warnings, connector-end direction checks.
 - [ ] **Goal 10 — Technical stubs** (connector-end compatibility, `*`/`/` unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)
 
 Legacy candidate follow-up work:

@@ -257,3 +257,134 @@ class TestAttributeValidation:
         is_conformant, message = validate_unit_conformance('MassValue', ureg.kilogram)
         assert is_conformant
         assert 'conformant' in message
+
+
+
+
+def sysmlpy_loads(text):
+    import sysmlpy
+    return sysmlpy.loads(text)
+
+from sysmlpy import analyze
+
+class TestStateMachineWellFormedness:
+    """Goal 9: OCL well-formedness for ``state def`` machines."""
+
+    def _codes(self, model):
+        from sysmlpy import analyze
+        return [i.code for i in analyze(model)]
+
+    def test_clean_machine_has_no_state_issues(self):
+        model = sysmlpy_loads("""
+        package M {
+            attribute key : ScalarValues::Boolean := true;
+            state def Cruise {
+                entry; then off;
+                state off;
+                state engaged;
+                transition engage first off accept Engage when key then engaged;
+                transition cancel first engaged accept Cancel then off;
+            }
+        }
+        """)
+        assert self._codes(model) == []
+
+    def test_unresolved_transition_endpoint(self):
+        model = sysmlpy_loads("""
+        package M {
+            state def Broken {
+                entry; then a;
+                state a;
+                state b;
+                transition t1 first a accept Go then s9;
+            }
+        }
+        """)
+        issues = [i for i in analyze(model)
+                  if i.code == "UNRESOLVED_TRANSITION_ENDPOINT"]
+        assert len(issues) == 1
+        assert issues[0].severity == "error"
+        assert "'t1'" in issues[0].message
+        assert "s9" in issues[0].message
+
+    def test_no_initial_state_warning(self):
+        model = sysmlpy_loads("""
+        package M {
+            state def M {
+                state a;
+                state b;
+                transition go first a accept Go then b;
+            }
+        }
+        """)
+        issues = [i for i in analyze(model) if i.code == "NO_INITIAL_STATE"]
+        assert len(issues) == 1
+        assert issues[0].severity == "warning"
+        assert "no initial state" in issues[0].message
+
+    def test_single_state_needs_no_initial(self):
+        model = sysmlpy_loads("""
+        package M {
+            state def M {
+                state only;
+            }
+        }
+        """)
+        assert [i for i in analyze(model)
+                if i.code == "NO_INITIAL_STATE"] == []
+
+    def test_unreachable_state_warning(self):
+        model = sysmlpy_loads("""
+        package M {
+            state def M {
+                entry; then a;
+                state a;
+                state b;
+                state lonely;
+                transition go first a accept Go then b;
+            }
+        }
+        """)
+        issues = [i for i in analyze(model) if i.code == "UNREACHABLE_STATE"]
+        assert len(issues) == 1
+        assert issues[0].severity == "warning"
+        assert "'lonely'" in issues[0].message
+
+    def test_reachable_cycle_has_no_warning(self):
+        model = sysmlpy_loads("""
+        package M {
+            state def M {
+                entry; then a;
+                state a;
+                state b;
+                transition go first a accept Go then b;
+                transition back first b accept Back then a;
+            }
+        }
+        """)
+        assert [i for i in analyze(model)
+                if i.code == "UNREACHABLE_STATE"] == []
+
+    def test_composite_states_resolve_qualified(self):
+        """Region-internal and cross-region bare references resolve; a
+        truly unknown endpoint still errors."""
+        model = sysmlpy_loads("""
+        package M {
+            state def M {
+                entry; then a;
+                state a;
+                transition go first a accept Go then comp;
+                state comp {
+                    entry; then c1;
+                    state c1;
+                    state c2;
+                    transition inner first c1 accept Flip then c2;
+                    transition eject first c2 accept Eject then a;
+                }
+            }
+        }
+        """)
+        bad = [i for i in analyze(model)
+               if i.code in ("UNRESOLVED_TRANSITION_ENDPOINT",
+                             "UNREACHABLE_STATE")]
+        assert bad == []

@@ -126,6 +126,10 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   substate.  For color-vision accessibility,
   `set_stereotype_palette("okabe-ito")` switches the `style="color"`
   views to the Okabe-Ito palette (`bw` remains the default).
+  **Validator depth (Goal 9)** starts with state-machine
+  well-formedness: `UNRESOLVED_TRANSITION_ENDPOINT` (error),
+  `NO_INITIAL_STATE` and `UNREACHABLE_STATE` (warnings) run inside
+  `analyze()` on the simulator's expanded machine descriptor.
 - **Relationship legends opt-in** — `include_legend=False` by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome `bw` remains the default style

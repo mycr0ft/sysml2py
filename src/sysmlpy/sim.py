@@ -205,6 +205,10 @@ class MachineDescriptor(NamedTuple):
     transitions: List[TransitionSpec]
     #: Notes gathered during extraction (fallbacks taken, etc.).
     notes: List[str]
+    #: Transitions whose endpoints could not be resolved to states —
+    #: excluded from simulation but surfaced for diagnostics (the
+    #: validator turns these into UNRESOLVED_TRANSITION_ENDPOINT).
+    skipped: Tuple[TransitionSpec, ...] = ()
 
 
 def build_state_machine(model, focus: Optional[str] = None,
@@ -258,7 +262,7 @@ def build_state_machine(model, focus: Optional[str] = None,
     states: List[str] = []
     raw: List[dict] = []
 
-    def _expand_region(level, prefix):
+    def _expand_region(level, prefix, all_names):
         local_flat: Dict[str, str] = {}
         entry_of: Dict[str, str] = {}
         substates_of: Dict[str, List[str]] = {}
@@ -275,7 +279,7 @@ def build_state_machine(model, focus: Optional[str] = None,
             if _has_region(s):
                 flat_prefix = prefix + nm + "."
                 inner_flat, inner_entry, inner_subs = _expand_region(
-                    s, flat_prefix)
+                    s, flat_prefix, all_names)
                 init = s.get("initial")
                 entry = None
                 if init:
@@ -301,6 +305,8 @@ def build_state_machine(model, focus: Optional[str] = None,
                 states.append(flat)
                 local_flat[nm] = flat
                 substates_of[nm] = [flat]
+            all_names.setdefault(nm, local_flat.get(nm)
+                                 or entry_of.get(nm) or flat)
 
         for t in level.get("transitions", []):
             src, tgt = t.get("source"), t.get("target")
@@ -330,24 +336,37 @@ def build_state_machine(model, focus: Optional[str] = None,
             })
         return local_flat, entry_of, substates_of
 
-    _, entry_of, _ = _expand_region(sm, "")
+    all_names: Dict[str, str] = {}
+    _, entry_of, _ = _expand_region(sm, "", all_names)
 
     transitions: List[TransitionSpec] = []
+    skipped: List[TransitionSpec] = []
     for t in raw:
         source, target = t.get("source"), t.get("target")
         if source is None or target is None:
             notes.append(
                 f"transition {t.get('name')!r} skipped: unresolved "
                 f"endpoint(s) (source={source!r}, target={target!r})")
+            skipped.append(TransitionSpec(
+                name=t.get("name"), source=source, target=target,
+                trigger=t.get("trigger"), guard=t.get("guard"),
+                effect=t.get("effect")))
             continue
-        for endpoint in (source, target):
-            if endpoint not in states:
-                # a substate referenced by bare name from outside its
-                # composite — simulated flat (documented MVP cut)
-                states.append(endpoint)
-                notes.append(
-                    f"state {endpoint!r} added implicitly (referenced "
-                    "by a transition outside its composite region)")
+        # bare-name references to states declared anywhere in the
+        # machine (e.g. a machine-level transition naming a composite's
+        # substate) resolve to the qualified flat name
+        source = all_names.get(source, source)
+        target = all_names.get(target, target)
+        if source not in states or target not in states:
+            notes.append(
+                f"transition {t.get('name')!r} skipped: endpoint(s) "
+                f"name no state in the machine "
+                f"(source={source!r}, target={target!r})")
+            skipped.append(TransitionSpec(
+                name=t.get("name"), source=source, target=target,
+                trigger=t.get("trigger"), guard=t.get("guard"),
+                effect=t.get("effect")))
+            continue
         transitions.append(TransitionSpec(
             name=t.get("name"), source=source, target=target,
             trigger=t.get("trigger"), guard=t.get("guard"),
@@ -372,7 +391,7 @@ def build_state_machine(model, focus: Optional[str] = None,
         initial = fallback
     return MachineDescriptor(name=sm.get("name"), states=states,
                              initial=initial, transitions=transitions,
-                             notes=notes)
+                             notes=notes, skipped=tuple(skipped))
 
 
 def load_model_grammar(model) -> dict:

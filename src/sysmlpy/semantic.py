@@ -2328,6 +2328,7 @@ class SemanticAnalyzer:
         issues.extend(self._check_feature_chaining_compatible(model, symtab))
         issues.extend(self._check_connector_ends_compatible(model))
         issues.extend(self._check_multiplicity_bounds_valid(model))
+        issues.extend(self._check_state_machines(model))
 
         # Step 6: Stylistic checks (warnings, not errors)
         if style_checks:
@@ -2912,6 +2913,102 @@ class SemanticAnalyzer:
         return checker.check_units(model)
 
     # -- OCL well-formedness constraints ------------------------------------
+
+    def _check_state_machines(self, model: Any) -> list[SemanticIssue]:
+        """OCL well-formedness for ``state def`` machines (Goal 9).
+
+        - UNRESOLVED_TRANSITION_ENDPOINT (error): a transition endpoint
+          that names no state in its machine.
+        - NO_INITIAL_STATE (warning): a machine with more than one
+          state and no ``entry; then X;`` — the entry point is
+          undefined, so simulation and execution semantics fall back
+          to the first declared state.
+        - UNREACHABLE_STATE (warning): a state no transition can reach
+          from the initial state (only checked when an initial state
+          exists).
+        """
+        issues: list[SemanticIssue] = []
+        try:
+            # Lazy import: sim pulls the boxes-view collector and the
+            # evaluator; no import cycle at module level.
+            from sysmlpy.sim import SimulationError, build_state_machine
+
+            visit = None
+            from sysmlpy import boxes_view as _bv
+            visit = _bv  # noqa: F841 — ensures boxes_view loads once
+            machines = self._collect_machines(model)
+        except SimulationError:
+            return issues
+        except Exception:
+            # A model that cannot be re-parsed (programmatic models
+            # without dump support) — skip state-machine checks.
+            return issues
+
+        for sm in machines:
+            name = sm.get("name")
+            top_states = sm.get("states", [])
+            n_states = len(top_states)
+
+            # NO_INITIAL_STATE: undefined entry point
+            if sm.get("initial") is None and n_states > 1:
+                issues.append(SemanticIssue(
+                    severity="warning",
+                    code="NO_INITIAL_STATE",
+                    message=(
+                        f"State machine '{name}' declares "
+                        f"{n_states} states but no initial state "
+                        "(missing 'entry; then <state>;'); the first "
+                        "declared state is assumed on execution"),
+                    reference=name,
+                ))
+
+            # Endpoint resolution + reachability run against the sim's
+            # expanded descriptor (composite retargeting, qualified
+            # substates, fall-through order — one source of truth).
+            try:
+                md = build_state_machine(model, focus=name)
+            except SimulationError:
+                continue
+            for t in md.skipped:
+                issues.append(SemanticIssue(
+                    severity="error",
+                    code="UNRESOLVED_TRANSITION_ENDPOINT",
+                    message=(
+                        f"Transition '{t.name or '<unnamed>'}' in "
+                        f"state machine '{name}' references an "
+                        f"endpoint that is not a state "
+                        f"(source={t.source!r}, target={t.target!r})"),
+                    reference=t.name,
+                ))
+
+            if sm.get("initial") is None:
+                continue  # reachability is ill-defined without an entry
+            reachable = {md.initial}
+            changed = True
+            while changed:
+                changed = False
+                for t in md.transitions:
+                    if t.source in reachable and t.target not in reachable:
+                        reachable.add(t.target)
+                        changed = True
+            for st in md.states:
+                if st not in reachable:
+                    issues.append(SemanticIssue(
+                        severity="warning",
+                        code="UNREACHABLE_STATE",
+                        message=(
+                            f"State '{st}' in state machine '{name}' "
+                            "is not reachable from the initial state"),
+                        reference=st,
+                    ))
+        return issues
+
+    @staticmethod
+    def _collect_machines(model: Any) -> list:
+        """Collect state-machine descriptors (boxes-view collector)."""
+        from sysmlpy.sim import load_model_grammar
+        from sysmlpy.boxes_view import _collect_state_machine
+        return _collect_state_machine(load_model_grammar(model))
 
     def _check_duplicate_names(self, symtab: SymbolTable) -> list[SemanticIssue]:
         """Namespace.duplicate_names: No two members may have the same name in a scope."""
