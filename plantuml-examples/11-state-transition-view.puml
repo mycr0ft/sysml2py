@@ -26,10 +26,4 @@ E3 --> E4 : transition
 
 E4 --> [*]
 
-legend right
-  <b>State Transition Legend</b>
-  State Transition: -->
-  Composite states: nested state blocks
-endlegend
-
 @enduml
