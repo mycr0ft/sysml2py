@@ -79,6 +79,9 @@ are complete.  Follow-up work is organized under the
     already exists in `traceability.py`.
 - [x] **Goal 7 — Spreadsheet bridge** *(v0.66.0: `sysmlpy.spreadsheet` — CSV export of tabular/data-value/matrix views (`output_format="csv"`, `view --format csv`), `write_xlsx()` workbook export + `sysmlpy xlsx` CLI (optional `openpyxl` extra `sysmlpy[xlsx]`), value import into evaluator bindings (`import_values_csv()`/`import_values_xlsx()`, `eval --set-file`, `parse_value_literal()`); 37 tests in `tests/spreadsheet_test.py`.)*
 - [ ] **Goal 8 — Semantic model diff** (review workflows)
+- **Next release: v0.69.1** — next committed batch (Goal 9 batch 2
+  candidates: unresolved `accept` signal references, requirement
+  `satisfy`/`verify` coverage cross-checks, abstract-typing warnings).
 - [~] **Goal 9 — Validator depth** (more OCL well-formedness checks)
   - [x] **Batch 1 (v0.69.0): state machines** — `UNRESOLVED_TRANSITION_ENDPOINT`
     (error), `NO_INITIAL_STATE` (warning), `UNREACHABLE_STATE`

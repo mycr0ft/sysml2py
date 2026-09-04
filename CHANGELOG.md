@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## Unreleased
+## v0.69.0 (2026-09-02)
 
 - **Goal 9 begins: state-machine well-formedness checks** — three new
   OCL rules in `analyze()`: `UNRESOLVED_TRANSITION_ENDPOINT` (error —
