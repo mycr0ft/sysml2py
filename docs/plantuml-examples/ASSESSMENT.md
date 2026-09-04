@@ -41,7 +41,7 @@ All 9 example diagrams were rendered successfully using PlantUML 1.2024.7:
 | 3 | Vehicle Structure | Rendered | Compartments (attributes/ports inside boxes) not supported in `rectangle` |
 | 4 | B&W Style | Rendered | Clean monochrome output; binding thickness stands out |
 | 5 | Requirements | Rendered | Derivation, satisfaction, verify, refine all visible |
-| 6 | Interconnection | Partial | Ports render as detached elements; port-to-port connections don't link properly |
+| 6 | Interconnection | Good | Official iv notation: parts nested by enclosure, `name : Type` labels, inherited ports as boundary nodes, port-to-port flow (`f1`/`f2`) and connection edges only |
 | 7 | CSS Styled | Rendered | Inline arrow styling works; CSS class selectors on elements don't apply via stereotypes |
 | 8 | State Machine | Rendered | Excellent — hierarchical states, transitions, guards all perfect |
 | 9 | Activity | Rendered | Excellent — control flow, decisions, notes all perfect |

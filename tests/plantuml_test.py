@@ -1073,6 +1073,119 @@ class TestInterconnectionView:
         assert "Engine" in puml
         assert "FuelPort" in puml
 
+    def test_iv_nests_by_enclosure_not_composition(self):
+        """iv conveys containment by nested rectangles, not *-- edges.
+
+        Official InterconnectionView notation shows part nesting by
+        enclosure and limits edges to connections/flows.
+        """
+        from sysmlpy.plantuml import as_interconnection_view
+
+        model = sysmlpy.loads("""
+        package System {
+            part def Sensor { port output; }
+            part def Controller {
+                part s : Sensor;
+                flow f1 from s.output to s.output;
+            }
+        }
+        """)
+        puml = as_interconnection_view(model)
+        assert "*--" not in puml, "iv must not draw containment edges"
+        assert "--:|>" not in puml, "iv must not draw typing arrows"
+        assert "--|>" not in puml, "iv must not draw specialization arrows"
+        assert "{" in puml and "}" in puml, "nesting must be enclosure"
+        flow_boxes = [l for l in puml.splitlines()
+                      if l.strip().startswith("rectangle")
+                      and l.strip().endswith("<<flow>>")]
+        assert not flow_boxes, "flows are edges, not boxes"
+
+    def test_iv_types_shown_in_labels(self):
+        """Usage labels carry their type (name : Type), not --:|> arrows."""
+        from sysmlpy.plantuml import as_interconnection_view
+
+        model = sysmlpy.loads("""
+        package System {
+            part def Sensor { port output; }
+            part def Controller {
+                part s : Sensor;
+            }
+        }
+        """)
+        puml = as_interconnection_view(model)
+        assert '"s : Sensor"' in puml
+
+    def test_iv_flow_edges_port_to_port(self):
+        """Flows chain through ports: s.output --> p.input, port aliases."""
+        from sysmlpy.plantuml import as_interconnection_view
+
+        model = sysmlpy.loads("""
+        package System {
+            part def Sensor { port output; }
+            part def Processor { port input; }
+            part def Controller {
+                part s : Sensor;
+                part p : Processor;
+                flow f1 from s.output to p.input;
+            }
+        }
+        """)
+        puml = as_interconnection_view(model)
+        # the flow edge connects port aliases, not part aliases
+        import re
+        edge_lines = [l for l in puml.splitlines() if "-->" in l]
+        assert edge_lines, "flow edge must be present"
+        src, dst = edge_lines[0].split("-->")
+        src = src.strip()
+        dst = dst.split(":")[0].strip()
+        aliases = re.findall(r'as (\S+)', puml)
+        port_aliases = set()
+        for line in puml.splitlines():
+            m = re.search(r'as (P\d+|E\d+)', line)
+            if m and "<<port>>" in line:
+                port_aliases.add(m.group(1))
+        assert src in port_aliases and dst in port_aliases, (
+            f"endpoints {src}/{dst} must be port nodes {port_aliases}")
+        # and the declared flow name is recovered from the grammar
+        assert ": f1" in edge_lines[0]
+
+    def test_iv_connection_edges_render(self):
+        """Connection usages render as thick plain lines between ports."""
+        from sysmlpy.plantuml import as_interconnection_view
+
+        model = sysmlpy.loads("""
+        package Drive {
+            part def Engine { port powerOut; }
+            part def Wheel { port hubIn; }
+            part def Drivetrain {
+                part engine : Engine;
+                part leftWheel : Wheel;
+                connection clutch connect engine.powerOut to leftWheel.hubIn;
+            }
+        }
+        """)
+        puml = as_interconnection_view(model)
+        assert "-[thickness=3]-" in puml
+        assert ": clutch" in puml
+
+    def test_iv_inherited_ports_on_usages(self):
+        """Usages expose their typed definition's ports as boundary boxes."""
+        from sysmlpy.plantuml import as_interconnection_view
+
+        model = sysmlpy.loads("""
+        package System {
+            part def Sensor { port output; }
+            part def Controller {
+                part s : Sensor;
+            }
+        }
+        """)
+        puml = as_interconnection_view(model)
+        # the Sensor definition box is consumed by the usage label
+        assert 'rectangle "Sensor" as' not in puml
+        # the port appears as a boundary node inside the usage
+        assert '"output" as P1 <<port>>' in puml
+
     def test_as_interconnection_view_with_focus(self):
         """Focus shows only subtree in interconnection view."""
         from sysmlpy.plantuml import as_interconnection_view

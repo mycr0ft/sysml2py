@@ -435,13 +435,60 @@ def _extract_flow_endpoints(flow_element):
         if not hasattr(flow_end, 'children'):
             continue
 
+        # FlowEnd children (v0.68+): FlowEndSubsetting carries the base
+        # reference (``s``); FlowFeatureMember -> FlowFeature ->
+        # FlowRedefinition -> redefinedFeature carries chained segments
+        # (``output``).  Combine into the full feature path so flows
+        # resolve port-to-port (``s.output``) rather than collapsing to
+        # the owning part (``s``).
+        names = []
         for child in flow_end.children:
-            if hasattr(child, 'children') and hasattr(child.children, 'names'):
-                names = child.children.names
-                if result == 'from':
-                    from_names = names
-                else:
-                    to_names = names
+            child_class = child.__class__.__name__
+            if child_class == 'FlowEndSubsetting':
+                ref = getattr(child, 'referencedFeature', None)
+                ref_names = getattr(ref, 'names', None) if ref is not None else None
+                if not ref_names and hasattr(child, 'children') \
+                        and hasattr(child.children, 'names'):
+                    ref_names = child.children.names
+                if ref_names:
+                    names.extend(ref_names)
+            elif child_class == 'FlowFeatureMember':
+                ff = getattr(child, 'children', None)
+                if ff is None:
+                    continue
+                # Grammar classes may hold a single child object rather
+                # than a list — normalize before iterating.
+                if not isinstance(ff, (list, tuple)):
+                    ff = [ff]
+                for item in ff:
+                    if item.__class__.__name__ != 'FlowFeature':
+                        if hasattr(item, 'children') and hasattr(item.children, 'names'):
+                            names.extend(item.children.names)
+                        continue
+                    subs = getattr(item, 'children', None)
+                    if subs is not None and not isinstance(subs, (list, tuple)):
+                        subs = [subs]
+                    for sub in (subs or []):
+                        if sub.__class__.__name__ == 'FlowRedefinition':
+                            # FlowRedefinition carries the chained name as
+                            # its child QualifiedName (redefinedFeature is
+                            # not populated on the grammar object).
+                            rd = getattr(sub, 'redefinedFeature', None)
+                            rd_names = getattr(rd, 'names', None) if rd is not None else None
+                            if not rd_names:
+                                sub_child = getattr(sub, 'children', None)
+                                rd_names = getattr(sub_child, 'names', None) \
+                                    if sub_child is not None else None
+                            if rd_names:
+                                names.extend(rd_names)
+            elif hasattr(child, 'children') and hasattr(child.children, 'names'):
+                names.extend(child.children.names)
+
+        if names:
+            if result == 'from':
+                from_names = names
+            else:
+                to_names = names
 
     return from_names, to_names
 
@@ -1338,33 +1385,179 @@ def as_interconnection_diagram(model, focus=None, elements=None, style="bw",
 
     # Collect all flow connections for arrow rendering
     flow_connections = _extract_flow_connections(model)
+    connector_connections = _extract_connections(model)
 
     # Traverse
     gen._traverse(gen.model)
 
     id_map = gen.id_map
-    elements_list = gen.elements
     relationships = gen.relationships
+    included_ids = gen._included_ids
 
-    # Filter to show interconnection-relevant elements
+    # Interconnection-relevant element types.  Flows and connections are
+    # EDGES on an iv (official notation), not nodes — they are excluded
+    # from element rendering and drawn from the extractions below.
     iv_types = {"part", "port", "interface", "item", "attribute",
-                "connection", "flow", "allocation"}
+                "allocation"}
 
-    for alias, name, stereotype, elem, is_included in elements_list:
-        sysml_type = getattr(elem, 'sysml_type', '')
-        if sysml_type in iv_types:
-            keyword = "rectangle"
-            if sysml_type == 'state':
-                keyword = "rectangle"  # avoid PlantUML state-shape constraints
-                stereotype = "<<state>>"
-            elif sysml_type == 'view':
-                keyword = "folder"
-            lines.append(f'{keyword} "{name}" as {alias} {stereotype}')
+    def _renders(element):
+        st = getattr(element, 'sysml_type', '')
+        return (id(element) in included_ids
+                and st in iv_types
+                and st not in ('flow', 'connection'))
+
+    # Definitions typed by included usages are not drawn: the usage label
+    # carries the type (``s : Sensor``, official iv notation) and the
+    # definition's ports are inherited onto the usage as boundary boxes.
+    consumed_def_ids = set()
+
+    def _resolve_def(tb_name):
+        if not tb_name:
+            return None
+        found = model.find(tb_name)
+        if isinstance(found, list):
+            return found[0] if found else None
+        return found
+
+    def _collect_consumed(element):
+        if (_renders(element)
+                and not getattr(element, 'is_definition', False)):
+            d = _resolve_def(_get_typedby_name(element))
+            if d is not None and getattr(d, 'is_definition', False):
+                consumed_def_ids.add(id(d))
+        for child in getattr(element, 'children', None) or []:
+            _collect_consumed(child)
+
+    for child in getattr(model, 'children', None) or []:
+        _collect_consumed(child)
+
+    # Typed labels: usages show ``name : Type`` (typing is conveyed in
+    # the label on an iv, not as a --:|> arrow).
+    def _iv_label(element):
+        name = _get_element_name(element)
+        tb = _get_typedby_name(element)
+        if tb:
+            d = _resolve_def(tb)
+            tname = getattr(d, 'name', None) if d is not None else None
+            if not tname and getattr(d, 'names', None):
+                tname = d.names[-1]
+            if tname:
+                return f"{name} : {tname}"
+        return name
+
+    # Inherited ports: a usage exposes the ports of its typed definition
+    # chain (definition + specializes ancestors) as boundary features.
+    synth_ports = {}   # usage_id -> [(alias, label)]
+    port_map = {}      # (owner_id, port_name) -> alias
+    port_counter = [0]
+
+    def _chain_port_defs(tb_name):
+        """Yield port children along the typed definition chain."""
+        seen_defs = set()
+        while tb_name and tb_name not in seen_defs:
+            seen_defs.add(tb_name)
+            d = _resolve_def(tb_name)
+            if d is None:
+                return
+            for c in getattr(d, 'children', None) or []:
+                if getattr(c, 'sysml_type', '') == 'port':
+                    yield c
+            tb_name = (_get_specializes_names(d) or [None])[0]
+
+    def _collect_ports(element):
+        """Register own + inherited ports for a rendered element.
+
+        Own port children render through the normal enclosure walk
+        (they are in ``ordered``), so only their alias registration in
+        ``port_map`` happens here.  Inherited ports (from the typed
+        definition chain) get synthetic aliases and appear in
+        ``synth_ports`` for _emit to nest as boundary boxes.
+        """
+        owner_id = id(element)
+        seen = set()
+        own = [c for c in getattr(element, 'children', None) or []
+               if getattr(c, 'sysml_type', '') == 'port']
+        for p in own:
+            nm = getattr(p, 'name', None)
+            if nm is None or (owner_id, nm) in port_map:
+                continue
+            alias = id_map.get(id(p))
+            if alias is None:
+                continue
+            port_map[(owner_id, nm)] = alias
+            seen.add(nm)
+        entries = []
+        if not getattr(element, 'is_definition', False):
+            for p in _chain_port_defs(_get_typedby_name(element)):
+                nm = getattr(p, 'name', None)
+                if nm is None or nm in seen or (owner_id, nm) in port_map:
+                    continue
+                port_counter[0] += 1
+                alias = f"P{port_counter[0]}"
+                port_map[(owner_id, nm)] = alias
+                entries.append((alias, _iv_label(p), True))
+                seen.add(nm)
+        if entries:
+            synth_ports[owner_id] = entries
+
+    # DFS over the model in the generator's order, keeping the nearest
+    # rendered ancestor for enclosure.
+    ordered = []   # (element, parent_element_or_None) in DFS order
+
+    def _dfs(element, parent_rendered):
+        if id(element) in consumed_def_ids:
+            return  # consumed definition: ports inherit onto usages
+        renders = _renders(element)
+        if renders:
+            ordered.append((element, parent_rendered))
+            _collect_ports(element)
+        for child in getattr(element, 'children', None) or []:
+            _dfs(child, element if renders else parent_rendered)
+
+    for child in getattr(model, 'children', None) or []:
+        _dfs(child, None)
+
+    # Emit elements with containment as enclosure (nested rectangles),
+    # not as *-- edges.
+    children_of = {}
+    for elem, parent in ordered:
+        children_of.setdefault(id(parent) if parent is not None else None,
+                               []).append(elem)
+
+    def _emit(elem, depth):
+        alias = id_map.get(id(elem))
+        if alias is None:
+            return
+        label = _iv_label(elem)
+        stereo = _get_stereotype(elem, style=style)
+        own_kids = [k for k, par in ordered if par is elem]
+        inh = synth_ports.get(id(elem), [])
+        pad = "    " * depth
+        if own_kids or inh:
+            lines.append(f'{pad}rectangle "{label}" as {alias} {stereo} {{')
+            for k in own_kids:
+                _emit(k, depth + 1)
+            for palias, plabel, _is_synth in inh:
+                lines.append(f'{pad}    rectangle "{plabel}" as {palias} <<port>>')
+            lines.append(pad + "}")
+        else:
+            lines.append(f'{pad}rectangle "{label}" as {alias} {stereo}')
+
+    top_level = [e for e, par in ordered if par is None]
+    for elem in top_level:
+        _emit(elem, 0)
 
     lines.append("")
 
-    # Render containment, typing, and specialization relationships
+    # Interconnection edges only: connections and flows.  Containment is
+    # conveyed by enclosure above; typing by the ``name : Type`` labels.
+    connect_arrows = {ARROW_STYLES["binding"], ARROW_STYLES["connector"],
+                      ARROW_STYLES["connector_directed"],
+                      ARROW_STYLES["succession_flow"],
+                      ARROW_STYLES["allocation"]}
     for src, arrow, dst, label, is_external in relationships:
+        if arrow not in connect_arrows:
+            continue
         if is_external and not show_external:
             continue
         if is_external:
@@ -1374,37 +1567,74 @@ def as_interconnection_diagram(model, focus=None, elements=None, style="bw",
         else:
             lines.append(f'{src} {arrow} {dst}')
 
-    lines.append("")
+    def _resolve_endpoint(names):
+        """Resolve a feature path to a rendered alias.
 
-    # Render flow connection arrows (from grammar-level scanning)
+        Walks segment by segment: ``['s', 'output']`` finds usage ``s``
+        then its (own or inherited) port ``output`` via port_map, giving
+        port-to-port edges.  Falls back to whole-path element
+        resolution for endpoints that are rendered elements themselves.
+        """
+        if not names:
+            return None
+        base = _find_element_by_qualified_name(model, names[:1])
+        if base is None:
+            elem = _find_element_by_qualified_name(model, names)
+            if elem is None:
+                return None
+            return id_map.get(id(elem))
+        cur = base
+        for seg in names[1:]:
+            nxt = None
+            for c in getattr(cur, 'children', None) or []:
+                if getattr(c, 'name', None) == seg:
+                    nxt = c
+                    break
+            if nxt is not None:
+                cur = nxt
+                continue
+            pa = port_map.get((id(cur), seg))
+            if pa is not None:
+                return pa
+            break
+        return id_map.get(id(cur))
+
+    def _clean_label(name):
+        if (name and len(name) == 36 and name.count("-") == 4
+                and all(c in "0123456789abcdef"
+                        for c in name.replace("-", ""))):
+            return None
+        return name
+
+    # Flow edges (port-to-port when endpoints chain through ports)
+    seen_edges = set()
     for from_names, to_names, flow_name, is_grammar_obj in flow_connections:
-        from_elem = _find_element_by_qualified_name(model, from_names) if from_names else None
-        to_elem = _find_element_by_qualified_name(model, to_names) if to_names else None
-
-        if from_elem is None or to_elem is None:
+        fa = _resolve_endpoint(from_names)
+        ta = _resolve_endpoint(to_names)
+        if not fa or not ta or fa == ta:
             continue
-
-        from_id = id(from_elem)
-        to_id = id(to_elem)
-
-        from_included = from_id in gen._included_ids
-        to_included = to_id in gen._included_ids
-        if not (from_included or to_included):
+        key = (fa, ta, flow_name)
+        if key in seen_edges:
             continue
+        seen_edges.add(key)
+        fn = _clean_label(flow_name)
+        lines.append(f'{fa} {ARROW_STYLES["flow"]} {ta} : {fn or "flow"}')
 
-        from_alias = id_map.get(from_id)
-        to_alias = id_map.get(to_id)
-        if from_alias and to_alias:
-            # Anonymous flows carry UUID names from the visitor — they
-            # are unnamed in the source and unlabeled in official
-            # notation, so fall back to the neutral "flow" label.
-            if (flow_name and len(flow_name) == 36
-                    and flow_name.count("-") == 4
-                    and all(c in "0123456789abcdef"
-                            for c in flow_name.replace("-", ""))):
-                flow_name = None
-            label_text = flow_name if flow_name else "flow"
-            lines.append(f'{from_alias} {ARROW_STYLES["flow"]} {to_alias} : {label_text}')
+    # Connection edges (thick plain line per official notation)
+    for from_names, to_names, conn_name in connector_connections:
+        fa = _resolve_endpoint(from_names)
+        ta = _resolve_endpoint(to_names)
+        if not fa or not ta or fa == ta:
+            continue
+        key = (fa, ta, conn_name, "conn")
+        if key in seen_edges:
+            continue
+        seen_edges.add(key)
+        cn = _clean_label(conn_name)
+        if cn:
+            lines.append(f'{fa} {ARROW_STYLES["connector"]} {ta} : {cn}')
+        else:
+            lines.append(f'{fa} {ARROW_STYLES["connector"]} {ta}')
 
     lines.append("")
 
@@ -1416,11 +1646,7 @@ def as_interconnection_diagram(model, focus=None, elements=None, style="bw",
             "  Binding (==): -[thickness=5]-",
             "  Connection: -[thickness=3]-",
             "  Flow Transfer: -->",
-            "  Succession Flow: ..>",
             "  Allocation: -[thickness=5,dotted]->",
-            "  Feature Typing: --:|> ",
-            "  Composite (owns): *--",
-            "  | Specialization | --|> |",
             "endlegend",
         ])
         lines.append("")
@@ -1832,6 +2058,30 @@ def _extract_flow_endpoints_from_grammar(flow_grammar):
     return from_names, to_names
 
 
+def _flow_declared_name(flow_element):
+    """Recover a flow's declared name (``flow f1 from ...`` -> ``f1``).
+
+    The visitor assigns anonymous flow usages a UUID name; the declared
+    name survives in the grammar's
+    FlowConnectionDeclaration -> UsageDeclaration -> FeatureDeclaration
+    -> Identification.declaredName chain.  Returns None when absent.
+    """
+    g = getattr(flow_element, 'grammar', None)
+    if g is None:
+        return None
+    decl = getattr(g, 'declaration', None)
+    if decl is None:
+        return None
+    d = getattr(decl, 'declaration', None)      # UsageDeclaration
+    if d is None:
+        return None
+    d2 = getattr(d, 'declaration', None)        # FeatureDeclaration
+    if d2 is None:
+        return None
+    ident = getattr(d2, 'identification', None)
+    return getattr(ident, 'declaredName', None) if ident is not None else None
+
+
 def _extract_flow_connections(model):
     """Scan the model for all flow connections (Usage-level and grammar-level).
 
@@ -1858,6 +2108,11 @@ def _extract_flow_connections(model):
         if getattr(element, 'sysml_type', '') == 'flow':
             from_names, to_names = _extract_flow_endpoints(element)
             flow_name = getattr(element, 'name', None)
+            if (flow_name and len(flow_name) == 36
+                    and flow_name.count("-") == 4):
+                declared = _flow_declared_name(element)
+                if declared:
+                    flow_name = declared
             connections.append((from_names, to_names, flow_name, False))
 
         # Scan every element's grammar body for embedded flows

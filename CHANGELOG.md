@@ -11,6 +11,26 @@
   as labels. Grammar-only `ControlNode` children no longer leak as
   anonymous containment boxes. 11 new tests
   (`TestActionFlowControlNodes`).
+- **Interconnection View notation fidelity** — `as_interconnection_view()`
+  now follows the official iv notation: part nesting is conveyed by
+  **enclosure** (nested `rectangle` blocks) instead of `*--` composition
+  edges; usages carry **typed labels** (`s : Sensor`) instead of
+  `--:|>` typing arrows; definitions typed by rendered usages are not
+  drawn (their ports inherit onto the usages as boundary boxes);
+  flows and connections render **only as edges** — flows port-to-port
+  with declared names recovered from the grammar (`flow f1 from
+  s.output to p.input` labels `f1`, previously collapsed to
+  part-to-part "flow"), `connection ... connect x.p1 to y.p2` usages
+  render as thick plain lines (`_extract_connections` was already
+  present but never wired into the iv). Anonymous flow UUID names are
+  suppressed as before. 5 new tests.
+- **Flow endpoint chains** — `_extract_flow_endpoints` now recovers the
+  full feature path (`s.output`, not just `s`): FlowFeatureMember →
+  FlowFeature → FlowRedefinition carries the chained segment as its
+  child QualifiedName; anonymous flows fall back to their declared
+  name via `Identification.declaredName` (`_flow_declared_name`).
+  Afv behavior verified unchanged (flows still connect actions, per
+  the pilot's VAction).
 - **Boxes-backed afv control nodes** — `as_action_flow_view_boxes()`
   renders the same chains through diagramboxes primitives: `first
   start` as a filled start dot, `decide`/`merge` as **diamonds**

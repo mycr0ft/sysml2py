@@ -5,7 +5,7 @@ skinparam defaultFontSize 12
 skinparam defaultFontName Helvetica
 skinparam defaultFontName Monospaced
 
-title gv [model] 9c233a46-f859-4451-b2c9-299c6a745bb5 [Textual Notation]
+title gv [model] b1669b79-ab6b-455d-a8bf-b0e7feb71acd [Textual Notation]
 
 note as TextualNotation
 part def Wheel

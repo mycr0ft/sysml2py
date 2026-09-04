@@ -4,7 +4,7 @@ skinparam monochrome true
 skinparam defaultFontSize 12
 skinparam defaultFontName Helvetica
 
-title grv [model] 9c233a46-f859-4451-b2c9-299c6a745bb5 [Element Table]
+title grv [model] b1669b79-ab6b-455d-a8bf-b0e7feb71acd [Element Table]
 
 rectangle "<b>Name</b>|<b>Type</b>|<b>Kind</b>|<b>Parent</b>" as HEADER #LightGray
 rectangle "Wheel|part def|def|(root)" as R0

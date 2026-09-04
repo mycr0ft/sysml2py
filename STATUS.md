@@ -105,6 +105,9 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   PlantUML afv uses hexagons (deployment syntax has no diamond), boxes
   afv uses true decision diamonds + start/done dots via diagramboxes
   0.5.0, whose sugiyama port routing is obstacle-aware (v0.68.0+).
+  The PlantUML interconnection view follows official iv notation
+  (enclosure nesting, typed labels, flows/connections as the only
+  edges — flows port-to-port; v0.68.0+).
 - **Relationship legends opt-in** — `include_legend=False` by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome `bw` remains the default style
