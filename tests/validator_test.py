@@ -278,6 +278,8 @@ class TestStateMachineWellFormedness:
         model = sysmlpy_loads("""
         package M {
             attribute key : ScalarValues::Boolean := true;
+            attribute def Engage;
+            attribute def Cancel;
             state def Cruise {
                 entry; then off;
                 state off;
@@ -388,3 +390,135 @@ class TestStateMachineWellFormedness:
                if i.code in ("UNRESOLVED_TRANSITION_ENDPOINT",
                              "UNREACHABLE_STATE")]
         assert bad == []
+
+
+class TestTriggerPayloadResolution:
+    """Goal 9 batch 2: ``accept <Sig>`` payloads must resolve."""
+
+    def _codes(self, model):
+        from sysmlpy import analyze
+        return [i.code for i in analyze(model)]
+
+    def test_undeclared_bare_payload_errors(self):
+        model = sysmlpy_loads("""
+        package M {
+            state def M {
+                entry; then a;
+                state a;
+                transition t first a accept Nada then a;
+            }
+        }
+        """)
+        issues = [i for i in analyze(model)
+                  if i.code == "UNRESOLVED_TRIGGER_PAYLOAD"]
+        assert len(issues) == 1
+        assert issues[0].severity == "error"
+        assert "'Nada'" in issues[0].message
+
+    def test_undeclared_guarded_payload_errors(self):
+        model = sysmlpy_loads("""
+        package M {
+            attribute key : ScalarValues::Boolean := true;
+            state def M {
+                entry; then a;
+                state a;
+                transition t first a accept Bogus when key then a;
+            }
+        }
+        """)
+        issues = [i for i in analyze(model)
+                  if i.code == "UNRESOLVED_TRIGGER_PAYLOAD"]
+        assert len(issues) == 1
+        assert "'Bogus'" in issues[0].message
+
+    def test_declared_payload_resolves(self):
+        model = sysmlpy_loads("""
+        package M {
+            attribute def Go;
+            state def M {
+                entry; then a;
+                state a;
+                transition t first a accept Go then a;
+            }
+        }
+        """)
+        assert [i for i in analyze(model)
+                if i.code == "UNRESOLVED_TRIGGER_PAYLOAD"] == []
+
+    def test_library_payload_resolves(self):
+        """Library-typed payloads (ScalarValues::Real) are references
+        resolved through the library symbol index."""
+        model = sysmlpy_loads("""
+        package M {
+            state def M {
+                entry; then a;
+                state a;
+                transition t first a accept e : ScalarValues::Real then a;
+            }
+        }
+        """)
+        assert [i for i in analyze(model)
+                if i.code == "UNRESOLVED_TRIGGER_PAYLOAD"] == []
+
+
+class TestRequirementCoverageChecks:
+    """Goal 9 batch 2: requirement traceability cross-checks."""
+
+    def _codes(self, model):
+        from sysmlpy import analyze
+        return [i.code for i in analyze(model)]
+
+    def test_uncovered_requirement_usage_warns(self):
+        model = sysmlpy_loads("""
+        package M {
+            requirement def R;
+            requirement r1 : R;
+        }
+        """)
+        issues = [i for i in analyze(model)
+                  if i.code == "REQUIREMENT_UNCOVERED"]
+        assert len(issues) == 1
+        assert issues[0].severity == "warning"
+        assert "'r1'" in issues[0].message
+
+    def test_requirement_def_never_flagged(self):
+        model = sysmlpy_loads("""
+        package M {
+            requirement def Category;
+        }
+        """)
+        assert [i for i in analyze(model)
+                if i.code == "REQUIREMENT_UNCOVERED"] == []
+
+    def test_satisfied_and_verified_is_clean(self):
+        model = sysmlpy_loads("""
+        package M {
+            requirement def R;
+            requirement top : R {
+                subject s : V;
+                verify v1 : VC;
+            }
+            part def V;
+            verification def VC;
+            part v : V {
+                satisfy top by v;
+            }
+        }
+        """)
+        assert [i for i in analyze(model)
+                if i.code == "REQUIREMENT_UNCOVERED"] == []
+
+    def test_partial_coverage_not_flagged(self):
+        """Satisfied but unverified is project progress, not an error."""
+        model = sysmlpy_loads("""
+        package M {
+            requirement def R;
+            requirement top : R;
+            part def V;
+            part v : V {
+                satisfy top by v;
+            }
+        }
+        """)
+        assert [i for i in analyze(model)
+                if i.code == "REQUIREMENT_UNCOVERED"] == []

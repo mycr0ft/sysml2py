@@ -139,7 +139,7 @@ else:
 | `semantic_test.py` | 107 | `analyze()`, OCL checks, symbol resolution, imports |
 | `navigate_test.py` | 33 | `Searchable` mixin, model traversal |
 | `import_test.py` | 31 | Import visibility/round-trip, `add_import()`, `.imports`, source-order preservation |
-| `validator_test.py` | 41 | Validator rules (+ state-machine well-formedness) |
+| `validator_test.py` | 49 | Validator rules (+ state-machine/trigger/requirement checks) |
 | `project_test.py` | 17 | `load_files()`, `load_project()` |
 | `store_test.py` | 46 | Storage backends (networkx/kuzu are skipped if not installed) |
 | `conformance_test.py` | 123 | OMG 2026-03 XPect parse conformance (slow) |

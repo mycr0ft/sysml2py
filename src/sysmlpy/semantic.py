@@ -1236,6 +1236,55 @@ class ExpressionIdentifierCollector:
             self._walk(child, results, child_scope)
 
 
+def _find_payload_parameters(node: Any) -> list:
+    """Locate every ``PayloadParameter`` dict in a grammar tree."""
+    out: list = []
+
+    def walk(n: Any) -> None:
+        if isinstance(n, dict):
+            if n.get("name") == "PayloadParameter":
+                out.append(n)
+            for v in n.values():
+                if isinstance(v, (dict, list)):
+                    walk(v)
+        elif isinstance(n, list):
+            for item in n:
+                if isinstance(item, (dict, list)):
+                    walk(item)
+
+    walk(node)
+    return out
+
+
+def _payload_reference(payload: Any) -> str | None:
+    """The name a ``PayloadParameter`` refers to, if any.
+
+    Bare ``accept Sig`` → the OwnedFeatureTyping QualifiedName.
+    Guarded ``accept Sig when ...`` → ``identification.declaredName``
+    (only when no typing is present — with both, the identification
+    is a fresh declaration, not a reference).
+    """
+    if not isinstance(payload, dict):
+        return None
+    feature = payload.get("feature") or {}
+    rels = feature.get("ownedRelationship")
+    rel_list = rels if isinstance(rels, list) else         [rels] if isinstance(rels, dict) else []
+    for rel in rel_list:
+        t = ((rel.get("type") or {}).get("type") or {}) \
+            if isinstance(rel, dict) else {}
+        names = t.get("names")
+        if isinstance(names, list) and names:
+            return "::".join(str(n) for n in names)
+    if rel_list:
+        return None  # typed payload — identification is a declaration
+    ident = payload.get("identification")
+    if isinstance(ident, dict):
+        name = ident.get("declaredName")
+        if name:
+            return str(name)
+    return None
+
+
 def _find_owned_expressions(node: Any) -> list[dict]:
     """Locate every ``OwnedExpression`` dict in a grammar definition tree."""
     out: list[dict] = []
@@ -2329,6 +2378,8 @@ class SemanticAnalyzer:
         issues.extend(self._check_connector_ends_compatible(model))
         issues.extend(self._check_multiplicity_bounds_valid(model))
         issues.extend(self._check_state_machines(model))
+        issues.extend(self._check_trigger_payloads(model, symtab, lib_roots))
+        issues.extend(self._check_requirement_coverage(model))
 
         # Step 6: Stylistic checks (warnings, not errors)
         if style_checks:
@@ -2914,6 +2965,124 @@ class SemanticAnalyzer:
 
     # -- OCL well-formedness constraints ------------------------------------
 
+    def _check_trigger_payloads(
+        self,
+        model: Any,
+        symtab: "SymbolTable",
+        lib_roots: list,
+    ) -> list[SemanticIssue]:
+        """Resolve ``accept <Sig>`` trigger payload references (Goal 9).
+
+        The shorthand ``accept <Sig> [when <expr>]`` binds a transition
+        trigger to a payload/signal definition.  A typo there is
+        silent today: the transition simply never fires, and nothing
+        in analyze() looks at payload names.  Two parse shapes exist
+        (both verified against the visitor output):
+
+        - bare ``accept Sig`` — PayloadParameter carries an
+          OwnedFeatureTyping → QualifiedName reference;
+        - guarded ``accept Sig when expr`` — the visitor parks the
+          name in ``identification.declaredName`` with no typing.
+
+        In both the name is meant as a reference to a declared
+        definition, so each payload name is resolved against the
+        symbol table in the transition's scope.  Unresolved payloads
+        produce UNRESOLVED_TRIGGER_PAYLOAD errors.  When both an
+        identification and a typing are present (``accept e : T``),
+        only the typing is a reference — the identification is a
+        fresh declaration.
+        """
+        issues: list[SemanticIssue] = []
+        try:
+            from sysmlpy.sim import load_model_grammar
+            visit = load_model_grammar(model)
+        except Exception:
+            return issues
+
+        for element, scope_path in self._walk_usages(model):
+            # Transitions live inside State definitions' grammar trees
+            # (no TransitionUsage object of their own) — extracting at
+            # the State level attributes each payload to exactly one
+            # element and keeps the scope path correct.
+            if type(element).__name__ != "State":
+                continue
+            grammar_def = None
+            grammar = getattr(element, "grammar", None)
+            if grammar is None:
+                continue
+            try:
+                grammar_def = grammar.get_definition()
+            except Exception:
+                continue
+            if not isinstance(grammar_def, dict):
+                continue
+            for payload in _find_payload_parameters(grammar_def):
+                ref = _payload_reference(payload)
+                if not ref:
+                    continue
+                if self._is_resolved(ref, symtab, scope_path, lib_roots):
+                    continue
+                issues.append(SemanticIssue(
+                    severity="error",
+                    code="UNRESOLVED_TRIGGER_PAYLOAD",
+                    message=(
+                        f"Accept trigger payload '{ref}' in "
+                        f"{type(element).__name__} "
+                        f"'{getattr(element, 'name', '<anonymous>')}' "
+                        "does not resolve to a defined symbol; the "
+                        "transition can never fire"),
+                    element=element,
+                    reference=ref,
+                ))
+        return issues
+
+    @staticmethod
+    def _walk_usages(model: Any):
+        """Yield ``(element, scope_path)`` for every usage-like element."""
+        def walk(element, scope_path):
+            name = getattr(element, "name", None)
+            elem_type = type(element).__name__
+            is_container = getattr(element, "is_definition", False)                 or elem_type == "Package"
+            child_scope = scope_path
+            if is_container and name is not None and elem_type != "Model":
+                child_scope = scope_path + [name]
+            yield element, scope_path
+            for child in getattr(element, "children", []):
+                yield from walk(child, child_scope)
+
+        yield from walk(model, [])
+
+    def _check_requirement_coverage(self, model: Any) -> list[SemanticIssue]:
+        """Cross-check requirement traceability coverage (Goal 9).
+
+        Reuses the Goal 2 traceability extractor: every requirement
+        *usage* with no ``satisfy`` *and* no ``verify`` relationship
+        yields a REQUIREMENT_UNCOVERED warning.  ``requirement def``
+        declarations are categories/templates, not traceable
+        instances, and are never flagged.  Partially covered
+        requirements (satisfied but unverified or vice versa) are not
+        flagged — that is a project-progress signal, not a
+        well-formedness problem.
+        """
+        issues: list[SemanticIssue] = []
+        try:
+            from sysmlpy.traceability import extract_traceability
+            report = extract_traceability(model)
+        except Exception:
+            return issues
+        for trace in report.uncovered():
+            if getattr(trace, "is_definition", False):
+                continue
+            issues.append(SemanticIssue(
+                severity="warning",
+                code="REQUIREMENT_UNCOVERED",
+                message=(
+                    f"Requirement '{trace.name}' has no satisfy and "
+                    "no verify relationships"),
+                reference=trace.name,
+            ))
+        return issues
+
     def _check_state_machines(self, model: Any) -> list[SemanticIssue]:
         """OCL well-formedness for ``state def`` machines (Goal 9).
 
@@ -2930,12 +3099,12 @@ class SemanticAnalyzer:
         issues: list[SemanticIssue] = []
         try:
             # Lazy import: sim pulls the boxes-view collector and the
-            # evaluator; no import cycle at module level.
+            # evaluator; no import cycle at module level.  The sim
+            # extra is optional — skip these checks without it.
             from sysmlpy.sim import SimulationError, build_state_machine
-
-            visit = None
-            from sysmlpy import boxes_view as _bv
-            visit = _bv  # noqa: F841 — ensures boxes_view loads once
+        except ImportError:
+            return issues
+        try:
             machines = self._collect_machines(model)
         except SimulationError:
             return issues

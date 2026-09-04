@@ -129,7 +129,10 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   **Validator depth (Goal 9)** starts with state-machine
   well-formedness: `UNRESOLVED_TRANSITION_ENDPOINT` (error),
   `NO_INITIAL_STATE` and `UNREACHABLE_STATE` (warnings) run inside
-  `analyze()` on the simulator's expanded machine descriptor.
+  `analyze()` on the simulator's expanded machine descriptor.  Batch 2
+  (v0.69.1) adds `UNRESOLVED_TRIGGER_PAYLOAD` (bare and guarded `accept`
+  payloads resolve or error) and `REQUIREMENT_UNCOVERED` (requirement
+  usages with no satisfy/verify traces; defs exempt).
 - **Relationship legends opt-in** — `include_legend=False` by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome `bw` remains the default style

@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## v0.69.1 (2026-09-04)
+
+- **Goal 9 batch 2: trigger-payload and requirement-coverage checks** —
+  - `UNRESOLVED_TRIGGER_PAYLOAD` (error): `accept <Sig>` payload names
+    (both bare and `when`-guarded forms) resolve against the symbol
+    table in the transition's scope; a typo'd payload previously
+    slipped through silently — the transition just never fired.  When
+    both an identification and a typing exist (`accept e : T`), only
+    the typing is a reference (the identification is a fresh
+    declaration).
+  - `REQUIREMENT_UNCOVERED` (warning): requirement *usages* with no
+    `satisfy` and no `verify` relationship, via the Goal 2
+    traceability extractor.  `requirement def` categories are never
+    flagged; partial coverage (satisfied xor verified) is not flagged.
+- **Fixed**: `analyze()` crashed with `UnboundLocalError` on models
+  parsed without the optional `sim` extra — the state-machine
+  well-formedness checks now skip cleanly instead.
+- 8 new validator tests (49 total in validator_test.py).
+
 ## v0.69.0 (2026-09-02)
 
 - **Goal 9 begins: state-machine well-formedness checks** — three new
