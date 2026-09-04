@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15.0 -15.0 297.0 306.0" width="297.0pt" height="306.0pt">
+<rect x="12.0" y="12.0" width="168.0" height="97.5" rx="7.5" ry="7.5" fill="#f0f0f0" stroke="#1a1a1a" stroke-width="1.5" />
+<text x="96.0" y="24.0" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">«action»</text>
+<text x="96.0" y="31.5" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">«Torque»</text>
+<text x="96.0" y="39.0" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">providePower</text>
+<rect x="0.0" y="51.0" width="12.0" height="18.0" fill="white" stroke="#1a1a1a" stroke-width="1.5" />
+<text x="18.0" y="63.0" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="start">fuelCommand</text>
+<rect x="180.0" y="51.0" width="12.0" height="18.0" fill="white" stroke="#1a1a1a" stroke-width="1.5" />
+<text x="174.0" y="63.0" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="end">torque</text>
+<rect x="12.0" y="184.5" width="144.0" height="73.5" rx="7.5" ry="7.5" fill="#f0f0f0" stroke="#1a1a1a" stroke-width="1.5" />
+<text x="84.0" y="196.5" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">«action»</text>
+<text x="84.0" y="204.0" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">«Inject»</text>
+<text x="84.0" y="211.5" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">injectFuel</text>
+<rect x="0.0" y="211.5" width="12.0" height="18.0" fill="white" stroke="#1a1a1a" stroke-width="1.5" />
+<text x="18.0" y="223.5" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="start">fuelCommand</text>
+<rect x="198.0" y="12.0" width="39.0" height="27.0" rx="6.0" ry="6.0" fill="#f0f0f0" stroke="#1a1a1a" stroke-width="1.5" />
+<text x="217.5" y="24.0" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">«action»</text>
+<text x="217.5" y="31.5" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">coolDown</text>
+<polyline points="192.0,60.0 0.0,60.0 0.0,210.0" stroke="#1a1a1a" stroke-width="1.5" fill="none" />
+<line x1="0.0" y1="220.5" x2="5.2" y2="211.4" stroke="#1a1a1a" stroke-width="1.5" fill="none" />
+<line x1="0.0" y1="220.5" x2="-5.2" y2="211.4" stroke="#1a1a1a" stroke-width="1.5" fill="none" />
+</svg>

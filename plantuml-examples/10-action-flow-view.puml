@@ -56,32 +56,27 @@ skinparam rectangle<<action>> {
 
 top to bottom direction
 
-title av [model] 3fe9c4ec-dd01-4b41-99d0-39e8d6501c43 [Action Flow View]
+title av [model] a5bf1e6d-da38-45c2-8447-9fca80292dc4 [Action Flow View]
 
 hide circle
 
 rectangle "Start" as E1 <<action def>>
 rectangle "Process" as E2 <<action def>>
 rectangle "End" as E3 <<action def>>
-rectangle "Main" as E4 <<action def>>
+rectangle "system" as E4 <<part>>
 rectangle "start" as E5 <<action>>
 rectangle "process" as E6 <<action>>
-rectangle "end_" as E7 <<action>>
+rectangle "finish" as E7 <<action>>
+rectangle "6d3f6630-28a6-4d17-9955-7214c83265d0" as E8 <<flow>>
+rectangle "86c7cf44-66fd-43c4-b828-529196fa7d8d" as E9 <<flow>>
 
 E4 *-- E5
 E4 *-- E6
 E4 *-- E7
+E4 *-- E8
+E4 *-- E9
 
 E5 --> E6 : flow
 E6 --> E7 : flow
-
-legend right
-  <b>Action Flow Legend</b>
-  Relationship: Notation
-  Flow Transfer: -->
-  Binding: -[thickness=4]-
-  Composite (owns): *--
-  Feature Typing: --:|> 
-endlegend
 
 @enduml

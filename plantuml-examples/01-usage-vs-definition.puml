@@ -100,7 +100,7 @@ skinparam folder<<view>> {
 
 top to bottom direction
 
-title gv [model] adf7399a-2e24-4f91-8e2a-aed2de5122a6
+title gv [model] 97091d8c-5e9d-4221-8f1c-f87229bbee83
 
 hide circle
 
@@ -108,19 +108,5 @@ rectangle "Engine" as E1 <<part def>>
 rectangle "myEngine" as E2 <<part>>
 
 E2 --:|> E1 : types
-
-legend right
-  <b>SysML v2 Relationship Legend</b>
-  Relationship: Notation
-  Feature Typing: --:|>
-  Specialization: --|>
-  Redefinition: --||>
-  Composite (owns): *--
-  Shared: o--
-  Binding: -[thickness=4]-
-  Connector: -[thickness=2]->
-  Flow: -->
-  Dependency: ..>>
-endlegend
 
 @enduml

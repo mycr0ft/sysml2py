@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15.0 -15.0 267.0 282.0" width="267.0pt" height="282.0pt">
+<rect x="12.0" y="160.5" width="138.0" height="73.5" rx="7.5" ry="7.5" fill="#f0f0f0" stroke="#1a1a1a" stroke-width="1.5" />
+<text x="81.0" y="172.5" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">«part»</text>
+<text x="81.0" y="180.0" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">«Drivetrain»</text>
+<text x="81.0" y="187.5" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">drivetrain</text>
+<rect x="0.0" y="187.5" width="12.0" height="18.0" fill="white" stroke="#1a1a1a" stroke-width="1.5" />
+<text x="18.0" y="199.5" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="start">powerIn</text>
+<rect x="12.0" y="12.0" width="135.0" height="73.5" rx="7.5" ry="7.5" fill="#f0f0f0" stroke="#1a1a1a" stroke-width="1.5" />
+<text x="79.5" y="24.0" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">«part»</text>
+<text x="79.5" y="31.5" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">«Engine»</text>
+<text x="79.5" y="39.0" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">engine</text>
+<rect x="147.0" y="39.0" width="12.0" height="18.0" fill="white" stroke="#1a1a1a" stroke-width="1.5" />
+<text x="141.0" y="51.0" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="end">powerOut</text>
+<rect x="165.0" y="12.0" width="39.0" height="34.5" rx="7.5" ry="7.5" fill="#f0f0f0" stroke="#1a1a1a" stroke-width="1.5" />
+<text x="184.5" y="24.0" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">«part»</text>
+<text x="184.5" y="31.5" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">«Pump»</text>
+<text x="184.5" y="39.0" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">pump</text>
+<rect x="168.0" y="160.5" width="39.0" height="34.5" rx="7.5" ry="7.5" fill="#f0f0f0" stroke="#1a1a1a" stroke-width="1.5" />
+<text x="187.5" y="172.5" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">«part»</text>
+<text x="187.5" y="180.0" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">«Tank»</text>
+<text x="187.5" y="187.5" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">tank</text>
+<polyline points="159.0,48.0 0.0,48.0 0.0,186.0" stroke="#1a1a1a" stroke-width="1.5" fill="none" />
+<line x1="0.0" y1="196.5" x2="5.2" y2="187.4" stroke="#1a1a1a" stroke-width="1.5" fill="none" />
+<line x1="0.0" y1="196.5" x2="-5.2" y2="187.4" stroke="#1a1a1a" stroke-width="1.5" fill="none" />
+<text x="6.0" y="27.0" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">clutch</text>
+<polyline points="184.5,46.5 184.5,123.0 187.5,123.0 187.5,150.0" stroke="#1a1a1a" stroke-width="1.5" fill="none" />
+<line x1="187.5" y1="160.5" x2="192.8" y2="151.4" stroke="#1a1a1a" stroke-width="1.5" fill="none" />
+<line x1="187.5" y1="160.5" x2="182.2" y2="151.4" stroke="#1a1a1a" stroke-width="1.5" fill="none" />
+<text x="202.5" y="105.0" fill="#1a1a1a" font-size="5.0" font-family="monospace" text-anchor="middle">feed</text>
+</svg>

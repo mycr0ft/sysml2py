@@ -64,7 +64,7 @@ skinparam rectangle<<flow>> {
 
 top to bottom direction
 
-title iv [model] 304ae5b3-77c1-462a-95f4-20b9fc335441 [Interconnection View]
+title iv [model] 0eda374b-4069-4ee2-94da-e72acf4b2e0f [Interconnection View]
 
 hide circle
 
@@ -79,8 +79,8 @@ rectangle "Controller" as E8 <<part def>>
 rectangle "s" as E9 <<part>>
 rectangle "p" as E10 <<part>>
 rectangle "a" as E11 <<part>>
-rectangle "f4fc15c4-0b9c-4bb1-aab1-9ccdc41c34c7" as E12 <<flow>>
-rectangle "164cfbc4-872e-41a0-b94d-9d66dff9f59a" as E13 <<flow>>
+rectangle "dfb5a092-a1e2-430c-a5b3-6e155399b21e" as E12 <<flow>>
+rectangle "b80cc4fa-4359-438d-8436-3d4bc14d3e24" as E13 <<flow>>
 
 E1 *-- E2
 E3 *-- E4
@@ -95,16 +95,17 @@ E11 --:|> E6 : types
 E8 *-- E12
 E8 *-- E13
 
-E9 --> E10 : f4fc15c4-0b9c-4bb1-aab1-9ccdc41c34c7
-E10 --> E11 : 164cfbc4-872e-41a0-b94d-9d66dff9f59a
+E9 --> E10 : flow
+E10 --> E11 : flow
 
 legend right
   <b>Interconnection Legend</b>
   Relationship: Notation
-  Binding: -[thickness=4]-
-  Connector: -[thickness=2]->
+  Binding (==): -[thickness=5]-
+  Connection: -[thickness=3]-
   Flow Transfer: -->
-  Allocation: -[dotted]->
+  Succession Flow: ..>
+  Allocation: -[thickness=5,dotted]->
   Feature Typing: --:|> 
   Composite (owns): *--
   | Specialization | --|> |

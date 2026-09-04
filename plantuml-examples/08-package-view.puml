@@ -68,7 +68,7 @@ skinparam folder<<view>> {
 
 top to bottom direction
 
-title gv [model] 797061b1-3779-4add-86ca-d7f430c88685 [Package View]
+title gv [model] 2c6f61a3-410c-40ed-83cb-a3279ea14512 [Package View]
 
 hide circle
 
@@ -81,15 +81,5 @@ rectangle "Transmission" as E2 <<part def>>
 rectangle "Wheel" as E3 <<part def>>
 rectangle "Suspension" as E4 <<part def>>
 
-
-legend right
-  <b>Package View Legend</b>
-  Relationship: Notation
-  Package Containment: *--
-  Composite (owns): *--
-  Feature Typing: --:|> 
-  | Specialization | --|> |
-  Import: ..>
-endlegend
 
 @enduml
