@@ -720,10 +720,15 @@ are complete.  Follow-up work is organized under the
     <code>UNRESOLVED_TRACE_TARGET</code> (error) and <code>TRACE_TARGET_NOT_REQUIREMENT</code>
     (warning) on <code>satisfy &lt;req&gt; by &lt;part&gt;</code> targets; exposes the Goal 2
     extractor's phantom-requirement behavior for dangling edges.</li>
-<li>[ ] <strong>Batch 4 candidates</strong> — connector end direction checks,
-    <code>verify</code> member target resolution; abstract-typing warnings
-    dropped from batch 3 (needs spec research: typing by abstract
-    defs inside abstract definitions is legitimate via redefinition).</li>
+<li>[x] <strong>Batch 4 (v0.71.0): verify + directions</strong> —
+    <code>UNRESOLVED_VERIFY_TARGET</code> (error; verify members inside
+    requirements) and <code>CONNECTOR_DIRECTION_MISMATCH</code> (warning;
+    same-direction port wiring, scoped end resolution).  The visitor
+    drops verify members' <code>: VC</code> typing (fsp empty) — noted.</li>
+<li>[ ] <strong>Batch 5 candidates</strong> — abstract-typing warnings (needs spec
+    research first: typing by abstract defs inside abstract
+    definitions is legitimate via redefinition), deeper feature-chain
+    connection ends (a.bus.p3), <code>satisfy</code> subject resolution.</li>
 <li>[ ] <strong>Goal 10 — Technical stubs</strong> (connector-end compatibility, <code>*</code>/<code>/</code> unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)</li>
 </ul>
 <p>Legacy candidate follow-up work:</p>
