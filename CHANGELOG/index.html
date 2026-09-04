@@ -5494,7 +5494,14 @@
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Action Flow View control nodes</strong> — <code>as_action_flow_view()</code> now renders
+<li>
+<p><strong>Docs</strong> — AGENTS.md pitfall 7: bare <code>import</code> without a visibility
+  keyword is non-conformant per the OMG standard (visibility is
+  required; confirmed against the textual standard and XPect source);
+  the grammar's rejection of it is correct, not a gap.</p>
+</li>
+<li>
+<p><strong>Action Flow View control nodes</strong> — <code>as_action_flow_view()</code> now renders
   SysML v2 control nodes from action bodies: <code>first start</code> as a solid
   initial dot, <code>decide</code>/<code>merge</code>/<code>fork</code>/<code>join</code> as hexagon nodes with
   stereotypes, and <code>done</code>/<code>terminate</code> succession targets as a final
@@ -5502,7 +5509,8 @@
   <code>VAction</code>) with guard conditions (<code>if &lt;cond&gt; then X</code>) and <code>else</code>
   as labels. Grammar-only <code>ControlNode</code> children no longer leak as
   anonymous containment boxes. 11 new tests
-  (<code>TestActionFlowControlNodes</code>).</li>
+  (<code>TestActionFlowControlNodes</code>).</p>
+</li>
 <li><strong>Interconnection View notation fidelity</strong> — <code>as_interconnection_view()</code>
   now follows the official iv notation: part nesting is conveyed by
   <strong>enclosure</strong> (nested <code>rectangle</code> blocks) instead of <code>*--</code> composition
