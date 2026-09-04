@@ -1760,6 +1760,89 @@ class TestPackageView:
         assert "Engine" in puml
         assert "Wheel" in puml
 
+    def test_pv_nests_members_in_packages(self):
+        """Package view conveys namespace containment by enclosure.
+
+        Official package notation (pilot VStructure.casePackage):
+        packages render as ``package "Name" { members }`` blocks with
+        owned members nested inside; containment edges (*--) are not
+        drawn.
+        """
+        from sysmlpy.plantuml import as_package_view
+
+        model = sysmlpy.loads("""
+        package Vehicles {
+            package Powertrain {
+                part def Engine;
+            }
+            part def Vehicle;
+            part myCar : Vehicle;
+        }
+        """)
+        puml = as_package_view(model)
+        assert 'package "Vehicles" as' in puml
+        assert 'package "Powertrain" as' in puml
+        # Powertrain block opens and Engine nests inside it
+        assert 'package "Powertrain" as E' in puml
+        assert "*--" not in puml, "containment must be enclosure, not edges"
+        # members of Vehicles appear inside its block
+        lines = puml.splitlines()
+        veh_idx = next(i for i, l in enumerate(lines)
+                       if 'package "Vehicles"' in l)
+        # find the matching close brace of the Vehicles block (depth-aware)
+        depth = 0
+        close_idx = None
+        for i in range(veh_idx, len(lines)):
+            depth += lines[i].count("{") - lines[i].count("}")
+            if depth == 0:
+                close_idx = i
+                break
+        inside = "\n".join(lines[veh_idx:close_idx])
+        assert "Engine" in inside and "Vehicle" in inside and "myCar" in inside
+
+    def test_pv_no_feature_explosion(self):
+        """Definitions render as leaf boxes; their features are not
+        exploded onto the package view."""
+        from sysmlpy.plantuml import as_package_view
+
+        model = sysmlpy.loads("""
+        package P {
+            part def Engine {
+                port intake;
+            }
+        }
+        """)
+        puml = as_package_view(model)
+        assert '"Engine"' in puml
+        assert "intake" not in puml
+
+    def test_pv_typed_member_labels(self):
+        """Usages carry name : Type labels on the package view."""
+        from sysmlpy.plantuml import as_package_view
+
+        model = sysmlpy.loads("""
+        package P {
+            part def Vehicle;
+            part myCar : Vehicle;
+        }
+        """)
+        puml = as_package_view(model)
+        assert '"myCar : Vehicle"' in puml
+
+    def test_pv_typing_edge_between_members(self):
+        """Typing arrows between rendered members are kept (unlabeled)."""
+        from sysmlpy.plantuml import as_package_view
+
+        model = sysmlpy.loads("""
+        package P {
+            part def Vehicle;
+            part myCar : Vehicle;
+        }
+        """)
+        puml = as_package_view(model)
+        assert "--:|>" in puml
+        assert " : types" not in puml
+
     def test_as_package_view_bw_style(self):
         """B&W style produces monochrome output."""
         from sysmlpy.plantuml import as_package_view

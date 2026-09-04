@@ -1411,18 +1411,10 @@ def as_interconnection_diagram(model, focus=None, elements=None, style="bw",
     # definition's ports are inherited onto the usage as boundary boxes.
     consumed_def_ids = set()
 
-    def _resolve_def(tb_name):
-        if not tb_name:
-            return None
-        found = model.find(tb_name)
-        if isinstance(found, list):
-            return found[0] if found else None
-        return found
-
     def _collect_consumed(element):
         if (_renders(element)
                 and not getattr(element, 'is_definition', False)):
-            d = _resolve_def(_get_typedby_name(element))
+            d = _resolve_typed_def(model, _get_typedby_name(element))
             if d is not None and getattr(d, 'is_definition', False):
                 consumed_def_ids.add(id(d))
         for child in getattr(element, 'children', None) or []:
@@ -1434,16 +1426,7 @@ def as_interconnection_diagram(model, focus=None, elements=None, style="bw",
     # Typed labels: usages show ``name : Type`` (typing is conveyed in
     # the label on an iv, not as a --:|> arrow).
     def _iv_label(element):
-        name = _get_element_name(element)
-        tb = _get_typedby_name(element)
-        if tb:
-            d = _resolve_def(tb)
-            tname = getattr(d, 'name', None) if d is not None else None
-            if not tname and getattr(d, 'names', None):
-                tname = d.names[-1]
-            if tname:
-                return f"{name} : {tname}"
-        return name
+        return _typed_label(element, model)
 
     # Inherited ports: a usage exposes the ports of its typed definition
     # chain (definition + specializes ancestors) as boundary features.
@@ -1456,7 +1439,7 @@ def as_interconnection_diagram(model, focus=None, elements=None, style="bw",
         seen_defs = set()
         while tb_name and tb_name not in seen_defs:
             seen_defs.add(tb_name)
-            d = _resolve_def(tb_name)
+            d = _resolve_typed_def(model, tb_name)
             if d is None:
                 return
             for c in getattr(d, 'children', None) or []:
@@ -2056,6 +2039,33 @@ def _extract_flow_endpoints_from_grammar(flow_grammar):
                     to_names = names
 
     return from_names, to_names
+
+
+def _resolve_typed_def(model, tb_name):
+    """Resolve a typed-by name to its definition element (or None)."""
+    if not tb_name:
+        return None
+    found = model.find(tb_name)
+    if isinstance(found, list):
+        return found[0] if found else None
+    return found
+
+
+def _typed_label(element, model):
+    """Element label with its type (``s : Sensor``) when typed.
+
+    Official SysML v2 notation conveys feature typing in the name
+    compartment of usages rather than as ``--:|>`` arrows in
+    interconnection/package views.
+    """
+    name = _get_element_name(element)
+    d = _resolve_typed_def(model, _get_typedby_name(element))
+    tname = getattr(d, 'name', None) if d is not None else None
+    if not tname and d is not None and getattr(d, 'names', None):
+        tname = d.names[-1]
+    if tname:
+        return f"{name} : {tname}"
+    return name
 
 
 def _flow_declared_name(flow_element):
@@ -3705,40 +3715,95 @@ def as_package_view(model, focus=None, style="bw", direction="TB",
     gen._traverse(gen.model)
 
     id_map = gen.id_map
-    elements_list = gen.elements
     relationships = gen.relationships
-
-    for child in model.children:
-        if isinstance(child, Package):
-            _render_package(lines, child, id_map, 0, max_depth)
+    included_ids = gen._included_ids
 
     pv_types = {"part", "item", "attribute", "action", "state",
                 "requirement", "view", "viewpoint", "port",
                 "interface", "connection", "flow", "constraint",
                 "calculation", "enumeration", "allocation"}
 
-    for alias, name, stereotype, elem, is_included in elements_list:
-        sysml_type = getattr(elem, 'sysml_type', '')
-        if sysml_type in pv_types:
+    # Namespace enclosure (pilot VStructure.casePackage): packages render
+    # as ``package "Name" { members }`` blocks with their owned members
+    # NESTED inside.  Features of definitions are namespace members of
+    # the definition, not of the enclosing package, so a package view
+    # shows definitions as leaf boxes without exploding their features.
+    # Containment is therefore conveyed entirely by enclosure, matching
+    # the official package notation.
+    def _renders(element):
+        if isinstance(element, Package):
+            # Packages ARE the namespace structure being viewed; the
+            # inclusion set (built from all_elements) excludes them.
+            return True
+        return (id(element) in included_ids
+                and getattr(element, 'sysml_type', '') in pv_types)
+
+    ordered = []   # (element, parent_package_or_None, depth) in DFS order
+
+    def _dfs(element, parent_pkg, depth):
+        if _renders(element):
+            ordered.append((element, parent_pkg, depth))
+            if isinstance(element, Package):
+                if max_depth is not None and depth + 1 > max_depth:
+                    return
+                for child in getattr(element, 'children', None) or []:
+                    _dfs(child, element, depth + 1)
+        # Non-package members do not open their namespace here: their
+        # features stay inside the definition box on a package view.
+
+    for child in getattr(model, 'children', None) or []:
+        _dfs(child, None, 0)
+
+    children_of = {}
+    for elem, par, d in ordered:
+        children_of.setdefault(id(par) if par is not None else None,
+                               []).append((elem, d))
+
+    def _emit(elem, depth):
+        # _get_element_id assigns aliases on demand: the traversal does
+        # not register packages (the old _render_package created theirs).
+        alias = _get_element_id(elem, id_map)
+        pad = "    " * depth
+        if isinstance(elem, Package):
+            name = (getattr(elem, 'name', None) or "unnamed").replace('"', "''")
+            kids = children_of.get(id(elem), [])
+            if kids:
+                lines.append(f'{pad}package "{name}" as {alias} {{')
+                for k, _kd in kids:
+                    _emit(k, depth + 1)
+                lines.append(pad + "}")
+            else:
+                lines.append(f'{pad}package "{name}" as {alias}')
+        else:
+            sysml_type = getattr(elem, 'sysml_type', '')
+            stereotype = _get_stereotype(elem, style=style)
+            label = _typed_label(elem, model)
             keyword = "rectangle"
-            if sysml_type == 'state':
-                keyword = "rectangle"  # avoid PlantUML state-shape constraints
-                stereotype = "<<state>>"
-            elif sysml_type == 'view':
+            if sysml_type == 'view':
                 keyword = "folder"
-            lines.append(f'{keyword} "{name}" as {alias} {stereotype}')
+            lines.append(f'{pad}{keyword} "{label}" as {alias} {stereotype}')
+
+    top_level = [e for e, par, _d in ordered if par is None]
+    for elem in top_level:
+        _emit(elem, 0)
 
     lines.append("")
 
+    # Keep only relationships between rendered namespace members:
+    # typing, specialization, redefinition.  Containment is conveyed by
+    # the enclosure above (official notation), not by *-- edges.
+    member_arrows = {ARROW_STYLES["typing"], ARROW_STYLES["specialization"],
+                     ARROW_STYLES["redefinition"]}
     for src, arrow, dst, label, is_external in relationships:
+        if arrow not in member_arrows:
+            continue
         if is_external and not show_external:
             continue
         if is_external:
             arrow = f"-[dotted,thickness=1,#999999]{arrow.lstrip('-')}"
-        if label:
-            lines.append(f'{src} {arrow} {dst} : {label}')
-        else:
-            lines.append(f'{src} {arrow} {dst}')
+        # Typing info already sits in the usage labels (name : Type); the
+        # pilot draws typing/specialization arrows unlabeled.
+        lines.append(f'{src} {arrow} {dst}')
 
     lines.append("")
 
@@ -3747,11 +3812,9 @@ def as_package_view(model, focus=None, style="bw", direction="TB",
             "legend right",
             "  <b>Package View Legend</b>",
             "  Relationship: Notation",
-            "  Package Containment: *--",
-            "  Composite (owns): *--",
+            "  Namespace Containment: enclosure",
             "  Feature Typing: --:|> ",
             "  | Specialization | --|> |",
-            "  Import: ..>",
             "endlegend",
         ])
         lines.append("")
@@ -3761,28 +3824,6 @@ def as_package_view(model, focus=None, style="bw", direction="TB",
 
 
 
-
-
-def _render_package(lines, pkg, id_map, depth, max_depth):
-    """Render a Package element in the package view."""
-    if max_depth is not None and depth >= max_depth:
-        return
-
-    pkg_id = id(pkg)
-    pkg_alias = _get_element_id(pkg, id_map)
-    pkg_name = getattr(pkg, 'name', None) or "unnamed"
-    pkg_name = pkg_name.replace('"', "''")
-
-    children = getattr(pkg, 'children', [])
-    sub_packages = [c for c in children if isinstance(c, Package)]
-
-    if sub_packages:
-        lines.append(f'rectangle "{pkg_name}" as {pkg_alias} <<package>> {{')
-        for sub_pkg in sub_packages:
-            _render_package(lines, sub_pkg, id_map, depth + 1, max_depth)
-        lines.append("}")
-    else:
-        lines.append(f'rectangle "{pkg_name}" as {pkg_alias} <<package>>')
 
 
 # ============================================================

@@ -17,7 +17,7 @@
 | 04 | B&W Style | PlantUML PNG | `as_general_view(style="bw")` |
 | 06 | Interconnection | PlantUML PNG | flows between ports as edges (`-->`), typing arrows |
 | 07 | General View | PlantUML PNG | monochrome default |
-| 08 | Package View | PlantUML PNG | nested package rectangles |
+| 08 | Package View | PlantUML PNG | official notation: `package` blocks with members enclosed (no `*--` containment edges), typed member labels |
 | 10 | Action Flow View | PlantUML PNG | control chain: initial dot → warmup → decide hexagon → guarded branches (`speedOK`, `low`) → final `done` circle |
 | 11 | State Transition View | PlantUML PNG | nested composite states, initial/final markers, named transitions |
 | 12 | Tree Diagram | PlantUML PNG | model containment tree |

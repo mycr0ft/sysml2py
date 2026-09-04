@@ -68,18 +68,20 @@ skinparam folder<<view>> {
 
 top to bottom direction
 
-title gv [model] be5f16f8-1da5-4a6f-b4ea-992e16fdad69 [Package View]
+title gv [model] a98d84b2-2f02-41cb-9852-6ccb0904e846 [Package View]
 
 hide circle
 
-rectangle "VehicleSystem" as E5 <<package>> {
-rectangle "Powertrain" as E6 <<package>>
-rectangle "Chassis" as E7 <<package>>
+package "VehicleSystem" as E5 {
+    package "Powertrain" as E6 {
+        rectangle "Engine" as E1 <<part def>>
+        rectangle "Transmission" as E2 <<part def>>
+    }
+    package "Chassis" as E7 {
+        rectangle "Wheel" as E3 <<part def>>
+        rectangle "Suspension" as E4 <<part def>>
+    }
 }
-rectangle "Engine" as E1 <<part def>>
-rectangle "Transmission" as E2 <<part def>>
-rectangle "Wheel" as E3 <<part def>>
-rectangle "Suspension" as E4 <<part def>>
 
 
 @enduml

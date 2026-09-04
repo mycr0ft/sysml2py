@@ -24,6 +24,19 @@
   render as thick plain lines (`_extract_connections` was already
   present but never wired into the iv). Anonymous flow UUID names are
   suppressed as before. 5 new tests.
+- **Package View namespace enclosure** — `as_package_view()` now follows
+  the official package notation (pilot `VStructure.casePackage`):
+  packages render as `package "Name" { members }` blocks with their
+  owned members **nested inside**; definitions render as leaf boxes
+  without exploding their features (features belong to the
+  definition's namespace, not the package); containment is conveyed
+  entirely by enclosure — no `*--` edges, fixing the old behavior
+  where only sub-packages nested and every feature floated
+  free-standing. Members carry typed labels (`myCar : Vehicle`);
+  typing/specialization arrows between rendered members are kept
+  unlabeled (the pilot draws them unlabeled); `focus` and
+  `max_depth` work on the namespace tree. Orphaned `_render_package`
+  removed. 4 new tests (plantuml 151). Example 08 regenerated.
 - **Flow endpoint chains** — `_extract_flow_endpoints` now recovers the
   full feature path (`s.output`, not just `s`): FlowFeatureMember →
   FlowFeature → FlowRedefinition carries the chained segment as its

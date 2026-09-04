@@ -28,6 +28,12 @@ are complete.  Follow-up work is organized under the
     Relationship legends now opt-in (`include_legend=False` default) — standard-notation
     legends were noise; monochrome `bw` stays the default style (color-vision
     accessibility; a dedicated palette option is tracked).
+  - [x] **Phase 2d (unreleased)** — package view namespace enclosure
+    (pilot `VStructure.casePackage`): packages render as
+    `package "Name" { members }` with owned members nested inside;
+    definitions as leaf boxes (no feature explosion); containment by
+    enclosure only; typing/specialization arrows kept between members
+    (unlabeled — typing sits in `name : Type` labels).
   - [x] **Phase 2c (unreleased)** — iv notation fidelity: enclosure
     nesting (no `*--` composition edges), typed usage labels
     (`s : Sensor`, no `--:|>` arrows), consumed definitions dropped
