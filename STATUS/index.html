@@ -1509,7 +1509,15 @@
   (enclosure nesting, typed labels, flows/connections as the only
   edges — flows port-to-port; v0.68.0+), and the package view follows
   official package notation: <code>package "Name" { members }</code> enclosure,
-  leaf definition boxes, typed member labels (v0.68.0+).</li>
+  leaf definition boxes, typed member labels (v0.68.0+).
+  <strong>State-machine simulation</strong> (v0.69.0): <code>sysmlpy sim FILE</code> runs a
+  <code>state def</code> machine Cameo-style — triggers fire transitions, guards
+  evaluate against model attribute values (pint-aware) with
+  <code>--set</code>/<code>set_value</code> what-if overrides, completion transitions run to
+  completion, effects are logged, and an interactive TUI shows the live
+  state with the transitions available from it (<code>--run "T1; T2"</code>
+  scripts sessions).  Guards also appear in boxes-view edge labels
+  (the shorthand-<code>when</code> extraction fix).</li>
 <li><strong>Relationship legends opt-in</strong> — <code>include_legend=False</code> by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome <code>bw</code> remains the default style

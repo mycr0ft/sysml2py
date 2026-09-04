@@ -5494,6 +5494,35 @@
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <ul>
+<li><strong>State-machine simulation (MVP, <code>sysmlpy sim</code>)</strong> — Cameo-style
+  simulate-and-step for <code>state def</code> machines: <code>StateSimulator</code> builds an
+  executable machine from a parsed model and drives it — <code>send(trigger)</code>
+  fires transitions, guards evaluate <strong>for real</strong> against the model's
+  attribute values (pint-aware, via the v0.64 evaluator) plus
+  <code>set_value</code>/<code>--set</code> what-if overrides, effects log as text, completion
+  transitions (no <code>accept</code> trigger) fire run-to-completion, and
+  <code>--run "T1; T2"</code> scripts a session for demos/CI.  Execution delegates
+  to the optional <code>transitions</code> library (new <code>sim</code> extra) — chosen over
+  python-statemachine because it builds machines from <em>data</em> at runtime,
+  the exact shape of the SysML→machine bridge.  Reuses the boxes-view
+  machine collector for states/initial/composites.</li>
+<li><strong>Boxes-view transition extraction fix</strong> — <code>_extract_transition_elements</code>
+    reported <code>trigger: 'key'</code> for <code>accept Engage when key</code> (the guard's
+    own feature name — the generic QualifiedName search tripped over the
+    guard) and dropped shorthand guards/effects entirely.  It now takes
+    the trigger from the payload's <code>declaredName</code>, the guard from the
+    <code>TriggerExpression</code> (<code>kind.isWhen</code>), and adds an <code>effect</code> slot; the
+    TargetTransitionUsage shorthand gets the same treatment.  Guards now
+    appear in stv/boxes edge labels.</li>
+<li><strong>Known grammar gap</strong> — the visitor emits
+    <code>EffectBehaviorMember.ownedRelatedElement = null</code> for <code>do &lt;ref&gt;</code> on
+    transitions, so effects are currently unobtainable from parsed
+    models; the simulator's effect slot and logging are wired and light
+    up the moment the reference lands (TODO).</li>
+<li>
+<p>30 new tests (<code>tests/sim_test.py</code>); plantuml 151, boxes 54, core
+    suites 707, conformance 123.</p>
+</li>
 <li>
 <p><strong>Docs</strong> — AGENTS.md pitfall 7: bare <code>import</code> without a visibility
   keyword is non-conformant per the OMG standard (visibility is

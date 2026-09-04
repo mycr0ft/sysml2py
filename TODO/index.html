@@ -654,6 +654,12 @@ are complete.  Follow-up work is organized under the
     Relationship legends now opt-in (<code>include_legend=False</code> default) — standard-notation
     legends were noise; monochrome <code>bw</code> stays the default style (color-vision
     accessibility; a dedicated palette option is tracked).</li>
+<li>[ ] <strong>sim follow-ups</strong> — composite-state regions (composites are
+    in the descriptor; simulated flat for now), parallel regions
+    (raise, by design, for now), effect-side assignments via
+    <code>set_value</code>, and the grammar's dropped <code>do &lt;ref&gt;</code> on transitions
+    (<code>EffectBehaviorMember.ownedRelatedElement</code> is null — when the
+    visitor emits the reference, simulator effects go live untouched).</li>
 <li>[x] <strong>Phase 2d (unreleased)</strong> — package view namespace enclosure
     (pilot <code>VStructure.casePackage</code>): packages render as
     <code>package "Name" { members }</code> with owned members nested inside;

@@ -1357,6 +1357,10 @@ codes (0 = success/clean, 1 = findings at threshold / operational error,
 <td><code>sysmlpy eval FILE [FILE...]</code></td>
 <td>Evaluate expressions / attribute values / constraints; <code>--expr X --set n=v --element Q --constraints</code>; exit 1 on failed constraint</td>
 </tr>
+<tr>
+<td><code>sysmlpy sim FILE</code></td>
+<td>Simulate a <code>state def</code> machine: triggers, real guard evaluation (<code>--set</code> overrides), run-to-completion, interactive TUI or <code>--run "T1; T2"</code>; needs the <code>sim</code> extra</td>
+</tr>
 </tbody>
 </table>
 <p>The legacy flat form (<code>sysmlpy FILE --dump</code>) is preserved with its
