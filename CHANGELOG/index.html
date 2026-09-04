@@ -5503,6 +5503,26 @@
   as labels. Grammar-only <code>ControlNode</code> children no longer leak as
   anonymous containment boxes. 11 new tests
   (<code>TestActionFlowControlNodes</code>).</li>
+<li><strong>Interconnection View notation fidelity</strong> — <code>as_interconnection_view()</code>
+  now follows the official iv notation: part nesting is conveyed by
+  <strong>enclosure</strong> (nested <code>rectangle</code> blocks) instead of <code>*--</code> composition
+  edges; usages carry <strong>typed labels</strong> (<code>s : Sensor</code>) instead of
+  <code>--:|&gt;</code> typing arrows; definitions typed by rendered usages are not
+  drawn (their ports inherit onto the usages as boundary boxes);
+  flows and connections render <strong>only as edges</strong> — flows port-to-port
+  with declared names recovered from the grammar (<code>flow f1 from
+  s.output to p.input</code> labels <code>f1</code>, previously collapsed to
+  part-to-part "flow"), <code>connection ... connect x.p1 to y.p2</code> usages
+  render as thick plain lines (<code>_extract_connections</code> was already
+  present but never wired into the iv). Anonymous flow UUID names are
+  suppressed as before. 5 new tests.</li>
+<li><strong>Flow endpoint chains</strong> — <code>_extract_flow_endpoints</code> now recovers the
+  full feature path (<code>s.output</code>, not just <code>s</code>): FlowFeatureMember →
+  FlowFeature → FlowRedefinition carries the chained segment as its
+  child QualifiedName; anonymous flows fall back to their declared
+  name via <code>Identification.declaredName</code> (<code>_flow_declared_name</code>).
+  Afv behavior verified unchanged (flows still connect actions, per
+  the pilot's VAction).</li>
 <li><strong>Boxes-backed afv control nodes</strong> — <code>as_action_flow_view_boxes()</code>
   renders the same chains through diagramboxes primitives: <code>first
   start</code> as a filled start dot, <code>decide</code>/<code>merge</code> as <strong>diamonds</strong>

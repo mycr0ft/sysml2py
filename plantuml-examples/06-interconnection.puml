@@ -64,38 +64,24 @@ skinparam rectangle<<flow>> {
 
 top to bottom direction
 
-title iv [model] 5582c6bc-efbd-4f33-ad78-9141fd0b5a78 [Interconnection View]
+title iv [model] 0b557b06-6585-4551-8770-3e7f9da1fd2c [Interconnection View]
 
 hide circle
 
-rectangle "Sensor" as E1 <<part def>>
-rectangle "output" as E2 <<port>>
-rectangle "Processor" as E3 <<part def>>
-rectangle "input" as E4 <<port>>
-rectangle "output" as E5 <<port>>
-rectangle "Actuator" as E6 <<part def>>
-rectangle "input" as E7 <<port>>
-rectangle "Controller" as E8 <<part def>>
-rectangle "s" as E9 <<part>>
-rectangle "p" as E10 <<part>>
-rectangle "a" as E11 <<part>>
-rectangle "db01e764-a934-4afa-bb2f-ab4dc7992483" as E12 <<flow>>
-rectangle "a9ffe331-446b-404d-b1ab-8a6e982f6d2e" as E13 <<flow>>
+rectangle "Controller" as E8 <<part def>> {
+    rectangle "s : Sensor" as E9 <<part>> {
+        rectangle "output" as P1 <<port>>
+    }
+    rectangle "p : Processor" as E10 <<part>> {
+        rectangle "input" as P2 <<port>>
+        rectangle "output" as P3 <<port>>
+    }
+    rectangle "a : Actuator" as E11 <<part>> {
+        rectangle "input" as P4 <<port>>
+    }
+}
 
-E1 *-- E2
-E3 *-- E4
-E3 *-- E5
-E6 *-- E7
-E8 *-- E9
-E9 --:|> E1 : types
-E8 *-- E10
-E10 --:|> E3 : types
-E8 *-- E11
-E11 --:|> E6 : types
-E8 *-- E12
-E8 *-- E13
-
-E9 --> E10 : flow
-E10 --> E11 : flow
+P1 --> P2 : f1
+P3 --> P4 : f2
 
 @enduml
