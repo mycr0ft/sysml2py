@@ -148,7 +148,7 @@ package System {
     }
 }
 """)
-generate_puml("06-interconnection", as_interconnection_view(model6, include_legend=True))
+generate_puml("06-interconnection", as_interconnection_view(model6))
 
 # 7. General View
 print("\n7. General View")
@@ -204,8 +204,7 @@ package States {
 """)
 operational = model14.find('Operational')[0]
 generate_puml("11-state-transition-view",
-              as_state_transition_view(model14, focus=operational,
-                                       include_legend=True))
+              as_state_transition_view(model14, focus=operational))
 
 # 11. Tree Diagram
 print("\n12. Tree Diagram")

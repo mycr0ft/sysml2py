@@ -56,7 +56,7 @@ skinparam rectangle<<action>> {
 
 top to bottom direction
 
-title av [model] a5bf1e6d-da38-45c2-8447-9fca80292dc4 [Action Flow View]
+title av [model] 8370dad7-7d72-422f-9e52-1c142980c2a9 [Action Flow View]
 
 hide circle
 
@@ -67,8 +67,8 @@ rectangle "system" as E4 <<part>>
 rectangle "start" as E5 <<action>>
 rectangle "process" as E6 <<action>>
 rectangle "finish" as E7 <<action>>
-rectangle "6d3f6630-28a6-4d17-9955-7214c83265d0" as E8 <<flow>>
-rectangle "86c7cf44-66fd-43c4-b828-529196fa7d8d" as E9 <<flow>>
+rectangle "f0aa8014-0f9b-49cc-846f-cee266eff82d" as E8 <<flow>>
+rectangle "79a8cb3d-79bd-4589-b86b-9b0fb43aa451" as E9 <<flow>>
 
 E4 *-- E5
 E4 *-- E6

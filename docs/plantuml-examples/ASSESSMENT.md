@@ -3,8 +3,8 @@
 > **Regenerated for v0.68.0** (2026-09-03) with the repaired generators:
 > official edge encodings (v0.67.0), nested composite-state blocks,
 > boxes-backed iv/afv (braille + SVG, Java-free), UUID flow labels
-> suppressed, relationship legends now opt-in (`include_legend=True`
-> on the examples that keep one). PNGs rendered with PlantUML 1.2024.7
+> suppressed, relationship legends off everywhere (opt-in via
+> `include_legend=True`). PNGs rendered with PlantUML 1.2024.7
 > (`PLANTUML_JAR`, default `~/tools/plantuml.jar`).
 
 ## v0.68.0 example set
