@@ -198,6 +198,15 @@ definition *object* in `obj.typedby`; that is only set when wired
 programmatically via `set_typed_by()`. A model-wide resolution pass is a
 tracked follow-up (see TODO.md).
 
+### 7. Bare `import` without a visibility keyword is non-conformant — RESOLVED
+
+The OMG SysML v2 standard **requires** a visibility declaration on imports
+(`private import ...`, `public import ...`, `protected import ...`);
+confirmed against the textual standard and the XPect source in a prior
+session. The grammar's `importRule` intentionally rejects bare
+`import X::*;` with `SysMLSyntaxError` (see `tests/import_test.py`).
+Do **not** "fix" the parser or file a conformance-gap TODO for this.
+
 ---
 
 ## PlantUML View Functions

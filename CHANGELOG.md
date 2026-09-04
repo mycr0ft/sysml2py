@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Docs** — AGENTS.md pitfall 7: bare `import` without a visibility
+  keyword is non-conformant per the OMG standard (visibility is
+  required; confirmed against the textual standard and XPect source);
+  the grammar's rejection of it is correct, not a gap.
+
 - **Action Flow View control nodes** — `as_action_flow_view()` now renders
   SysML v2 control nodes from action bodies: `first start` as a solid
   initial dot, `decide`/`merge`/`fork`/`join` as hexagon nodes with
