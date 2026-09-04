@@ -1525,7 +1525,11 @@
   inside it, and composite-level transitions apply from every
   substate.  For color-vision accessibility,
   <code>set_stereotype_palette("okabe-ito")</code> switches the <code>style="color"</code>
-  views to the Okabe-Ito palette (<code>bw</code> remains the default).</li>
+  views to the Okabe-Ito palette (<code>bw</code> remains the default).
+  <strong>Validator depth (Goal 9)</strong> starts with state-machine
+  well-formedness: <code>UNRESOLVED_TRANSITION_ENDPOINT</code> (error),
+  <code>NO_INITIAL_STATE</code> and <code>UNREACHABLE_STATE</code> (warnings) run inside
+  <code>analyze()</code> on the simulator's expanded machine descriptor.</li>
 <li><strong>Relationship legends opt-in</strong> — <code>include_legend=False</code> by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome <code>bw</code> remains the default style

@@ -705,7 +705,14 @@ are complete.  Follow-up work is organized under the
     already exists in <code>traceability.py</code>.</li>
 <li>[x] <strong>Goal 7 — Spreadsheet bridge</strong> <em>(v0.66.0: <code>sysmlpy.spreadsheet</code> — CSV export of tabular/data-value/matrix views (<code>output_format="csv"</code>, <code>view --format csv</code>), <code>write_xlsx()</code> workbook export + <code>sysmlpy xlsx</code> CLI (optional <code>openpyxl</code> extra <code>sysmlpy[xlsx]</code>), value import into evaluator bindings (<code>import_values_csv()</code>/<code>import_values_xlsx()</code>, <code>eval --set-file</code>, <code>parse_value_literal()</code>); 37 tests in <code>tests/spreadsheet_test.py</code>.)</em></li>
 <li>[ ] <strong>Goal 8 — Semantic model diff</strong> (review workflows)</li>
-<li>[ ] <strong>Goal 9 — Validator depth</strong> (more OCL well-formedness checks)</li>
+<li>[~] <strong>Goal 9 — Validator depth</strong> (more OCL well-formedness checks)</li>
+<li>[x] <strong>Batch 1 (v0.69.0): state machines</strong> — <code>UNRESOLVED_TRANSITION_ENDPOINT</code>
+    (error), <code>NO_INITIAL_STATE</code> (warning), <code>UNREACHABLE_STATE</code>
+    (warning); run on the simulator's expanded descriptor so
+    composite semantics are shared with <code>sysmlpy sim</code>.</li>
+<li>[ ] <strong>Batch 2 candidates</strong> — unresolved <code>accept</code> signal/payload
+    references, requirement <code>satisfy</code>/<code>verify</code> coverage cross-checks,
+    abstract-typing warnings, connector-end direction checks.</li>
 <li>[ ] <strong>Goal 10 — Technical stubs</strong> (connector-end compatibility, <code>*</code>/<code>/</code> unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)</li>
 </ul>
 <p>Legacy candidate follow-up work:</p>
