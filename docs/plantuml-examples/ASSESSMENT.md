@@ -26,7 +26,7 @@
 | 15–18 | Tabular / Data Value / Matrix / HTML | text outputs | markdown + one color HTML |
 | 19 | State Transition (boxes) | braille .txt + .svg | nested composite boxes, `[*]` markers — **no Java** |
 | 20 | Interconnection (boxes) | braille .txt + .svg | ports ON part borders, port-to-port connection edges — **no Java** |
-| 21 | Action Flow (boxes) | braille .txt + .svg | parameters as in/out ports, flows port-to-port — **no Java** |
+| 21 | Action Flow (boxes) | braille .txt + .svg | control chain: start dot → warmup → **decision diamond** → guarded branches (`speedOK`, `low`) → done bullseye — **no Java** |
 
 ## Original assessment (July, v0.46-era PlantUML approximations)
 

@@ -616,6 +616,76 @@ package V {
 """
 
 
+class TestActionFlowControlBoxes:
+    """Control nodes (initial/decide/final) render through boxes primitives.
+
+    `first start` -> filled start dot, `decide` -> diamond
+    (diagramboxes DecisionNode), done/terminate targets -> done
+    bullseye; chain edges are dashed successions with guard labels.
+    """
+
+    AFV_CONTROL = """
+    package Operation {
+        part vehicle {
+            action cruise {
+                first start;
+                then warmup;
+                then decide;
+                if speedOK then engage;
+                if low then warmup;
+                else done;
+                action warmup;
+                action engage;
+            }
+        }
+    }
+    """
+
+    def test_start_decision_done_nodes_present(self):
+        from diagramboxes import StartNode, DecisionNode, DoneNode
+        d = as_action_flow_view_boxes(self.AFV_CONTROL)
+        kinds = [type(a).__name__ for a in d.activities]
+        assert "StartNode" in kinds
+        assert "DecisionNode" in kinds
+        assert "DoneNode" in kinds
+
+    def test_control_nodes_parented_in_composite(self):
+        d = as_action_flow_view_boxes(self.AFV_CONTROL)
+        cruise = next(n for n in d.nodes if n.name == "cruise")
+        parented = [a for a in d.activities if getattr(a, "parent", None)]
+        assert parented, "control nodes should nest inside the composite"
+        assert all(a.parent is cruise for a in parented)
+
+    def test_chain_edges_dashed_with_guards(self):
+        d = as_action_flow_view_boxes(self.AFV_CONTROL)
+        chain = [e for e in d.edges if e.line_style == "dashed"]
+        labels = sorted(e.label for e in chain if e.label)
+        assert labels == ["else", "low", "speedOK"]
+        # start -> warmup and warmup -> decide are unlabeled chain edges
+        unlabeled = [e for e in chain if e.label is None]
+        assert len(unlabeled) == 2
+
+    def test_chain_targets_resolve(self):
+        d = as_action_flow_view_boxes(self.AFV_CONTROL)
+        names = {n.name for n in d.nodes}
+        # warmup receives both the plain chain edge and the :low branch
+        warmup_in = [e for e in d.edges
+                     if getattr(e.target, "name", None) == "warmup"]
+        assert len(warmup_in) == 2
+        # engage receives the guarded branch
+        assert any(getattr(e.target, "name", None) == "engage"
+                   and e.label == "speedOK" for e in d.edges)
+        assert "engage" in names and "warmup" in names
+
+    def test_control_braille_render(self):
+        out = render_action_flow_view_boxes(self.AFV_CONTROL)
+        assert "cruise" in out
+
+    def test_control_svg_render_has_diamond(self):
+        svg = render_action_flow_view_boxes_svg(self.AFV_CONTROL)
+        assert "<polygon" in svg
+
+
 class TestActionFlowSuccessions:
     """Successions between nested actions render as dashed edges."""
 

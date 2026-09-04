@@ -1378,6 +1378,7 @@ def as_action_flow_view_boxes(
     # ---- 4. build nodes --------------------------------------------------
     d = Diagram()
     nodes = {}         # element id -> Node
+    ctrl_boxes = {}    # control-chain ref -> diagramboxes primitive
 
     def _stereo(el, is_def):
         if is_def:
@@ -1471,6 +1472,64 @@ def as_action_flow_view_boxes(
             d.add_edge(src, dst, source_port=sp, target_port=tp, **kw)
         else:
             d.add_edge(src, dst, **kw)
+
+    # ---- 6. control nodes (initial/final/decide/merge/fork/join) ---------
+    # Chains are extracted from action grammar bodies by the shared
+    # plantuml extractor.  Boxes map: `first start` -> filled start dot,
+    # done/terminate targets -> done bullseye, decide/merge -> diamonds,
+    # fork/join -> synchronization bars.  Chain edges render as dashed
+    # successions with guard conditions as labels.
+    try:
+        from sysmlpy.plantuml import _extract_control_chains
+        chains = _extract_control_chains(model)
+    except Exception:
+        chains = []
+    for owner, c_nodes, c_edges, _seen in chains:
+        owner_node = nodes.get(id(owner))
+        if owner_node is None:
+            continue  # owning action not drawn (pruned / unrendered)
+
+        def _ctrl_box(ref):
+            # Chain-scoped node identity: one initial/final per chain,
+            # control nodes keyed by their grammar object.
+            if ref == ('initial',):
+                key = ('initial',)
+                if key not in ctrl_boxes:
+                    ctrl_boxes[key] = d.add_start('', parent=owner_node)
+                return ctrl_boxes[key]
+            if ref == ('final',):
+                key = ('final',)
+                if key not in ctrl_boxes:
+                    ctrl_boxes[key] = d.add_done('', parent=owner_node)
+                return ctrl_boxes[key]
+            kind = ref[0]
+            if kind == 'control':
+                key = ('control', id(ref[1]))
+                if key not in ctrl_boxes:
+                    kw = getattr(ref[1], 'keyword', None)
+                    nm = getattr(ref[1], 'declared_name', None) or ''
+                    if kw == 'decide':
+                        ctrl_boxes[key] = d.add_decision(nm, parent=owner_node)
+                    elif kw == 'merge':
+                        ctrl_boxes[key] = d.add_merge(nm, parent=owner_node)
+                    elif kw == 'fork':
+                        ctrl_boxes[key] = d.add_fork(name=nm, parent=owner_node)
+                    else:  # join
+                        ctrl_boxes[key] = d.add_join(name=nm, parent=owner_node)
+                return ctrl_boxes[key]
+            if kind == 'action':
+                return nodes.get(id(ref[1]))
+            return None
+
+        for src_ref, dst_ref, label in c_edges:
+            src = _ctrl_box(src_ref)
+            dst = _ctrl_box(dst_ref)
+            if src is None or dst is None or src is dst:
+                continue
+            if keep_ids is not None and id(owner) not in keep_ids:
+                continue
+            d.add_edge(src, dst, line_style=DASHED, label=label,
+                       target_style=OPEN)
 
     return d
 

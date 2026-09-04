@@ -10,8 +10,20 @@
   `VAction`) with guard conditions (`if <cond> then X`) and `else`
   as labels. Grammar-only `ControlNode` children no longer leak as
   anonymous containment boxes. 11 new tests
-  (`TestActionFlowControlNodes`); boxes-backed afv control nodes are
-  a follow-up.
+  (`TestActionFlowControlNodes`).
+- **Boxes-backed afv control nodes** — `as_action_flow_view_boxes()`
+  renders the same chains through diagramboxes primitives: `first
+  start` as a filled start dot, `decide`/`merge` as **diamonds**
+  (`DecisionNode`, parented inside the composite action), done /
+  terminate targets as done bullseyes, fork/join as bars; chain edges
+  are dashed successions with guard labels. Requires diagramboxes
+  0.5.0 (`parent=` support on the diamond/bar factories). +6 tests
+  (`TestActionFlowControlBoxes`, 54 total in boxes_view_test).
+- **diagramboxes 0.5.0 port routing** — the sugiyama engine's port
+  routing is obstacle-aware: side-facing port edges wrap around node
+  bodies through free bands instead of slicing through boxes placed
+  between the endpoints; single-ported edges anchor at the port
+  boundary. Benefits the boxes iv/stv/afv under `routing='sugiyama'`.
 
 ## v0.68.0 (2026-09-03)
 

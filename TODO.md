@@ -28,6 +28,16 @@ are complete.  Follow-up work is organized under the
     Relationship legends now opt-in (`include_legend=False` default) — standard-notation
     legends were noise; monochrome `bw` stays the default style (color-vision
     accessibility; a dedicated palette option is tracked).
+  - [x] **Phase 2b (unreleased)** — afv control nodes in both renderers:
+    PlantUML afv uses hexagons for decide/merge/fork/join (PlantUML
+    deployment syntax has no diamond element; state-diagram `<<choice>>`
+    pseudo-states cannot coexist with `*--`/`--:|>` arrows); boxes afv
+    uses true **diamonds** (diagramboxes `DecisionNode`, parented in
+    composites), start dots and done bullseyes, dashed guard-labeled
+    chain edges. diagramboxes 0.5.0: obstacle-aware port routing —
+    sugiyama port edges wrap around node bodies through free bands
+    instead of cutting through them; single-ported edges anchor at
+    the port boundary.
   - [x] **Phase 1 (v0.67.0)** — PlantUML notation fidelity: edge encodings aligned to the OMG pilot
     (thick plain connections, heaviest bindings, `--:|>` typing, `--||>` redefinition, send/accept
     actions, variant/objective/metadata, succession flow); connection endpoints now parse (visitor

@@ -290,14 +290,18 @@ package Powertrain {
 """)
 
 AFV_MODEL = sysmlpy.loads("""
-package EnergyFlow {
-    action def Torque { in fuelCommand; out torque; }
-    action def Inject { in fuelCommand; }
+package Operation {
     part vehicle {
-        action providePower : Torque;
-        action injectFuel : Inject;
-        action coolDown;
-        flow providePower.torque to injectFuel.fuelCommand;
+        action cruise {
+            first start;
+            then warmup;
+            then decide;
+            if speedOK then engage;
+            if low then warmup;
+            else done;
+            action warmup;
+            action engage;
+        }
     }
 }
 """)
