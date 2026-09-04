@@ -485,13 +485,30 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#unreleased" class="md-nav__link">
+  <a href="#v0680-2026-09-03" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Unreleased
+        v0.68.0 (2026-09-03)
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="v0.68.0 (2026-09-03)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-boxes-backed-views-iv-afv-legend-defaults" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Boxes-backed views (iv + afv) &amp; legend defaults
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2981,13 +2998,30 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#unreleased" class="md-nav__link">
+  <a href="#v0680-2026-09-03" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Unreleased
+        v0.68.0 (2026-09-03)
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="v0.68.0 (2026-09-03)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#white_check_mark-boxes-backed-views-iv-afv-legend-defaults" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        :white_check_mark: Boxes-backed views (iv + afv) &amp; legend defaults
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -5436,7 +5470,8 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
-<h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="v0680-2026-09-03">v0.68.0 (2026-09-03)<a class="headerlink" href="#v0680-2026-09-03" title="Permanent link">&para;</a></h2>
+<h3 id="white_check_mark-boxes-backed-views-iv-afv-legend-defaults">:white_check_mark: Boxes-backed views (iv + afv) &amp; legend defaults<a class="headerlink" href="#white_check_mark-boxes-backed-views-iv-afv-legend-defaults" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Sibling package <code>boxes</code> renamed to <code>diagramboxes</code> (its v0.3.0) —
   PyPI name collision. <code>sysmlpy.boxes_view</code> imports the new name and
@@ -5450,6 +5485,22 @@
   Transition resolution gained a last-segment fallback so
   <code>transition Running then Stopped;</code> (target nested in Running)
   resolves from the enclosing level. 24 adapter tests.</li>
+<li><strong>Boxes-backed action flow view</strong> —
+  <code>as_action_flow_view_boxes()</code> renders action usages as boxes
+  («action» + type), declared action parameters as boundary ports
+  (in/left, out/right — <code>label_inside</code> placement), and flow
+  connections as port-to-port edges
+  (<code>flow providePower.torque to injectFuel.fuelCommand</code>). Inline
+  nested actions render as composite children; action defs containing
+  structure render as «action def» boxes with their nested actions
+  inside; structure-less defs surface only through their typed
+  usages' ports. <code>focus=</code> keeps the subtree plus flow partners.
+  Successions between nested actions
+  (<code>succession s1 first torque then inject;</code>) render as dashed
+  edges (..&gt; per the official notation). Container-to-own-child
+  flows (def parameter feeding a nested action) are skipped — they
+  would re-anchor to self edges in the nested layout. 16 more tests
+  (48 total adapter tests).</li>
 <li><strong>Boxes-backed interconnection view</strong> —
   <code>as_interconnection_view_boxes()</code> renders part usages as boxes with
   boundary ports and <code>connection</code> usages as port-to-port edges
@@ -5458,6 +5509,18 @@
   <code>focus=</code> filters by part; braille + SVG render helpers. Ports use
   the new diagramboxes <code>label_inside</code> placement so labels stay clear
   of the box text. 8 more tests (32 total).</li>
+<li><strong>Relationship legends are now opt-in</strong> (<code>include_legend=False</code> by
+  default across <code>to_plantuml</code>, <code>PlantUMLGenerator</code>, and all view
+  functions). The built-in legends listed relationship notations
+  (typing <code>--:|&gt;</code>, composite <code>*--</code>, binding thickness, …) that are
+  already defined by the standard — redundant noise for readers.
+  Pass <code>include_legend=True</code> to request one. The boxes stv legend
+  (which explains our own ASCII rendering conventions, not standard
+  notation) remains available and off by default.</li>
+<li><strong>Accessibility note</strong>: the monochrome <code>"bw"</code> style remains the
+  default everywhere; <code>"color"</code> styling stays opt-in via <code>style=</code>.
+  A dedicated color-vision-safe palette option is tracked for a
+  later release (see TODO.md).</li>
 </ul>
 <h2 id="v0670-2026-09-03">v0.67.0 (2026-09-03)<a class="headerlink" href="#v0670-2026-09-03" title="Permanent link">&para;</a></h2>
 <h3 id="white_check_mark-plantuml-notation-fidelity-official-sysml-v2-graphical-conventions-adoption-roadmap-goal-6-phase-1">:white_check_mark: PlantUML notation fidelity — official SysML v2 graphical conventions (Adoption Roadmap Goal 6, phase 1)<a class="headerlink" href="#white_check_mark-plantuml-notation-fidelity-official-sysml-v2-graphical-conventions-adoption-roadmap-goal-6-phase-1" title="Permanent link">&para;</a></h3>

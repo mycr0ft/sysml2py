@@ -601,6 +601,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#boxes-backed-views-v0680-goal-6-phase-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boxes-Backed Views (v0.68.0 — Goal 6 phase 2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#official-sysml-v2-notation-fidelity-v0670-goal-6-phase-1" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1353,6 +1364,21 @@ original exit codes. Example CI usage:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sysmlpy<span class="w"> </span>analyze<span class="w"> </span>model/*.sysml<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span>--fail-on<span class="w"> </span>error
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>sysmlpy<span class="w"> </span>trace<span class="w"> </span>model/*.sysml<span class="w"> </span>--fail-on<span class="w"> </span>uncovered<span class="w"> </span>--format<span class="w"> </span>markdown<span class="w"> </span>-o<span class="w"> </span>coverage.md
 </code></pre></div>
+<h3 id="boxes-backed-views-v0680-goal-6-phase-2">Boxes-Backed Views (v0.68.0 — Goal 6 phase 2)<a class="headerlink" href="#boxes-backed-views-v0680-goal-6-phase-2" title="Permanent link">&para;</a></h3>
+<p>Java-free rendering through the sibling <code>diagramboxes</code> package
+(renamed from <code>boxes</code> — PyPI name collision; its v0.4.0 adds nested
+composite nodes):
+- <code>as_interconnection_view_boxes()</code> — parts as boxes with boundary
+  ports, <code>connection</code> usages as port-to-port Z-routed edges,
+  <code>focus=</code> filtering; braille + SVG helpers.
+- <code>as_action_flow_view_boxes()</code> — actions as boxes («action» +
+  typed name), declared parameters as in/left out/right ports, flow
+  connections as port-to-port edges, inline nested actions as
+  composite children, action defs with structure as «action def»
+  composites, successions as dashed <code>..&gt;</code> edges.
+- Relationship legends are opt-in (<code>include_legend=False</code> default)
+  — built-in legends restated standard notation. Monochrome <code>bw</code>
+  remains the default style for color-vision accessibility.</p>
 <h3 id="official-sysml-v2-notation-fidelity-v0670-goal-6-phase-1">Official SysML v2 Notation Fidelity (v0.67.0 — Goal 6 phase 1)<a class="headerlink" href="#official-sysml-v2-notation-fidelity-v0670-goal-6-phase-1" title="Permanent link">&para;</a></h3>
 <p>Edge encodings follow the OMG pilot's PlantUML generator: connections
 are thick plain lines (<code>-[thickness=3]-</code>, arrow only with metadata),
