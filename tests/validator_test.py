@@ -597,3 +597,139 @@ class TestTraceTargets:
         # (report content is Goal 2's domain — unchanged by the check)
         report = extract_traceability(model)
         assert any(t.name == "Rea1" for t in report.requirements)
+
+
+class TestVerifyTargets:
+    """Goal 9 batch 4: ``verify <vc>`` members must resolve."""
+
+    def test_unresolved_verify_target_errors(self):
+        model = sysmlpy_loads("""
+        package M {
+            requirement def Real;
+            requirement top : Real {
+                verify bad1 : MissingVC;
+            }
+        }
+        """)
+        issues = [i for i in analyze(model)
+                  if i.code == "UNRESOLVED_VERIFY_TARGET"]
+        assert len(issues) == 1
+        assert issues[0].severity == "error"
+        assert "'bad1'" in issues[0].message
+
+    def test_resolved_verify_target_clean(self):
+        model = sysmlpy_loads("""
+        package M {
+            requirement def Real;
+            requirement top : Real {
+                verify v1;
+            }
+            verification v1;
+        }
+        """)
+        assert [i for i in analyze(model)
+                if i.code == "UNRESOLVED_VERIFY_TARGET"] == []
+
+
+class TestConnectorDirections:
+    """Goal 9 batch 4: connection-end direction compatibility."""
+
+    def _direction_issues(self, model):
+        return [i for i in analyze(model)
+                if i.code == "CONNECTOR_DIRECTION_MISMATCH"]
+
+    def test_out_to_out_warns(self):
+        model = sysmlpy_loads("""
+        package M {
+            port def OutP;
+            part def A {
+                out port p1 : OutP;
+            }
+            part def B {
+                out port p2 : OutP;
+            }
+            part a : A;
+            part b : B;
+            connection c1 connect a.p1 to b.p2;
+        }
+        """)
+        issues = self._direction_issues(model)
+        assert len(issues) == 1
+        assert issues[0].severity == "warning"
+        assert "'c1'" in issues[0].message
+
+    def test_out_to_in_clean(self):
+        model = sysmlpy_loads("""
+        package M {
+            port def OutP;
+            port def InP;
+            part def A {
+                out port p1 : OutP;
+            }
+            part def B {
+                in port p2 : InP;
+            }
+            part a : A;
+            part b : B;
+            connection c1 connect a.p1 to b.p2;
+        }
+        """)
+        assert self._direction_issues(model) == []
+
+    def test_undirected_ends_skipped(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def A {
+                port p1;
+            }
+            part def B {
+                port p2;
+            }
+            part a : A;
+            part b : B;
+            connection c1 connect a.p1 to b.p2;
+        }
+        """)
+        assert self._direction_issues(model) == []
+
+    def test_inout_ends_skipped(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def A {
+                inout port p1;
+            }
+            part def B {
+                out port p2;
+            }
+            part a : A;
+            part b : B;
+            connection c1 connect a.p1 to b.p2;
+        }
+        """)
+        assert self._direction_issues(model) == []
+
+    def test_nested_single_segment_ends(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def A {
+                out port p1;
+                out port p2;
+                connection c1 connect p1 to p2;
+            }
+            part a : A;
+        }
+        """)
+        assert len(self._direction_issues(model)) == 1
+
+    def test_nested_direction_clean(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def A {
+                out port p1;
+                in port p2;
+                connection c1 connect p1 to p2;
+            }
+            part a : A;
+        }
+        """)
+        assert self._direction_issues(model) == []

@@ -1236,6 +1236,119 @@ class ExpressionIdentifierCollector:
             self._walk(child, results, child_scope)
 
 
+def _find_named_dicts(node: Any, name: str) -> list:
+    """Locate every dict with ``dict["name"] == name`` in a tree."""
+    out: list = []
+
+    def walk(n: Any) -> None:
+        if isinstance(n, dict):
+            if n.get("name") == name:
+                out.append(n)
+            for v in n.values():
+                if isinstance(v, (dict, list)):
+                    walk(v)
+        elif isinstance(n, list):
+            for item in n:
+                if isinstance(item, (dict, list)):
+                    walk(item)
+
+    walk(node)
+    return out
+
+
+def _as_list_dicts(v: Any) -> list:
+    """Normalize an optional-dict-or-list relationship field to a list."""
+    if isinstance(v, list):
+        return [x for x in v if isinstance(x, dict)]
+    if isinstance(v, dict):
+        return [v]
+    return []
+
+
+def _find_declared_name(d: dict):
+    """Bounded search for ``identification.declaredName`` in a usage/
+    definition dict (the identification nesting varies by shape)."""
+    frontier = [d]
+    for _ in range(4):
+        nxt = []
+        for n in frontier:
+            if not isinstance(n, dict):
+                continue
+            ident = n.get("identification")
+            if isinstance(ident, dict):
+                name = ident.get("declaredName")
+                if name:
+                    return name
+            for v in n.values():
+                if isinstance(v, dict):
+                    nxt.append(v)
+                elif isinstance(v, list):
+                    nxt.extend(x for x in v if isinstance(x, dict))
+        frontier = nxt
+    return None
+
+
+def _port_direction(port_usage: dict):
+    """The explicit direction keyword on a PortUsage dict, if any.
+
+    The prefix chain is
+    ``OccurrenceUsagePrefix → BasicUsagePrefix → RefPrefix.direction``
+    where ``direction`` is ``{"in": ..., "out": ..., "inout": ...}`` —
+    the present keyword is the non-empty string value.
+    """
+    pre = port_usage.get("prefix")
+    while isinstance(pre, dict):
+        d = pre.get("direction")
+        if isinstance(d, dict):
+            for k in ("in", "out", "inout"):
+                v = d.get(k)
+                if isinstance(v, str) and v.strip():
+                    return k
+            return None
+        pre = pre.get("prefix")
+    return None
+
+
+def _connector_end_chain(end: dict) -> list:
+    """Feature-chain segment names of a ConnectorEnd dict."""
+    ors = end.get("ownedRelationship") if isinstance(end, dict) else None
+    for rel in _as_list_dicts(ors):
+        if rel.get("name") != "OwnedReferenceSubsetting":
+            continue
+        ofc_list = _as_list_dicts(rel.get("ownedRelatedElement"))
+        ofc = ofc_list[0] if ofc_list else {}
+        if ofc.get("name") != "OwnedFeatureChain":
+            continue
+        feat = ofc.get("feature") or {}
+        names = []
+        for chain_rel in _as_list_dicts(feat.get("ownedRelationship")):
+            if chain_rel.get("name") != "OwnedFeatureChaining":
+                continue
+            cf = chain_rel.get("chainingFeature") or {}
+            qn = cf.get("names")
+            if isinstance(qn, list) and qn:
+                names.append(str(qn[-1]))
+        return names
+    return []
+
+
+def _usage_typed_by(usage: dict):
+    """The last segment of a usage dict's OwnedFeatureTyping, if any.
+
+    The typing rides the declaration/specialization chain, which
+    precedes the body in dict order, so a usage's own typing is found
+    before any nested member's typing.
+    """
+    for rel in _find_named_dicts(usage, "OwnedFeatureTyping"):
+        ft = rel.get("type") or {}
+        qn = ft.get("type") if isinstance(ft, dict) else None
+        if isinstance(qn, dict):
+            names = qn.get("names")
+            if isinstance(names, list) and names:
+                return str(names[-1])
+    return None
+
+
 def _find_payload_parameters(node: Any) -> list:
     """Locate every ``PayloadParameter`` dict in a grammar tree."""
     out: list = []
@@ -2381,6 +2494,8 @@ class SemanticAnalyzer:
         issues.extend(self._check_trigger_payloads(model, symtab, lib_roots))
         issues.extend(self._check_requirement_coverage(model))
         issues.extend(self._check_trace_targets(model, symtab, lib_roots))
+        issues.extend(self._check_verify_targets(model, symtab, lib_roots))
+        issues.extend(self._check_connector_directions(model))
 
         # Step 6: Stylistic checks (warnings, not errors)
         if style_checks:
@@ -3178,6 +3293,166 @@ class SemanticAnalyzer:
                 table = table._children.get(part, table)
             return table.lookup(parts[-1])
         return None
+
+    def _check_verify_targets(
+        self,
+        model: Any,
+        symtab: "SymbolTable",
+        lib_roots: list,
+    ) -> list[SemanticIssue]:
+        """Resolve ``verify <vc>`` members inside requirements (Goal 9).
+
+        ``verify v1 : VC;`` in a requirement body parses as a
+        VerifyRequirementUsage whose ``ors`` holds the referenced
+        verification-case name.  Notably the visitor drops the
+        ``: VC`` typing specialization entirely (``fsp`` is empty), so
+        a typo'd verification-case *type* is invisible — but the
+        member name reference is checkable: resolve it against the
+        symbol table in the requirement's scope.  Unresolved targets
+        produce UNRESOLVED_VERIFY_TARGET errors (same contract as
+        UNRESOLVED_TRACE_TARGET for satisfy).
+        """
+        issues: list[SemanticIssue] = []
+        for element, scope_path in self._walk_usages(model):
+            # verify members live inside Requirement grammar trees
+            # (no VerifyRequirementUsage object of their own)
+            if type(element).__name__ != "Requirement":
+                continue
+            grammar = getattr(element, "grammar", None)
+            if grammar is None:
+                continue
+            try:
+                grammar_def = grammar.get_definition()
+            except Exception:
+                continue
+            if not isinstance(grammar_def, dict):
+                continue
+            for vr in _find_named_dicts(grammar_def, "VerifyRequirementUsage"):
+                ors = vr.get("ors")
+                if not isinstance(ors, dict):
+                    continue
+                rf = ors.get("referencedFeature") or {}
+                # referencedFeature *is* the QualifiedName node here
+                names = rf.get("names") if isinstance(rf, dict) else None
+                if not names:
+                    continue
+                ref = "::".join(str(n) for n in names)
+                if self._is_resolved(ref, symtab, scope_path, lib_roots):
+                    continue
+                issues.append(SemanticIssue(
+                    severity="error",
+                    code="UNRESOLVED_VERIFY_TARGET",
+                    message=(
+                        f"verify target '{ref}' in requirement "
+                        f"'{getattr(element, 'name', '<anonymous>')}' "
+                        "does not resolve to a defined element"),
+                    element=element,
+                    reference=ref,
+                ))
+        return issues
+
+    def _check_connector_directions(self, model: Any) -> list[SemanticIssue]:
+        """Check connection-end port direction compatibility (Goal 9).
+
+        ``connection c connect a.p1 to b.p2;`` — when both end ports
+        carry explicit directions and neither is ``inout``, wiring
+        ``out`` to ``out`` or ``in`` to ``in`` flags
+        CONNECTOR_DIRECTION_MISMATCH (warning — conjugated ports and
+        exotic flow conventions exist, so this is advisory, not an
+        error).  Ends without a direction keyword, ``inout`` ends,
+        chains deeper than two segments and unresolvable parts are
+        skipped.
+        """
+        issues: list[SemanticIssue] = []
+        try:
+            from sysmlpy.sim import load_model_grammar
+            visit = load_model_grammar(model)
+        except Exception:
+            return issues
+
+        scope_ports: dict = {}   # def/usage name -> {port: direction}
+        part_typing: dict = {}   # part usage name -> typed-by name
+        connections: list = []   # (name, scope_stack, [chain, ...])
+
+        def walk2(node, scope_stack):
+            if isinstance(node, dict):
+                nm = node.get("name")
+                declared = _find_declared_name(node)
+                new_stack = scope_stack
+                if declared and isinstance(nm, str) and (
+                        nm.endswith("Usage") or nm.endswith("Definition")):
+                    if nm != "PortUsage":
+                        new_stack = scope_stack + [declared]
+                    if nm == "PortUsage":
+                        d = _port_direction(node)
+                        if d and scope_stack:
+                            scope_ports.setdefault(
+                                scope_stack[-1], {})[declared] = d
+                    elif nm == "ConnectionUsage":
+                        chains = []
+                        part = node.get("part") or {}
+                        bp = part.get("part") or {}
+                        for rel in _as_list_dicts(
+                                bp.get("ownedRelationship")):
+                            if rel.get("name") != "ConnectorEndMember":
+                                continue
+                            ends = _as_list_dicts(
+                                rel.get("ownedRelatedElement"))
+                            if not ends:
+                                continue
+                            chain = _connector_end_chain(ends[0])
+                            if chain:
+                                chains.append(chain)
+                        if len(chains) == 2:
+                            connections.append((declared, new_stack, chains))
+                    elif nm.endswith("Usage"):
+                        t = _usage_typed_by(node)
+                        if t:
+                            part_typing[declared] = t
+                for k, v in node.items():
+                    if isinstance(v, (dict, list)):
+                        walk2(v, new_stack)
+            elif isinstance(node, list):
+                for x in node:
+                    walk2(x, scope_stack)
+
+        walk2(visit, [])
+
+        def end_direction(chain, scope_stack):
+            if len(chain) == 2:
+                part_name, port_name = chain
+                t = part_typing.get(part_name)
+                if t and port_name in scope_ports.get(t, {}):
+                    return scope_ports[t][port_name]
+                return scope_ports.get(part_name, {}).get(port_name)
+            if len(chain) == 1:
+                port_name = chain[0]
+                for scope in reversed(scope_stack):
+                    if port_name in scope_ports.get(scope, {}):
+                        return scope_ports[scope][port_name]
+                    t = part_typing.get(scope)
+                    if t and port_name in scope_ports.get(t, {}):
+                        return scope_ports[t][port_name]
+            return None
+
+        for cname, cstack, chains in connections:
+            d1 = end_direction(chains[0], cstack)
+            d2 = end_direction(chains[1], cstack)
+            if not d1 or not d2:
+                continue
+            if d1 == "inout" or d2 == "inout":
+                continue
+            if d1 == d2:
+                issues.append(SemanticIssue(
+                    severity="warning",
+                    code="CONNECTOR_DIRECTION_MISMATCH",
+                    message=(
+                        f"Connection '{cname}' binds two '{d1}' ports "
+                        f"({chains[0][-1]} -> {chains[1][-1]}); a "
+                        "connection normally pairs 'out' with 'in'"),
+                    reference=cname,
+                ))
+        return issues
 
     def _check_state_machines(self, model: Any) -> list[SemanticIssue]:
         """OCL well-formedness for ``state def`` machines (Goal 9).

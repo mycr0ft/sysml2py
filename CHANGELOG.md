@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## v0.71.0 (2026-09-04)
+
+- **Goal 9 batch 4: verify targets + connector directions** —
+  - `UNRESOLVED_VERIFY_TARGET` (error): `verify <vc>` members inside
+    requirements resolve against the symbol table.  The visitor drops
+    the `: VC` typing specialization on verify members entirely
+    (`fsp` is empty), so a typo'd verification-case *type* is
+    invisible in the parse tree — but the member's reference name is
+    checkable, and now is.
+  - `CONNECTOR_DIRECTION_MISMATCH` (warning): `connection c connect
+    a.p1 to b.p2` with both ends carrying explicit non-`inout`
+    directions in the same direction (`out`→`out`, `in`→`in`).
+    Resolves both end chains — two-segment chains through part
+    typings (`a.p1` via a's typed-by def) and single-segment chains
+    against the enclosing scope.  Undirected, `inout` and
+    deeper-chain ends are skipped (advisory, not an error —
+    conjugated ports and exotic flow conventions exist).
+- 8 new validator tests (61).
+
 ## v0.70.0 (2026-09-04)
 
 - **Goal 9 batch 3: trace-target checks** —

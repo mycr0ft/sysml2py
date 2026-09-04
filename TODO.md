@@ -94,10 +94,15 @@ are complete.  Follow-up work is organized under the
     `UNRESOLVED_TRACE_TARGET` (error) and `TRACE_TARGET_NOT_REQUIREMENT`
     (warning) on `satisfy <req> by <part>` targets; exposes the Goal 2
     extractor's phantom-requirement behavior for dangling edges.
-  - [ ] **Batch 4 candidates** — connector end direction checks,
-    `verify` member target resolution; abstract-typing warnings
-    dropped from batch 3 (needs spec research: typing by abstract
-    defs inside abstract definitions is legitimate via redefinition).
+  - [x] **Batch 4 (v0.71.0): verify + directions** —
+    `UNRESOLVED_VERIFY_TARGET` (error; verify members inside
+    requirements) and `CONNECTOR_DIRECTION_MISMATCH` (warning;
+    same-direction port wiring, scoped end resolution).  The visitor
+    drops verify members' `: VC` typing (fsp empty) — noted.
+  - [ ] **Batch 5 candidates** — abstract-typing warnings (needs spec
+    research first: typing by abstract defs inside abstract
+    definitions is legitimate via redefinition), deeper feature-chain
+    connection ends (a.bus.p3), `satisfy` subject resolution.
 - [ ] **Goal 10 — Technical stubs** (connector-end compatibility, `*`/`/` unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)
 
 Legacy candidate follow-up work:
