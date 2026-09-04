@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.67.0** (2026-09-03)
+Current version: **v0.68.0** (2026-09-03)
 
 ---
 
@@ -94,6 +94,18 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   action edges, variant/objective/metadata edges); connection
   endpoints now parse (was a parse stub); stv renders composite
   states as nested blocks; gv renders connector edges (v0.67.0).
+- **Boxes-backed interconnection + action flow views** —
+  `as_interconnection_view_boxes()` (parts as boxes with boundary
+  ports, `connection` usages as port-to-port Z-routed edges) and
+  `as_action_flow_view_boxes()` (actions as boxes, parameters as
+  in/out ports, flows as port-to-port edges, nested actions as
+  composite children, successions as dashed `..>` edges) against
+  `diagramboxes` (renamed from `boxes`, its v0.4.0); braille + SVG
+  render helpers for both (v0.68.0).
+- **Relationship legends opt-in** — `include_legend=False` by
+  default everywhere; the built-in legends restated standard
+  notation and are noise. Monochrome `bw` remains the default style
+  for color-vision accessibility (v0.68.0).
 - **ANTLR4 parser** — default parser, using OMG grammar v2026.03.0
   - `load()`, `loads()`, `parse()`, `load_grammar()` (public API)
   - `load_antlr()`, `load_grammar_antlr()` (explicit ANTLR4 path)
@@ -253,14 +265,14 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 | `tests/kuzu_store_test.py` | 32 | Pass (skipped if kuzu not installed) |
 | `tests/import_test.py` | 31 | ✅ All pass |
 | `tests/cayley_store_test.py` | 22 | Pass (skipped if cayley not installed) |
-| `tests/boxes_view_test.py` | 19 | Pass (skipped if boxes not installed) |
+| `tests/boxes_view_test.py` | 48 | Pass (skipped if diagramboxes not installed) |
 | `tests/project_test.py` | 17 | ✅ All pass |
 | `tests/redefined_name_test.py` | 14 | ✅ All pass (100%) |
 | `tests/two_stage_parse_test.py` | 7 | ✅ All pass |
 | `tests/main_test.py` | 7 | ✅ All pass |
 | `tests/partial_test.py` | 6 | ✅ All pass |
 | `tests/conformance_test.py` | 123 | ✅ All pass (100%) |
-| **Total** | **1205** | **1082 fast + 123 conformance pass (25 skipped: optional deps)** |
+| **Total** | **1274** | **1151 fast + 123 conformance pass (24 skipped: optional deps)** |
 
 ### Documentation
 

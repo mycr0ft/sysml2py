@@ -41,7 +41,7 @@ try:
         ChoicePseudostate, ForkPseudostate, JoinPseudostate,
         FinalState, TerminatePseudostate,
         HistoryPseudostate, EntryPoint, ExitPoint, StateNode,
-        OPEN, NONE,
+        OPEN, NONE, DASHED,
     )
 except ImportError as _exc:  # pragma: no cover
     raise ImportError(
@@ -1007,4 +1007,492 @@ def render_interconnection_view_boxes_svg(
 ) -> str:
     """Convenience: build + render the boxes interconnection view as SVG."""
     d = as_interconnection_view_boxes(model, focus=focus)
+    return d.render_svg(routing=routing, scale=scale, **layout_kw)
+
+# ---------------------------------------------------------------------------
+# Action flow view (afv) via boxes
+# ---------------------------------------------------------------------------
+
+def _afv_kids(value):
+    """Normalize a grammar ``children`` value to a list.
+
+    Grammar objects store ``children`` as a list, a single child
+    object, or None depending on cardinality — this hides that from
+    the walkers below.
+    """
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    return [value]
+
+
+def _afv_flow_end(end_member):
+    """``(owner, param)`` from one FlowEndMember of a flow grammar.
+
+    The flow-end grammar nests as::
+
+        FlowEndMember → FlowEnd
+            → FlowEndSubsetting → QualifiedName(names)     # owning feature
+            → FlowFeatureMember → FlowFeature
+                  → FlowRedefinition → QualifiedName(names)  # parameter
+
+    Either part may be absent (e.g. ``flow t to inject.i`` has a
+    subsetting name but no parameter chain on the source end).
+    """
+    owner = param = None
+    for fe in _afv_kids(getattr(end_member, "children", None)):
+        if fe.__class__.__name__ != "FlowEnd":
+            continue
+        for sub in _afv_kids(getattr(fe, "children", None)):
+            cname = sub.__class__.__name__
+            if cname == "FlowEndSubsetting":
+                for q in _afv_kids(getattr(sub, "children", None)):
+                    if q.__class__.__name__ == "QualifiedName" and getattr(q, "names", None):
+                        owner = list(q.names)
+            elif cname == "FlowFeatureMember":
+                for ff in _afv_kids(getattr(sub, "children", None)):
+                    for fr in _afv_kids(getattr(ff, "children", None)):
+                        for q in _afv_kids(getattr(fr, "children", None)):
+                            if q.__class__.__name__ == "QualifiedName" and getattr(q, "names", None):
+                                param = list(q.names)
+    return owner, param
+
+
+def _afv_flow_grammar_ends(flow_grammar):
+    """``((owner, param), (owner, param))`` from a FlowConnectionUsage grammar."""
+    decl = getattr(flow_grammar, "declaration", None)
+    members = _afv_kids(getattr(decl, "children", None))
+    ends = [_afv_flow_end(m) for m in members[1:]]
+    if len(ends) >= 2:
+        return ends[0], ends[1]
+    return None, None
+
+
+def _afv_action_params(grammar_obj):
+    """``[(name, direction)]`` declared parameters of an action def/usage.
+
+    Walks the action body grammar
+    (``body → ActionBodyItem → NonOccurrenceUsageMember →
+    NonOccurrenceUsageElement → <usage>.prefix.direction`` +
+    ``.declaration.declaration.identification.declaredName``).
+    Direction comes from ``FeatureDirection`` (isIn/isOut/isInOut).
+    """
+    body = getattr(grammar_obj, "body", None)
+    params = []
+    for item in _afv_kids(getattr(body, "children", None)):
+        for member in _afv_kids(getattr(item, "children", None)):
+            for elem in _afv_kids(getattr(member, "children", None)):
+                for ref in _afv_kids(getattr(elem, "children", None)):
+                    decl = getattr(ref, "declaration", None)
+                    fd = getattr(decl, "declaration", None) if decl is not None else None
+                    if fd is None or fd.__class__.__name__ != "FeatureDeclaration":
+                        continue
+                    ident = getattr(fd, "identification", None)
+                    name = getattr(ident, "declaredName", None) if ident is not None else None
+                    if not name:
+                        continue
+                    direction = getattr(getattr(ref, "prefix", None), "direction", None)
+                    side = ("in" if getattr(direction, "isIn", None) else
+                            "out" if getattr(direction, "isOut", None) else
+                            "inout" if getattr(direction, "isInOut", None) else None)
+                    params.append((name, side))
+    return params
+
+
+def _afv_flows_in_body(grammar_obj, out, depth=0):
+    """Recursively collect FlowConnectionUsage/Definition grammar objects."""
+    if depth > 24:
+        return
+    body = getattr(grammar_obj, "body", None)
+    if body is not None and body is not grammar_obj:
+        _afv_flows_in_body(body, out, depth + 1)
+    for child in _afv_kids(getattr(grammar_obj, "children", None)):
+        if child.__class__.__name__ in ("FlowConnectionUsage", "FlowConnectionDefinition"):
+            out.append(child)
+        else:
+            _afv_flows_in_body(child, out, depth + 1)
+
+
+def _afv_successions_in_body(grammar_obj, out, depth=0):
+    """Recursively collect ``Succession`` grammar objects."""
+    if depth > 24:
+        return
+    body = getattr(grammar_obj, "body", None)
+    if body is not None and body is not grammar_obj:
+        _afv_successions_in_body(body, out, depth + 1)
+    for child in _afv_kids(getattr(grammar_obj, "children", None)):
+        if child.__class__.__name__ == "Succession":
+            out.append(child)
+        else:
+            _afv_successions_in_body(child, out, depth + 1)
+
+
+def _afv_succession_ends(succ):
+    """``[names]`` — OwnedReferenceSubsetting name lists of both ends."""
+    ends = []
+    for mem in _afv_kids(getattr(succ, "children", None)):
+        for end in _afv_kids(getattr(mem, "children", None)):
+            for ref in _afv_kids(getattr(end, "children", None)):
+                if ref.__class__.__name__ != "OwnedReferenceSubsetting":
+                    continue
+                seg = []
+                rf = getattr(ref, "referencedFeature", None)
+                if rf is not None and getattr(rf, "names", None):
+                    seg.extend(rf.names)
+                for chain in (getattr(ref, "elements", None) or []):
+                    for oc in _afv_kids(getattr(chain, "children", None)):
+                        cf = getattr(oc, "chainingFeature", None)
+                        if cf is not None and getattr(cf, "names", None):
+                            seg.extend(cf.names)
+                if seg:
+                    ends.append(seg)
+    return ends
+
+
+def _afv_uuid_like(name):
+    """True for anonymous-element UUID names (suppress as edge labels)."""
+    if not name:
+        return True
+    return len(name) == 36 and name.count("-") == 4 and all(
+        c in "0123456789abcdef" for c in name.replace("-", ""))
+
+
+def as_action_flow_view_boxes(
+    model: Union[str, "sysmlpy.Model", dict],
+    focus: Optional[str] = None,
+) -> "Diagram":
+    """Build a boxes (diagramboxes) action flow diagram from a model.
+
+    Renders action usages as boxes («action», or «action def» when the
+    box is a definition that contains structure), declared action
+    parameters as boundary ports (``in`` on the left, ``out`` on the
+    right), and flow connections as edges — port-to-port when an end
+    chains through a parameter (``flow providePower.torque to
+    injectFuel.fuelCommand``), direct box-to-box otherwise.  Actions
+    nested in an inline action usage or an action definition render as
+    composite children (diagramboxes v0.4.0 nesting).
+
+    Definitions without nested actions or internal flows are not drawn
+    as boxes — their parameters surface on the typed usage's ports.
+
+    Successions between nested actions
+    (``succession s1 first torque then inject;``) render as dashed
+    edges (``..>`` per the official notation).
+
+    Parameters
+    ----------
+    model : str, sysmlpy.Model, or dict
+        SysML v2 text, a loaded Model, or a parsed definition dict.
+    focus : str, optional
+        Restrict to the subtree of this action (def or usage) plus any
+        flows touching its actions (partners included).
+
+    Returns
+    -------
+    diagramboxes.Diagram
+    """
+    import sysmlpy as _sysmlpy
+
+    if isinstance(model, str):
+        model = _sysmlpy.loads(model)
+    elif isinstance(model, dict):
+        model = _sysmlpy.loads(_sysmlpy.dump(model))
+
+    if not hasattr(model, "all"):
+        raise TypeError(f"Unsupported model type: {type(model).__name__}")
+
+    # ---- 1. collect actions with their nearest action ancestor -------
+    usages = []   # (element, parent_action_element_or_None)
+    defs = []     # action definitions
+    order = {}    # element id -> creation order (stable node placement)
+
+    def _walk(el, chain):
+        st = getattr(el, "sysml_type", None)
+        if st == "action":
+            if getattr(el, "is_definition", False):
+                defs.append(el)
+                order[id(el)] = len(order)
+            else:
+                parent = next((a for a in reversed(chain)
+                               if getattr(a, "sysml_type", None) == "action"), None)
+                usages.append((el, parent))
+                order[id(el)] = len(order)
+        for c in (getattr(el, "children", None) or []):
+            _walk(c, chain + [el])
+
+    _walk(model, [])
+
+    if not usages and not defs:
+        raise ValueError("as_action_flow_view_boxes: no actions found")
+
+    # ---- 2. collect flows (usage-level + grammar-level with container) --
+    flows = []    # (flow_grammar, flow_name, container_element_or_None)
+    successions = []   # (Succession grammar, name, container_element)
+    visited_ids = set()
+
+    def _scan(el):
+        eid = id(el)
+        if eid in visited_ids:
+            return
+        visited_ids.add(eid)
+
+        g = getattr(el, "grammar", None)
+        if getattr(el, "sysml_type", "") == "flow" and g is not None:
+            flows.append((g, getattr(el, "name", None), None))
+        if g is not None:
+            found = []
+            _afv_flows_in_body(g, found)
+            for fgo in found:
+                if id(fgo) not in visited_ids:
+                    visited_ids.add(id(fgo))
+                    flows.append((fgo, None, el))
+            succs = []
+            _afv_successions_in_body(g, succs)
+            for so in succs:
+                if id(so) not in visited_ids:
+                    visited_ids.add(id(so))
+                    successions.append((so, getattr(so, "name", None), el))
+        for c in (getattr(el, "children", None) or []):
+            _scan(c)
+
+    for child in (getattr(model, "children", None) or []):
+        _scan(child)
+
+    # ---- 3. resolve endpoints: name -> action element -------------------
+    action_by_name = {}
+    for el in defs:
+        action_by_name.setdefault(getattr(el, "name", None), el)
+    for el, _p in usages:
+        action_by_name.setdefault(getattr(el, "name", None), el)
+
+    param_names = {}   # element id -> {param name: direction}
+    for el in defs + [u for u, _ in usages]:
+        g = getattr(el, "grammar", None)
+        if g is not None:
+            param_names[id(el)] = {n: side for n, side in _afv_action_params(g)}
+    # typed usages inherit their def's parameters
+    typed_def = {}
+    for el, _p in usages:
+        tn = getattr(el, "typed_by_name", None)
+        if tn and not param_names.get(id(el)):
+            base = tn.split("::")[-1]
+            de = action_by_name.get(base)
+            if de is not None and getattr(de, "is_definition", False):
+                typed_def[id(el)] = de
+                if id(de) not in param_names:
+                    dg = getattr(de, "grammar", None)
+                    param_names[id(de)] = ({n: s for n, s in _afv_action_params(dg)}
+                                           if dg is not None else {})
+
+    def _resolve_end(owner, param, container):
+        """Map an (owner, param) flow end to (element, port_name) or None."""
+        if owner:
+            key = ".".join(owner)
+            el = action_by_name.get(key) or action_by_name.get(owner[-1])
+            if el is not None:
+                return el, (param[-1] if param else None)
+            # owner may name a parameter of the enclosing def/usage
+            if container is not None:
+                cn = param_names.get(id(container)) or {}
+                if owner[0] in cn:
+                    return container, owner[0]
+        elif container is not None and param:
+            # bare parameter reference of the enclosing context
+            cn = param_names.get(id(container)) or {}
+            if param[-1] in cn:
+                return container, param[-1]
+        return None, None
+
+    resolved = []   # (from_elem, from_port, to_elem, to_port, label[, dashed])
+    for fgo, fname, container in flows:
+        ends = _afv_flow_grammar_ends(fgo)
+        if not ends or ends[0] is None or ends[1] is None:
+            continue
+        ends_resolved = []
+        for owner, param in ends:
+            ends_resolved.append(_resolve_end(owner, param, container))
+        (fe, fport), (te, tport) = ends_resolved
+        if fe is None or te is None:
+            continue  # unresolvable ends are simply not drawn
+        if fe is te:
+            continue
+        # Skip container-to-own-child flows: they would re-anchor to a
+        # self edge in the nested layout (e.g. a def's parameter port
+        # feeding its own nested action).
+        if container is not None and (fe is container or te is container):
+            continue
+        label = None if _afv_uuid_like(fname) else fname
+        resolved.append((fe, fport, te, tport, label))
+
+    for so, sname, container in successions:
+        if sname is None:
+            ident = getattr(getattr(getattr(so, "declaration", None),
+                                    "declaration", None),
+                            "identification", None)
+            sname = getattr(ident, "declaredName", None)
+        ends = _afv_succession_ends(so)
+        if len(ends) < 2:
+            continue
+        ends_resolved = []
+        for owner in ends[:2]:
+            ends_resolved.append(_resolve_end(owner, None, container))
+        (fe, fport), (te, tport) = ends_resolved
+        if fe is None or te is None or fe is te:
+            continue
+        if container is not None and (fe is container or te is container):
+            continue
+        label = None if _afv_uuid_like(sname) else sname
+        resolved.append((fe, fport, te, tport, label, True))
+
+    # ---- 3b. which definitions need a box ------------------------------
+    parents_needed = {id(p) for _e, p in usages if p is not None}
+    containers_needed = {id(c) for _fgo, _n, c in flows if c is not None}
+    defs_to_draw = [d for d in defs
+                    if id(d) in parents_needed or id(d) in containers_needed]
+
+    # ---- 3c. focus filter ----------------------------------------------
+    keep_ids = None
+    if focus is not None:
+        focus_el = action_by_name.get(focus)
+        if focus_el is None:
+            raise ValueError(
+                f"as_action_flow_view_boxes: no action named {focus!r}; "
+                f"found {sorted(n for n in action_by_name if n)}")
+        # Subtree of the focus action: itself plus every usage whose
+        # parent chain (nested actions / owning def) reaches it.
+        parent_chain = {}   # element id -> parent element id
+        for el, parent in usages:
+            if parent is not None:
+                parent_chain[id(el)] = id(parent)
+        subtree = {id(focus_el)}
+        for el, _parent in usages:
+            walk = parent_chain.get(id(el))
+            while walk is not None:
+                if walk == id(focus_el):
+                    subtree.add(id(el))
+                    break
+                walk = parent_chain.get(walk)
+        keep_ids = subtree
+
+    # ---- 4. build nodes --------------------------------------------------
+    d = Diagram()
+    nodes = {}         # element id -> Node
+
+    def _stereo(el, is_def):
+        if is_def:
+            return ["action def"]
+        st = ["action"]
+        tn = getattr(el, "typed_by_name", None)
+        if tn:
+            st.append(tn.split("::")[-1])
+        return st
+
+    def _draw(el, is_def, parent_node=None):
+        name = getattr(el, "name", None) or "action"
+        nodes[id(el)] = d.add_node(
+            name, stereotypes=_stereo(el, is_def),
+            attributes=[], rounded=True, parent=parent_node)
+        for pname, direction in _params(el, is_def):
+            side = "left" if direction == "in" else "right"
+            nodes[id(el)].add_port(pname, side=side, label_inside=True)
+        return nodes[id(el)]
+
+    # parent lookup for usages (element id -> parent element)
+    parent_of = {id(u): p for u, p in usages}
+
+    def _params(el, is_def):
+        own = param_names.get(id(el))
+        if own:
+            return list(own.items())
+        de = typed_def.get(id(el))
+        if de is not None:
+            return list((param_names.get(id(de)) or {}).items())
+        return []
+
+    # draw defs that need boxes (with their nested usages)
+    for de in defs_to_draw:
+        if keep_ids is not None and id(de) not in keep_ids:
+            continue
+        _draw(de, True)
+    for el, parent in usages:
+        if keep_ids is not None and id(el) not in keep_ids:
+            continue
+        pnode = nodes.get(id(parent)) if parent is not None else None
+        if id(el) in nodes:
+            continue
+        _draw(el, False, parent_node=pnode)
+
+    # ---- 5. edges ---------------------------------------------------------
+    port_cache = {}
+
+    def _port(node, label, is_source):
+        if node is None or not label:
+            return None
+        key = (id(node), label)
+        if key in port_cache:
+            return port_cache[key]
+        existing = next((p for p in node.ports if p.label == label), None)
+        if existing is not None:
+            port_cache[key] = existing
+            return existing
+        side = "right" if is_source else "left"
+        same = [p for p in node.ports if p.side == side]
+        offset = None
+        if len(same) >= 1:
+            offset = (len(same) + 1) / 4.0
+            if offset > 1.0:
+                offset = 0.5
+        p = node.add_port(label, side=side, offset=offset, label_inside=True)
+        port_cache[key] = p
+        return p
+
+    for item in resolved:
+        fe, fport, te, tport, label = item[:5]
+        dashed = item[5] if len(item) > 5 else False
+        if keep_ids is not None and not (
+                id(fe) in keep_ids or id(te) in keep_ids):
+            continue
+        # Under focus, flow partners outside the subtree are still
+        # drawn (top-level) so the touching flow has both endpoints.
+        for el in (fe, te):
+            if id(el) not in nodes:
+                _draw(el, bool(getattr(el, "is_definition", False)))
+        src = nodes.get(id(fe))
+        dst = nodes.get(id(te))
+        if src is None or dst is None:
+            continue
+        sp = _port(src, fport, True)
+        tp = _port(dst, tport, False)
+        kw = {"label": label}
+        if dashed:
+            kw["line_style"] = DASHED
+        if sp is not None and tp is not None:
+            d.add_edge(src, dst, source_port=sp, target_port=tp, **kw)
+        else:
+            d.add_edge(src, dst, **kw)
+
+    return d
+
+
+def render_action_flow_view_boxes(
+    model: Union[str, "sysmlpy.Model", dict],
+    focus: Optional[str] = None,
+    routing: str = "orthogonal",
+    **layout_kw,
+) -> str:
+    """Convenience: build + render the boxes action flow view (braille)."""
+    d = as_action_flow_view_boxes(model, focus=focus)
+    return d.render(routing=routing, **layout_kw)
+
+
+def render_action_flow_view_boxes_svg(
+    model: Union[str, "sysmlpy.Model", dict],
+    focus: Optional[str] = None,
+    routing: str = "orthogonal",
+    scale: float = 1.5,
+    **layout_kw,
+) -> str:
+    """Convenience: build + render the boxes action flow view as SVG."""
+    d = as_action_flow_view_boxes(model, focus=focus)
     return d.render_svg(routing=routing, scale=scale, **layout_kw)

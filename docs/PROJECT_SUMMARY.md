@@ -138,6 +138,23 @@ sysmlpy analyze model/*.sysml --format json --fail-on error
 sysmlpy trace model/*.sysml --fail-on uncovered --format markdown -o coverage.md
 ```
 
+### Boxes-Backed Views (v0.68.0 — Goal 6 phase 2)
+
+Java-free rendering through the sibling `diagramboxes` package
+(renamed from `boxes` — PyPI name collision; its v0.4.0 adds nested
+composite nodes):
+- `as_interconnection_view_boxes()` — parts as boxes with boundary
+  ports, `connection` usages as port-to-port Z-routed edges,
+  `focus=` filtering; braille + SVG helpers.
+- `as_action_flow_view_boxes()` — actions as boxes («action» +
+  typed name), declared parameters as in/left out/right ports, flow
+  connections as port-to-port edges, inline nested actions as
+  composite children, action defs with structure as «action def»
+  composites, successions as dashed `..>` edges.
+- Relationship legends are opt-in (`include_legend=False` default)
+  — built-in legends restated standard notation. Monochrome `bw`
+  remains the default style for color-vision accessibility.
+
 ### Official SysML v2 Notation Fidelity (v0.67.0 — Goal 6 phase 1)
 
 Edge encodings follow the OMG pilot's PlantUML generator: connections

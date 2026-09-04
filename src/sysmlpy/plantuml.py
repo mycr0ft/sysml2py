@@ -618,7 +618,7 @@ class PlantUMLGenerator:
         puml = PlantUMLGenerator(model, elements=[wheel, axle]).generate()
     """
 
-    def __init__(self, model, style="bw", direction="TB", include_legend=True,
+    def __init__(self, model, style="bw", direction="TB", include_legend=False,
                  focus=None, elements=None, max_depth=None, show_external=False,
                  custom_style=None):
         """
@@ -1083,7 +1083,7 @@ class PlantUMLGenerator:
         return legend
 
 
-def to_plantuml(model, style="bw", direction="TB", include_legend=True,
+def to_plantuml(model, style="bw", direction="TB", include_legend=False,
                 focus=None, elements=None, max_depth=None, show_external=False,
                 custom_style=None):
     """
@@ -1120,7 +1120,7 @@ def to_plantuml(model, style="bw", direction="TB", include_legend=True,
 
 
 def as_graphical_rendering(model, focus=None, style="bw", direction="TB",
-                           include_legend=True, max_depth=None,
+                           include_legend=False, max_depth=None,
                            show_external=False, custom_style=None):
     """Generate a graphical rendering of a model or view.
 
@@ -1150,7 +1150,7 @@ def as_graphical_rendering(model, focus=None, style="bw", direction="TB",
 
 
 def as_interconnection_diagram(model, focus=None, elements=None, style="bw",
-                                direction="TB", include_legend=True,
+                                direction="TB", include_legend=False,
                                 max_depth=None, show_external=False,
                                 auto_include_connections=True,
                                 custom_style=None):
@@ -1422,7 +1422,7 @@ def as_interconnection_diagram(model, focus=None, elements=None, style="bw",
 
 
 def as_interconnection_view(model, focus=None, elements=None, style="bw",
-                             direction="TB", include_legend=True,
+                             direction="TB", include_legend=False,
                              max_depth=None, show_external=False,
                              auto_include_connections=True,
                              custom_style=None):
@@ -1446,7 +1446,7 @@ def as_interconnection_view(model, focus=None, elements=None, style="bw",
 
 
 def as_action_flow_view(model, focus=None, elements=None, style="bw", direction="TB",
-                        include_legend=True, max_depth=None, show_external=False,
+                        include_legend=False, max_depth=None, show_external=False,
                         auto_include_flows=True, custom_style=None):
     """Generate an Action Flow View (AFV) diagram.
 
@@ -2020,7 +2020,7 @@ def _expand_with_state_transitions(model, included_ids):
 
 
 def as_state_transition_view(model, focus=None, elements=None, style="bw",
-                              direction="TB", include_legend=True,
+                              direction="TB", include_legend=False,
                               max_depth=None, show_external=False,
                               auto_include_transitions=True,
                               custom_style=None):
@@ -2631,7 +2631,7 @@ def as_textual_notation(model, focus=None, style="bw", custom_style=None):
 
 
 def as_general_view(model, focus=None, elements=None, style="bw", direction="TB",
-                    include_legend=True, max_depth=None, show_external=False,
+                    include_legend=False, max_depth=None, show_external=False,
                     custom_style=None, show_multiplicity=False,
                     auto_include_connections=False):
     """Generate a General View (GV) diagram.
@@ -2955,7 +2955,7 @@ def as_general_view(model, focus=None, elements=None, style="bw", direction="TB"
 
 
 def as_package_view(model, focus=None, style="bw", direction="TB",
-                    include_legend=True, max_depth=None,
+                    include_legend=False, max_depth=None,
                     show_external=False, custom_style=None):
     """Generate a Package View diagram.
 

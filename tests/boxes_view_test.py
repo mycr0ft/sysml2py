@@ -30,10 +30,13 @@ import sysmlpy  # noqa: E402
 from sysmlpy.boxes_view import (  # noqa: E402
     as_state_transition_view_boxes,
     as_interconnection_view_boxes,
+    as_action_flow_view_boxes,
     render_state_transition_view,
     render_state_transition_view_svg,
     render_interconnection_view_boxes,
     render_interconnection_view_boxes_svg,
+    render_action_flow_view_boxes,
+    render_action_flow_view_boxes_svg,
     _collect_state_machine,
 )
 
@@ -462,3 +465,187 @@ class TestInterconnectionBoxes:
         out = render_interconnection_view_boxes_svg(IV_MODEL)
         for t in ("powerOut", "powerIn", "clutch"):
             assert t in out
+
+
+AFV_TYPED = """
+package V {
+    action def Torque { in fuelCommand; out torque; }
+    action def Inject { in fuelCommand; }
+    part vehicle {
+        action providePower : Torque;
+        action injectFuel : Inject;
+        flow providePower.torque to injectFuel.fuelCommand;
+    }
+}
+"""
+
+AFV_NESTED = """
+package V {
+    part vehicle {
+        action drive {
+            action torque { out o; }
+            action inject { in i; }
+            flow torque.o to inject.i;
+        }
+    }
+}
+"""
+
+AFV_DEF_NESTED = """
+package V {
+    action def Drive { action torque; action inject; }
+    action drive : Drive;
+}
+"""
+
+AFV_DEFPARAM = """
+package V {
+    action def Drive { attribute t : Real; action inject { in i; } flow t to inject.i; }
+    action drive : Drive;
+}
+"""
+
+
+class TestActionFlowBoxes:
+    """Boxes-backed action flow view (params as ports, flows as edges)."""
+
+    def test_typed_action_ports(self):
+        d = as_action_flow_view_boxes(AFV_TYPED)
+        pp = next(n for n in d.nodes if n.name == "providePower")
+        inf = next(n for n in d.nodes if n.name == "injectFuel")
+        assert ("fuelCommand", "left") in [(p.label, p.side) for p in pp.ports]
+        assert ("torque", "right") in [(p.label, p.side) for p in pp.ports]
+        assert ("fuelCommand", "left") in [(p.label, p.side) for p in inf.ports]
+
+    def test_structless_defs_not_drawn(self):
+        d = as_action_flow_view_boxes(AFV_TYPED)
+        names = {n.name for n in d.nodes}
+        assert names == {"providePower", "injectFuel"}
+
+    def test_usage_stereotype_carries_type(self):
+        d = as_action_flow_view_boxes(AFV_TYPED)
+        pp = next(n for n in d.nodes if n.name == "providePower")
+        assert "Torque" in pp.stereotypes
+
+    def test_port_to_port_flow_edge(self):
+        d = as_action_flow_view_boxes(AFV_TYPED)
+        assert len(d.edges) == 1
+        e = d.edges[0]
+        assert e.source.name == "providePower"
+        assert e.target.name == "injectFuel"
+        assert e.source_port is not None and e.source_port.label == "torque"
+        assert e.target_port is not None and e.target_port.label == "fuelCommand"
+
+    def test_nested_inline_actions(self):
+        d = as_action_flow_view_boxes(AFV_NESTED)
+        drive = next(n for n in d.nodes if n.name == "drive")
+        torque = next(n for n in d.nodes if n.name == "torque")
+        inject = next(n for n in d.nodes if n.name == "inject")
+        assert torque.parent is drive
+        assert inject.parent is drive
+        assert len(d.edges) == 1
+        e = d.edges[0]
+        assert e.source_port is not None and e.source_port.label == "o"
+        assert e.target_port is not None and e.target_port.label == "i"
+
+    def test_def_with_nested_actions(self):
+        d = as_action_flow_view_boxes(AFV_DEF_NESTED)
+        drive_def = next(n for n in d.nodes if n.name == "Drive")
+        assert "action def" in drive_def.stereotypes
+        torque = next(n for n in d.nodes if n.name == "torque")
+        inject = next(n for n in d.nodes if n.name == "inject")
+        assert torque.parent is drive_def
+        assert inject.parent is drive_def
+        # the typed usage is drawn as its own box
+        usage = next(n for n in d.nodes if n.name == "drive")
+        assert usage.parent is None
+
+    def test_container_param_flow_skipped(self):
+        # A flow from a def's own parameter to a nested action would
+        # re-anchor to a self edge in the nested layout — skipped.
+        d = as_action_flow_view_boxes(AFV_DEFPARAM)
+        assert len(d.edges) == 0
+        assert any(n.name == "Drive" for n in d.nodes)
+
+    def test_anonymous_flow_label_suppressed(self):
+        import sysmlpy as _s
+        m = _s.loads(
+            "package V { part p { action a1; action a2; flow a1 to a2; } }")
+        d = as_action_flow_view_boxes(m)
+        assert len(d.edges) == 1
+        assert d.edges[0].label is None  # UUID name not shown
+
+    def test_focus_keeps_partner(self):
+        d = as_action_flow_view_boxes(AFV_TYPED, focus="providePower")
+        names = {n.name for n in d.nodes}
+        assert "providePower" in names
+        assert "injectFuel" in names  # partner included
+        assert len(d.edges) == 1
+
+    def test_focus_unknown_raises(self):
+        import pytest
+        with pytest.raises(ValueError):
+            as_action_flow_view_boxes(AFV_TYPED, focus="nope")
+
+    def test_no_actions_raises(self):
+        import pytest
+        with pytest.raises(ValueError):
+            as_action_flow_view_boxes("package P { part a; part b; }")
+
+    def test_braille_render(self):
+        from sysmlpy.boxes_view import render_action_flow_view_boxes
+        out = render_action_flow_view_boxes(AFV_NESTED)
+        for t in ("drive", "torque", "inject"):
+            assert t in out
+
+    def test_svg_render(self):
+        from sysmlpy.boxes_view import render_action_flow_view_boxes_svg
+        out = render_action_flow_view_boxes_svg(AFV_TYPED)
+        for t in ("providePower", "injectFuel", "torque", "fuelCommand"):
+            assert t in out
+
+AFV_SUCCESSION = """
+package V {
+    part vehicle {
+        action drive {
+            action torque; action inject;
+            succession s1 first torque then inject;
+        }
+    }
+}
+"""
+
+
+class TestActionFlowSuccessions:
+    """Successions between nested actions render as dashed edges."""
+
+    def test_succession_dashed_edge(self):
+        d = as_action_flow_view_boxes(AFV_SUCCESSION)
+        assert len(d.edges) == 1
+        e = d.edges[0]
+        assert e.source.name == "torque" and e.target.name == "inject"
+        assert e.line_style == "dashed"
+        assert e.label == "s1"
+
+    def test_succession_label_suppressed_when_uuid(self):
+        import sysmlpy as _s
+        m = _s.loads(
+            "package V { part v { action d { action t; action i; "
+            "succession first t then i; } } }")
+        d = as_action_flow_view_boxes(m)
+        assert len(d.edges) == 1
+        assert d.edges[0].label is None
+
+    def test_succession_and_flow_mixed(self):
+        import sysmlpy as _s
+        m = _s.loads(
+            "package V { part v { action d { action t; action i; "
+            "action w { out r; } "
+            "succession s1 first t then i; "
+            "flow i.done to w.r; } } }")
+        d = as_action_flow_view_boxes(m)
+        assert len(d.edges) == 2
+        kinds = sorted((e.source.name, e.target.name, e.line_style)
+                       for e in d.edges)
+        assert ("i", "w", "solid") in kinds
+        assert ("t", "i", "dashed") in kinds

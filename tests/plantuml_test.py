@@ -373,8 +373,9 @@ class TestPlantUMLFiltering:
         puml = to_plantuml(model, focus=vehicle, show_external=True)
 
         # Should include Wheel (external) and the typing relationship
+        # (legends are opt-in since v0.68.0, so match the real edge)
         assert "Wheel" in puml
-        assert "--:|>" in puml
+        assert ":|>" in puml
         assert "types" in puml
 
     def test_focus_without_external_relationships(self):
@@ -2193,9 +2194,9 @@ class TestOfficialNotationV067:
             "Connection: -[thickness=3]-", "")
 
     def test_gv_legend_updated(self):
-        """Legend reflects official edge encodings."""
+        """Legend reflects official edge encodings (opt-in since v0.68.0)."""
         model = sysmlpy.loads(self.MODEL)
-        puml = sysmlpy.as_general_view(model)
+        puml = sysmlpy.as_general_view(model, include_legend=True)
         assert "Binding (==): -[thickness=5]-" in puml
         assert "Connection: -[thickness=3]-" in puml
         assert "Accept Action: <<.." in puml
@@ -2234,6 +2235,6 @@ class TestOfficialNotationV067:
 
     def test_stv_legend_updated(self):
         puml = sysmlpy.as_state_transition_view(
-            sysmlpy.loads(self.STATE_MODEL))
+            sysmlpy.loads(self.STATE_MODEL), include_legend=True)
         assert "Composite states: nested state blocks" in puml
         assert "Containment: simple arrow" not in puml

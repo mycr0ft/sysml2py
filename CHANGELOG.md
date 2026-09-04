@@ -1,6 +1,9 @@
 # CHANGELOG
 
-## Unreleased
+## v0.68.0 (2026-09-03)
+
+### :white_check_mark: Boxes-backed views (iv + afv) & legend defaults
+
 
 - Sibling package `boxes` renamed to `diagramboxes` (its v0.3.0) —
   PyPI name collision. `sysmlpy.boxes_view` imports the new name and
@@ -14,6 +17,22 @@
   Transition resolution gained a last-segment fallback so
   `transition Running then Stopped;` (target nested in Running)
   resolves from the enclosing level. 24 adapter tests.
+- **Boxes-backed action flow view** —
+  `as_action_flow_view_boxes()` renders action usages as boxes
+  («action» + type), declared action parameters as boundary ports
+  (in/left, out/right — `label_inside` placement), and flow
+  connections as port-to-port edges
+  (`flow providePower.torque to injectFuel.fuelCommand`). Inline
+  nested actions render as composite children; action defs containing
+  structure render as «action def» boxes with their nested actions
+  inside; structure-less defs surface only through their typed
+  usages' ports. `focus=` keeps the subtree plus flow partners.
+  Successions between nested actions
+  (`succession s1 first torque then inject;`) render as dashed
+  edges (..> per the official notation). Container-to-own-child
+  flows (def parameter feeding a nested action) are skipped — they
+  would re-anchor to self edges in the nested layout. 16 more tests
+  (48 total adapter tests).
 - **Boxes-backed interconnection view** —
   `as_interconnection_view_boxes()` renders part usages as boxes with
   boundary ports and `connection` usages as port-to-port edges
@@ -22,6 +41,18 @@
   `focus=` filters by part; braille + SVG render helpers. Ports use
   the new diagramboxes `label_inside` placement so labels stay clear
   of the box text. 8 more tests (32 total).
+- **Relationship legends are now opt-in** (`include_legend=False` by
+  default across `to_plantuml`, `PlantUMLGenerator`, and all view
+  functions). The built-in legends listed relationship notations
+  (typing `--:|>`, composite `*--`, binding thickness, …) that are
+  already defined by the standard — redundant noise for readers.
+  Pass `include_legend=True` to request one. The boxes stv legend
+  (which explains our own ASCII rendering conventions, not standard
+  notation) remains available and off by default.
+- **Accessibility note**: the monochrome `"bw"` style remains the
+  default everywhere; `"color"` styling stays opt-in via `style=`.
+  A dedicated color-vision-safe palette option is tracked for a
+  later release (see TODO.md).
 
 ## v0.67.0 (2026-09-03)
 

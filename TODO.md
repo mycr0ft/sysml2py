@@ -18,7 +18,16 @@ are complete.  Follow-up work is organized under the
 - [x] **Goal 3 — JSON interchange format** *(v0.63.0: `sysmlpy.interchange` module — `to_interchange()` / `from_interchange()` JSON-LD-style partition documents (flat `@graph`, `@id`/`@type` elements, deterministic uuid5 ids); lossless import back to a live model via the shared `Model._load_definition()` path; `sysmlpy export` / `sysmlpy import` CLI commands; 38 tests in `tests/interchange_test.py`. Spec-normative JSON-LD context mapping (OMG property IRIs) tracked as follow-up.)*
 - [x] **Goal 4 — Expression evaluator** *(v0.64.0: `sysmlpy.evaluator` — `collect_values()` / `evaluate_expression()` / `evaluate_calculation()` / `check_constraints()`; pint attribute values bind into calc/constraint evaluation with what-if `bindings`; feature-chain resolution with type fallback; glued unit-expression handling; `sysmlpy eval` CLI with `--expr`/`--set`/`--constraints`; calc defs inside part bodies no longer dropped by the visitor/object tree; 44 tests in `tests/evaluator_test.py`. Conditional expressions and calc `in` parameters tracked as follow-up.)*
 - [x] **Goal 5 — LSP server** *(v0.65.0: `sysmlpy.lsp` package — dependency-free LSP 3.17 subset over stdio JSON-RPC; `publishDiagnostics` (exact ANTLR syntax ranges + `analyze()` issues located via quoted-name heuristic), `documentSymbol` outline, `hover` (kind/type/value), `definition` (usage→decl, type name→type def), keyword+member `completion`, FULL text sync, UTF-16 positions; `sysmlpy-lsp` console script + `python -m sysmlpy.lsp`; VS Code extension scaffold `editors/vscode/sysmlpy-lsp/`; Neovim recipes in `docs/LSP.md`; 37 tests in `tests/lsp_test.py`. Follow-ups: incremental sync, position-tracked semantic diagnostics, workspace/symbol, `.`-completion.)*
-- [~] **Goal 6 — Rendering without Java** (native SVG / Mermaid output; boxes covers state machines only)
+- [~] **Goal 6 — Rendering without Java** (native SVG / Mermaid output; boxes covers state
+    machines, interconnection and action flows)
+  - [x] **Phase 2 (v0.68.0)** — boxes-backed iv + afv: `as_interconnection_view_boxes()`
+    (parts as boxes, boundary ports via `label_inside`, port-to-port Z-routed connection
+    edges) and `as_action_flow_view_boxes()` (actions as boxes, parameters as in/out ports,
+    flows port-to-port, nested actions as composite children, successions as dashed `..>`
+    edges) against `diagramboxes` (renamed from `boxes`, v0.4.0 nested-node layout).
+    Relationship legends now opt-in (`include_legend=False` default) — standard-notation
+    legends were noise; monochrome `bw` stays the default style (color-vision
+    accessibility; a dedicated palette option is tracked).
   - [x] **Phase 1 (v0.67.0)** — PlantUML notation fidelity: edge encodings aligned to the OMG pilot
     (thick plain connections, heaviest bindings, `--:|>` typing, `--||>` redefinition, send/accept
     actions, variant/objective/metadata, succession flow); connection endpoints now parse (visitor
