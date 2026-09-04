@@ -1517,7 +1517,10 @@
   completion, effects are logged, and an interactive TUI shows the live
   state with the transitions available from it (<code>--run "T1; T2"</code>
   scripts sessions).  Guards also appear in boxes-view edge labels
-  (the shorthand-<code>when</code> extraction fix).</li>
+  (the shorthand-<code>when</code> extraction fix), and transition <code>do</code> effects
+  now parse through to the simulator — references round-trip, while
+  send/assignment declarations surface as text (<code>send Alert to
+  logger</code>, <code>x := 5</code>).</li>
 <li><strong>Relationship legends opt-in</strong> — <code>include_legend=False</code> by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome <code>bw</code> remains the default style

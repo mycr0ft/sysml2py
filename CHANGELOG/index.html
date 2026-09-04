@@ -5514,13 +5514,18 @@
     <code>TriggerExpression</code> (<code>kind.isWhen</code>), and adds an <code>effect</code> slot; the
     TargetTransitionUsage shorthand gets the same treatment.  Guards now
     appear in stv/boxes edge labels.</li>
-<li><strong>Known grammar gap</strong> — the visitor emits
-    <code>EffectBehaviorMember.ownedRelatedElement = null</code> for <code>do &lt;ref&gt;</code> on
-    transitions, so effects are currently unobtainable from parsed
-    models; the simulator's effect slot and logging are wired and light
-    up the moment the reference lands (TODO).</li>
+<li><strong>Transition <code>do</code> effects now parse</strong> — the visitor emitted
+    <code>EffectBehaviorMember.ownedRelatedElement = null</code> (the effect
+    reference was dropped at the visitor level).  It now visits the
+    grammar's real <code>effectBehaviorUsage</code> shape, emitting the
+    class-constructable <code>EffectBehaviorUsage</code>/<code>PerformedActionUsage</code>
+    dicts for <code>do &lt;behavior-reference&gt;</code> (round-trips through
+    <code>dump()</code>), and carries the send/accept/assignment declarations as
+    a readable sibling <code>text</code> (e.g. <code>send Alert to logger</code>);
+    assignment effects render <code>target := value</code> (e.g. <code>x := 5</code>) in the
+    simulator.  The simulator's effect logging lights up untouched.</li>
 <li>
-<p>30 new tests (<code>tests/sim_test.py</code>); plantuml 151, boxes 54, core
+<p>32 new tests (<code>tests/sim_test.py</code>); plantuml 151, boxes 54, core
     suites 707, conformance 123.</p>
 </li>
 <li>

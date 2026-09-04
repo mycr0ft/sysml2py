@@ -656,7 +656,10 @@ state is shown while you drive.</p>
   values (<code>collect_values</code>, pint <code>Quantity</code>-aware) plus <code>set_value</code>
   overrides; a guard that cannot evaluate blocks the transition and is
   logged.</li>
-<li><strong>Effects</strong> (<code>do &lt;action&gt;</code>) are logged as text.</li>
+<li><strong>Effects</strong> (<code>do &lt;action&gt;</code>) are logged as text — behavior
+  references round-trip (<code>do logState</code> → <code>logState</code>), and the
+  send/assignment forms surface their declarations (<code>send Alert to
+  logger</code>, <code>x := 5</code>).</li>
 </ul>
 <h2 id="scope-of-the-mvp">Scope of the MVP<a class="headerlink" href="#scope-of-the-mvp" title="Permanent link">&para;</a></h2>
 <ul>
@@ -665,12 +668,11 @@ state is shown while you drive.</p>
   transitions are flattened implicitly, with a note).</li>
 <li>One machine per simulator (<code>--focus</code> picks which); parallel regions
   raise <code>SimulationError</code> for now.</li>
-<li>Effects are logged, not executed; effect-side assignments would flow
-  through <code>set_value</code> and are a follow-up.  (The ANTLR visitor
-  currently drops <code>do &lt;ref&gt;</code> references on transitions —
-  <code>EffectBehaviorMember.ownedRelatedElement</code> is <code>null</code> — so parsed
-  models report no effect text yet; the wiring lights up the moment
-  the reference is emitted.)</li>
+<li>Effects are logged, not executed; effect-side assignments (their
+  <code>target := value</code> text is now available) would flow through
+  <code>set_value</code> and are a follow-up.  Composite regions and parallel
+  regions are flat/raise for now (the descriptor carries the
+  composites).</li>
 </ul>
 <h2 id="library-choice">Library choice<a class="headerlink" href="#library-choice" title="Permanent link">&para;</a></h2>
 <p>Execution delegates to <a href="https://pypi.org/project/transitions/"><code>transitions</code></a>
