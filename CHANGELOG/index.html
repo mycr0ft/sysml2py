@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0700-2026-09-04" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.70.0 (2026-09-04)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0691-2026-09-04" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3020,6 +3031,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0700-2026-09-04" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.70.0 (2026-09-04)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0691-2026-09-04" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5514,6 +5536,25 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0700-2026-09-04">v0.70.0 (2026-09-04)<a class="headerlink" href="#v0700-2026-09-04" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Goal 9 batch 3: trace-target checks</strong> —</li>
+<li><code>UNRESOLVED_TRACE_TARGET</code> (error): a <code>satisfy &lt;req&gt; by &lt;part&gt;</code>
+    target that names no declared requirement.  A typo'd target was
+    doubly silent before: the trace edge died quietly AND the Goal 2
+    coverage extractor materialized the dangling edge as a <em>phantom
+    requirement</em> — the real requirement read uncovered while a fake
+    one appeared traced.</li>
+<li><code>TRACE_TARGET_NOT_REQUIREMENT</code> (warning): a target that resolves
+    but to a non-<code>Requirement</code> element.  Library-resolved targets are
+    left alone (conservative — no model element to inspect).</li>
+<li><strong>Scoping note</strong>: abstract-typing warnings were dropped from this
+  batch after probing — typing by an abstract definition inside an
+  abstract definition is legitimate modeling (redefinition is the
+  intended mechanism), so the rule needs spec research before it can
+  be implemented without false positives.</li>
+<li>4 new validator tests (53).</li>
+</ul>
 <h2 id="v0691-2026-09-04">v0.69.1 (2026-09-04)<a class="headerlink" href="#v0691-2026-09-04" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Goal 9 batch 2: trigger-payload and requirement-coverage checks</strong> —</li>

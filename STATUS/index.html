@@ -1532,7 +1532,10 @@
   <code>analyze()</code> on the simulator's expanded machine descriptor.  Batch 2
   (v0.69.1) adds <code>UNRESOLVED_TRIGGER_PAYLOAD</code> (bare and guarded <code>accept</code>
   payloads resolve or error) and <code>REQUIREMENT_UNCOVERED</code> (requirement
-  usages with no satisfy/verify traces; defs exempt).</li>
+  usages with no satisfy/verify traces; defs exempt).  Batch 3
+  (v0.70.0) adds <code>UNRESOLVED_TRACE_TARGET</code> / <code>TRACE_TARGET_NOT_REQUIREMENT</code>
+  on <code>satisfy</code> targets — dangling edges no longer materialize phantom
+  requirements in coverage reports un-flagged.</li>
 <li><strong>Relationship legends opt-in</strong> — <code>include_legend=False</code> by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome <code>bw</code> remains the default style

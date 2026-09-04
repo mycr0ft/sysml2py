@@ -716,8 +716,14 @@ are complete.  Follow-up work is organized under the
     forms) and <code>REQUIREMENT_UNCOVERED</code> (warning; requirement usages
     only, defs exempt).  Also fixed an <code>UnboundLocalError</code> crash in
     <code>analyze()</code> when the optional <code>sim</code> extra is absent.</li>
-<li>[ ] <strong>Batch 3 candidates</strong> — abstract-typing warnings, connector
-    end direction checks, <code>satisfy</code> target-existence checks.</li>
+<li>[x] <strong>Batch 3 (v0.70.0): trace targets</strong> —
+    <code>UNRESOLVED_TRACE_TARGET</code> (error) and <code>TRACE_TARGET_NOT_REQUIREMENT</code>
+    (warning) on <code>satisfy &lt;req&gt; by &lt;part&gt;</code> targets; exposes the Goal 2
+    extractor's phantom-requirement behavior for dangling edges.</li>
+<li>[ ] <strong>Batch 4 candidates</strong> — connector end direction checks,
+    <code>verify</code> member target resolution; abstract-typing warnings
+    dropped from batch 3 (needs spec research: typing by abstract
+    defs inside abstract definitions is legitimate via redefinition).</li>
 <li>[ ] <strong>Goal 10 — Technical stubs</strong> (connector-end compatibility, <code>*</code>/<code>/</code> unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)</li>
 </ul>
 <p>Legacy candidate follow-up work:</p>
