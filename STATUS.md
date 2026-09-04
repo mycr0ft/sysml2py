@@ -123,7 +123,9 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   and composite regions simulate with qualified names: entering a
   composite lands in its initial substate, region transitions run
   inside it, and composite-level transitions apply from every
-  substate.
+  substate.  For color-vision accessibility,
+  `set_stereotype_palette("okabe-ito")` switches the `style="color"`
+  views to the Okabe-Ito palette (`bw` remains the default).
 - **Relationship legends opt-in** — `include_legend=False` by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome `bw` remains the default style

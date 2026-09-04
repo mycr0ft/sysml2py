@@ -131,6 +131,14 @@ USAGE_STEREOTYPES = {
 }
 
 # Color scheme for stereotypes (letter, color)
+#
+# The default palette predates any accessibility pass and pairs lime
+# green (#32CD32) against red (#E74C3C) — indistinguishable under
+# protanopia/deuteranopia.  ``set_stereotype_palette("okabe-ito")``
+# switches every view to the Okabe-Ito colorblind-safe palette (the
+# de-facto standard from Okabe & Ito 2008); ``"default"`` restores the
+# original.  ``style="bw"`` (the default for all views) renders no
+# colors at all and is unaffected.
 STEREOTYPE_COLORS = {
     "part":       ("P", "#32CD32"),
     "item":       ("I", "#32CD32"),
@@ -154,6 +162,61 @@ STEREOTYPE_COLORS = {
     "interface":  ("IF", "#3498DB"),
     "enumeration": ("E", "#F1C40F"),
 }
+
+# Okabe-Ito colorblind-safe palette (Okabe & Ito 2008): the eight
+# colors below stay distinguishable under protanopia, deuteranopia and
+# tritanopia.  Hue families follow the default palette where they can
+# (blue ports, orange actions) so switching does not scramble mental
+# maps; collisions are resolved in favour of kinds that co-occur in
+# the same views (parts/flows in iv, actions/flows in afv).
+STEREOTYPE_COLORS_OKABEITO = {
+    "part":       ("P", "#009E73"),   # bluish green
+    "item":       ("I", "#009E73"),
+    "attribute":  ("A", "#009E73"),
+    "port":       ("P", "#0072B2"),   # blue
+    "action":     ("A", "#E69F00"),   # orange
+    "state":      ("S", "#CC79A7"),   # reddish purple
+    "constraint": ("C", "#56B4E9"),   # sky blue
+    "requirement": ("R", "#D55E00"),  # vermillion
+    "use_case":   ("UC", "#F0E442"),  # yellow
+    "case":       ("C", "#F0E442"),
+    "analysis_case": ("AC", "#F0E442"),
+    "verification_case": ("VC", "#F0E442"),
+    "connection": ("C", "#56B4E9"),   # sky blue
+    "flow":       ("F", "#0072B2"),   # blue (parts keep bluish green)
+    "allocation": ("A", "#CC79A7"),
+    "metadata":   ("M", "#95A5A6"),   # gray
+    "view":       ("V", "#CC79A7"),
+    "viewpoint":  ("VP", "#CC79A7"),
+    "concern":    ("CN", "#95A5A6"),  # gray
+    "interface":  ("IF", "#56B4E9"),
+    "enumeration": ("E", "#F0E442"),  # yellow
+}
+
+_ACTIVE_PALETTE = "default"
+
+
+def set_stereotype_palette(name: str) -> None:
+    """Select the stereotype color palette used by ``style="color"``.
+
+    ``"default"`` — the historical palette; ``"okabe-ito"`` — the
+    colorblind-safe palette.  Unknown names raise ValueError.  The
+    default for every view remains ``style="bw"``, which renders no
+    colors regardless of this setting.
+    """
+    global _ACTIVE_PALETTE
+    if name not in ("default", "okabe-ito"):
+        raise ValueError(
+            f"unknown palette {name!r}; expected 'default' or "
+            "'okabe-ito'")
+    _ACTIVE_PALETTE = name
+
+
+def _stereotype_colors() -> dict:
+    """The active stereotype color table (see set_stereotype_palette)."""
+    if _ACTIVE_PALETTE == "okabe-ito":
+        return STEREOTYPE_COLORS_OKABEITO
+    return STEREOTYPE_COLORS
 
 
 def _get_typedby_name(element):
@@ -348,7 +411,7 @@ def _get_stereotype(element, style="bw"):
     if style == "bw":
         return f"<<{label}>>"
 
-    color_info = STEREOTYPE_COLORS.get(sysml_type, ("T", "#3498DB"))
+    color_info = _stereotype_colors().get(sysml_type, ("T", "#56B4E9"))
     letter, color = color_info
 
     return f"<<({letter},{color}) {label}>>"

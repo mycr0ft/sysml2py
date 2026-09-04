@@ -32,6 +32,11 @@
     a readable sibling `text` (e.g. `send Alert to logger`);
     assignment effects render `target := value` (e.g. `x := 5`) in the
     simulator.  The simulator's effect logging lights up untouched.
+  - **Colorblind-safe palette option** — `set_stereotype_palette("okabe-ito")`
+    switches every `style="color"` view to the Okabe-Ito palette (the
+    historical default pairs lime-green parts against red requirements —
+    indistinguishable under protanopia/deuteranopia).  `bw` stays the
+    default style and renders no colors regardless.
   - **Composite-state regions simulate** — regions expand flat with
     qualified names (`Composite.Sub`, nesting supported): transitions
     targeting a composite enter its initial substate (UML default

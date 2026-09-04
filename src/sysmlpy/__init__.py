@@ -437,5 +437,10 @@ def __getattr__(name):
         fn = getattr(sim, name)
         globals()[name] = fn
         return fn
+    if name == "set_stereotype_palette":
+        from sysmlpy import plantuml as _pu
+        fn = _pu.set_stereotype_palette
+        globals()[name] = fn
+        return fn
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

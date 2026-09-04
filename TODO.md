@@ -38,6 +38,9 @@ are complete.  Follow-up work is organized under the
     transitions run inside, transitions declared on the composite
     apply from every substate (UML composite transitions, deeper
     transitions win the fall-through); parallel regions raise.
+  - [x] **Goal 6: colorblind-safe palette** — `set_stereotype_palette("okabe-ito")`
+    switches `style="color"` views to the Okabe-Ito palette; `bw`
+    default unchanged.
   - [ ] **sim follow-ups** — parallel regions (raise, by design, for
     now), history/deep-history pseudostates, and *executing*
     assignment effects via `set_value` (the text `x := 5` is now
