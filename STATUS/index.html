@@ -1529,7 +1529,10 @@
   <strong>Validator depth (Goal 9)</strong> starts with state-machine
   well-formedness: <code>UNRESOLVED_TRANSITION_ENDPOINT</code> (error),
   <code>NO_INITIAL_STATE</code> and <code>UNREACHABLE_STATE</code> (warnings) run inside
-  <code>analyze()</code> on the simulator's expanded machine descriptor.</li>
+  <code>analyze()</code> on the simulator's expanded machine descriptor.  Batch 2
+  (v0.69.1) adds <code>UNRESOLVED_TRIGGER_PAYLOAD</code> (bare and guarded <code>accept</code>
+  payloads resolve or error) and <code>REQUIREMENT_UNCOVERED</code> (requirement
+  usages with no satisfy/verify traces; defs exempt).</li>
 <li><strong>Relationship legends opt-in</strong> — <code>include_legend=False</code> by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome <code>bw</code> remains the default style
