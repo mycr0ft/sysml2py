@@ -586,6 +586,30 @@ from sysmlpy.plantuml import as_action_flow_view
 print(as_action_flow_view(model, style="bw"))
 ```
 
+#### Boxes Views — Java-free braille + SVG (v0.68.0)
+Native text/graphics rendering through the sibling `diagramboxes`
+package — no PlantUML/Java required. Interconnection, action flow and
+state transition views render to Unicode-braille text (terminal) or
+SVG. Monochrome by design (color-vision friendly).
+
+![Interconnection View (boxes)](docs/plantuml-examples/20-interconnection-boxes.svg)
+
+```python
+from sysmlpy.boxes_view import (
+    render_interconnection_view_boxes,   # iv: parts + ports + connection edges
+    render_action_flow_view_boxes,       # afv: actions + in/out ports + flows
+    render_state_transition_view,        # stv: nested composite state boxes
+)
+print(render_interconnection_view_boxes(model))
+```
+
+```
+    ⡰⠊⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠲⡀     ⡰⠊⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠲⡀
+    ⡇  «part»    ⡇     ⡇  «part»    ⡇
+    ⡇  engine    ⡇     ⡇   pump     ⡇
+    ⡇            ⡇     ⡇            ⡇
+```
+
 #### Interconnection View (IV) — `as_interconnection_view()` / `as_interconnection_diagram()`
 Corresponds to SysML v2 ``InterconnectionView`` (short name ``iv``). Focuses on connectors, bindings, and flow paths between ports and parts.
 

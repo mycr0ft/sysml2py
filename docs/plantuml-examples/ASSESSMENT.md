@@ -1,5 +1,35 @@
 # PlantUML Visual Approximation Assessment
 
+> **Regenerated for v0.68.0** (2026-09-03) with the repaired generators:
+> official edge encodings (v0.67.0), nested composite-state blocks,
+> boxes-backed iv/afv (braille + SVG, Java-free), UUID flow labels
+> suppressed, relationship legends now opt-in (`include_legend=True`
+> on the examples that keep one). PNGs rendered with PlantUML 1.2024.7
+> (`PLANTUML_JAR`, default `~/tools/plantuml.jar`).
+
+## v0.68.0 example set
+
+| # | Example | Kind | Notes |
+|---|---------|------|-------|
+| 01 | Usage vs Definition | PlantUML PNG | `gv`-style; monochrome |
+| 02 | Relationship Arrows | PlantUML PNG | typing/specialization/composite arrows |
+| 03 | Vehicle Structure | PlantUML PNG | bw style |
+| 04 | B&W Style | PlantUML PNG | `as_general_view(style="bw")` |
+| 06 | Interconnection | PlantUML PNG | flows between ports as edges (`-->`), typing arrows |
+| 07 | General View | PlantUML PNG | monochrome default |
+| 08 | Package View | PlantUML PNG | nested package rectangles |
+| 10 | Action Flow View | PlantUML PNG | action boxes + flow edges, anonymous flows labeled `flow` |
+| 11 | State Transition View | PlantUML PNG | nested composite states, initial/final markers, named transitions |
+| 12 | Tree Diagram | PlantUML PNG | model containment tree |
+| 13 | Element Table | PlantUML PNG | tabular listing |
+| 14 | Textual Notation | PlantUML PNG | SysML textual notation dump |
+| 15–18 | Tabular / Data Value / Matrix / HTML | text outputs | markdown + one color HTML |
+| 19 | State Transition (boxes) | braille .txt + .svg | nested composite boxes, `[*]` markers — **no Java** |
+| 20 | Interconnection (boxes) | braille .txt + .svg | ports ON part borders, port-to-port connection edges — **no Java** |
+| 21 | Action Flow (boxes) | braille .txt + .svg | parameters as in/out ports, flows port-to-port — **no Java** |
+
+## Original assessment (July, v0.46-era PlantUML approximations)
+
 ## Rendering Results
 
 All 9 example diagrams were rendered successfully using PlantUML 1.2024.7:

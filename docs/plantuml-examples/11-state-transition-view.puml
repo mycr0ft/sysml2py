@@ -11,27 +11,25 @@ title stv [state def] Operational [State Transition View]
 
 hide circle
 
-state "Operational" as E1
-state "Idle" as E2
-state "Running" as E3
-state "Error" as E4
-state "Stopped" as E5
+state "Operational" as E1 {
+  state "Idle" as E2
+  state "Running" as E3
+  state "Stopped" as E4
+}
 
 [*] --> E2
 
-E1 --> E2
-E1 --> E3
-E1 --> E4
-E1 --> E5
 
+E2 --> E3 : t1
+E3 --> E2 : transition
+E3 --> E4 : transition
 
 E4 --> [*]
-E5 --> [*]
 
 legend right
   <b>State Transition Legend</b>
-  State Transition: thick green arrow
-  Containment: simple arrow
+  State Transition: -->
+  Composite states: nested state blocks
 endlegend
 
 @enduml

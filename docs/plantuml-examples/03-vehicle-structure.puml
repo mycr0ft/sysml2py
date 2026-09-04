@@ -100,7 +100,7 @@ skinparam folder<<view>> {
 
 top to bottom direction
 
-title gv [model] 989ce4fa-42a3-4e75-808e-451de19d91ee
+title gv [model] bb46c6ad-71b8-467d-9126-4ad169066b5c
 
 hide circle
 
@@ -125,19 +125,5 @@ E11 --:|> E1 : types
 E9 *-- E12
 E12 --:|> E6 : types
 E13 --:|> E9 : types
-
-legend right
-  <b>SysML v2 Relationship Legend</b>
-  Relationship: Notation
-  Feature Typing: --:|>
-  Specialization: --|>
-  Redefinition: --||>
-  Composite (owns): *--
-  Shared: o--
-  Binding: -[thickness=4]-
-  Connector: -[thickness=2]->
-  Flow: -->
-  Dependency: ..>>
-endlegend
 
 @enduml

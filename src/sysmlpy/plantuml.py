@@ -1395,6 +1395,14 @@ def as_interconnection_diagram(model, focus=None, elements=None, style="bw",
         from_alias = id_map.get(from_id)
         to_alias = id_map.get(to_id)
         if from_alias and to_alias:
+            # Anonymous flows carry UUID names from the visitor — they
+            # are unnamed in the source and unlabeled in official
+            # notation, so fall back to the neutral "flow" label.
+            if (flow_name and len(flow_name) == 36
+                    and flow_name.count("-") == 4
+                    and all(c in "0123456789abcdef"
+                            for c in flow_name.replace("-", ""))):
+                flow_name = None
             label_text = flow_name if flow_name else "flow"
             lines.append(f'{from_alias} {ARROW_STYLES["flow"]} {to_alias} : {label_text}')
 
@@ -1673,6 +1681,14 @@ def as_action_flow_view(model, focus=None, elements=None, style="bw", direction=
         from_alias = id_map.get(from_id)
         to_alias = id_map.get(to_id)
         if from_alias and to_alias:
+            # Anonymous flows carry UUID names from the visitor — they
+            # are unnamed in the source and unlabeled in official
+            # notation, so fall back to the neutral "flow" label.
+            if (flow_name and len(flow_name) == 36
+                    and flow_name.count("-") == 4
+                    and all(c in "0123456789abcdef"
+                            for c in flow_name.replace("-", ""))):
+                flow_name = None
             label_text = flow_name if flow_name else "flow"
             lines.append(f'{from_alias} {ARROW_STYLES["flow"]} {to_alias} : {label_text}')
 
