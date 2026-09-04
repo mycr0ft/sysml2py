@@ -110,6 +110,14 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   edges — flows port-to-port; v0.68.0+), and the package view follows
   official package notation: `package "Name" { members }` enclosure,
   leaf definition boxes, typed member labels (v0.68.0+).
+  **State-machine simulation** (v0.69.0): `sysmlpy sim FILE` runs a
+  `state def` machine Cameo-style — triggers fire transitions, guards
+  evaluate against model attribute values (pint-aware) with
+  `--set`/`set_value` what-if overrides, completion transitions run to
+  completion, effects are logged, and an interactive TUI shows the live
+  state with the transitions available from it (`--run "T1; T2"`
+  scripts sessions).  Guards also appear in boxes-view edge labels
+  (the shorthand-`when` extraction fix).
 - **Relationship legends opt-in** — `include_legend=False` by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome `bw` remains the default style

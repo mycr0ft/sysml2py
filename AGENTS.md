@@ -11,7 +11,7 @@ already knows.
 | Field | Value |
 |-------|-------|
 | Name | sysmlpy |
-| Current version | 0.36.0 |
+| Current version | 0.69.0 |
 | Language | Python 3.9+ |
 | Package manager | **Poetry** (use `poetry run` for all commands) |
 | Test runner | pytest via `poetry run pytest` |
@@ -74,6 +74,7 @@ SysML text
 | `src/sysmlpy/semantic.py` | `analyze()`, `SemanticAnalyzer`, `SymbolTable`, `LibrarySymbolIndex` |
 | `src/sysmlpy/project.py` | `load_files()`, `load_project()`, `load_with_dependencies()` |
 | `src/sysmlpy/store.py` | Storage backends |
+| `src/sysmlpy/sim.py` | State-machine simulation (optional `sim` extra, `transitions` library) |
 | `src/sysmlpy/boxes_view.py` | Optional boxes-backed state-machine visualizer |
 | `src/sysmlpy/formatting.py` | `classtree()` — model tree → SysML text |
 | `pyproject.toml` | Version is in `[project].version` (PEP 621) |
@@ -142,6 +143,7 @@ else:
 | `project_test.py` | 17 | `load_files()`, `load_project()` |
 | `store_test.py` | 46 | Storage backends (networkx/kuzu are skipped if not installed) |
 | `conformance_test.py` | 123 | OMG 2026-03 XPect parse conformance (slow) |
+| `sim_test.py` | 30 | State-machine simulation (`sim` extra) |
 
 ---
 

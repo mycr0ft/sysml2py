@@ -31,7 +31,8 @@ import sysmlpy
 from sysmlpy import loads
 
 # Subcommand table, also used to detect the legacy flat invocation form.
-SUBCOMMANDS = ("parse", "analyze", "view", "trace", "export", "import", "eval", "xlsx", "format", "fmt")
+SUBCOMMANDS = ("parse", "analyze", "view", "trace", "export", "import",
+               "eval", "xlsx", "sim", "format", "fmt")
 
 
 # ---------------------------------------------------------------------------
@@ -498,6 +499,52 @@ def _format_value(value):
     return str(value)
 
 
+def cmd_sim(args) -> int:
+    """Simulate the state machine of a model (interactive TUI)."""
+    try:
+        from sysmlpy.sim import run_tui
+    except ImportError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 2
+
+    paths = [Path(args.file)]
+    for p_ in _missing_files(paths):
+        print(f"Error: File '{p_}' not found.", file=sys.stderr)
+        return 2
+    try:
+        model = sysmlpy.load_files(paths, library=args.library)
+    except Exception as e:
+        print(f"Parse error: {e}", file=sys.stderr)
+        return 2
+
+    values = {}
+    for spec in args.set or []:
+        if "=" not in spec:
+            print(f"Error: --set expects NAME=VALUE, got {spec!r}",
+                  file=sys.stderr)
+            return 2
+        name, _, raw = spec.partition("=")
+        values[name.strip()] = _parse_eval_value(raw)
+
+    script = [t.strip() for t in (args.run or "").split(";") if t.strip()]
+    try:
+        from sysmlpy.sim import StateSimulator, SimulationError
+        sim = StateSimulator(model, focus=args.focus, values=values)
+    except (ImportError, SimulationError) as e:
+        print(f"Simulation error: {e}", file=sys.stderr)
+        return 2
+    for note in sim.notes:
+        print(f"note: {note}")
+    if script:
+        for trigger in script:
+            fired = sim.send(trigger)
+            print(f"{trigger}: {'fired' if fired else 'blocked'} "
+                  f"-> {sim.state!r}")
+        return 0
+    run_tui(model, focus=args.focus, values=values)
+    return 0
+
+
 def cmd_xlsx(args) -> int:
     """Export tabular views to an Excel workbook (v0.66.0, Goal 7)."""
     from sysmlpy.spreadsheet import write_xlsx
@@ -831,6 +878,38 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to SysML v2 library files to use for parsing",
     )
     p_eval.set_defaults(func=cmd_eval)
+
+    # -- sim (state-machine simulation, optional 'transitions' extra) -----
+    p_sim = sub.add_parser(
+        "sim",
+        help="Simulate a state machine (guards evaluated for real)",
+        description="Cameo-style state-machine simulation: fires "
+                    "transitions on triggers, evaluates guards against "
+                    "the model's attribute values (plus --set "
+                    "overrides), and logs effects. Interactive TUI "
+                    "(or a scripted run with --run). Requires the "
+                    "'sim' extra: pip install 'sysmlpy[sim]'.",
+    )
+    p_sim.add_argument("file", help="SysML v2 file with a state machine")
+    p_sim.add_argument(
+        "--focus",
+        help="Name of the state def/state machine to simulate "
+             "(default: the first one found)",
+    )
+    p_sim.add_argument(
+        "--set", action="append", metavar="NAME=VALUE",
+        help="Starting value for guards (repeatable)",
+    )
+    p_sim.add_argument(
+        "--run", metavar="TRIG1;TRIG2",
+        help="Fire this ';'-separated trigger sequence instead of "
+             "entering the interactive loop",
+    )
+    p_sim.add_argument(
+        "-l", "--library",
+        help="Path to SysML v2 library files to use for parsing",
+    )
+    p_sim.set_defaults(func=cmd_sim)
 
     # -- xlsx (v0.66.0, Goal 7) -------------------------------------------------
     p_xlsx = sub.add_parser(

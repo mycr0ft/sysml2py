@@ -28,6 +28,12 @@ are complete.  Follow-up work is organized under the
     Relationship legends now opt-in (`include_legend=False` default) — standard-notation
     legends were noise; monochrome `bw` stays the default style (color-vision
     accessibility; a dedicated palette option is tracked).
+  - [ ] **sim follow-ups** — composite-state regions (composites are
+    in the descriptor; simulated flat for now), parallel regions
+    (raise, by design, for now), effect-side assignments via
+    `set_value`, and the grammar's dropped `do <ref>` on transitions
+    (`EffectBehaviorMember.ownedRelatedElement` is null — when the
+    visitor emits the reference, simulator effects go live untouched).
   - [x] **Phase 2d (unreleased)** — package view namespace enclosure
     (pilot `VStructure.casePackage`): packages render as
     `package "Name" { members }` with owned members nested inside;

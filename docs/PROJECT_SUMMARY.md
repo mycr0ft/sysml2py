@@ -129,6 +129,7 @@ codes (0 = success/clean, 1 = findings at threshold / operational error,
 | `sysmlpy export FILE [FILE...]` | SysML → JSON interchange (JSON-LD-style `@graph` of `@id`/`@type` elements); `--compact`, `-o FILE` |
 | `sysmlpy import FILE.json` | JSON interchange → SysML v2 text; `-o FILE` |
 | `sysmlpy eval FILE [FILE...]` | Evaluate expressions / attribute values / constraints; `--expr X --set n=v --element Q --constraints`; exit 1 on failed constraint |
+| `sysmlpy sim FILE` | Simulate a `state def` machine: triggers, real guard evaluation (`--set` overrides), run-to-completion, interactive TUI or `--run "T1; T2"`; needs the `sim` extra |
 
 The legacy flat form (`sysmlpy FILE --dump`) is preserved with its
 original exit codes. Example CI usage:

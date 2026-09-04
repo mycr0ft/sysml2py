@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+- **State-machine simulation (MVP, `sysmlpy sim`)** — Cameo-style
+  simulate-and-step for `state def` machines: `StateSimulator` builds an
+  executable machine from a parsed model and drives it — `send(trigger)`
+  fires transitions, guards evaluate **for real** against the model's
+  attribute values (pint-aware, via the v0.64 evaluator) plus
+  `set_value`/`--set` what-if overrides, effects log as text, completion
+  transitions (no `accept` trigger) fire run-to-completion, and
+  `--run "T1; T2"` scripts a session for demos/CI.  Execution delegates
+  to the optional `transitions` library (new `sim` extra) — chosen over
+  python-statemachine because it builds machines from *data* at runtime,
+  the exact shape of the SysML→machine bridge.  Reuses the boxes-view
+  machine collector for states/initial/composites.
+  - **Boxes-view transition extraction fix** — `_extract_transition_elements`
+    reported `trigger: 'key'` for `accept Engage when key` (the guard's
+    own feature name — the generic QualifiedName search tripped over the
+    guard) and dropped shorthand guards/effects entirely.  It now takes
+    the trigger from the payload's `declaredName`, the guard from the
+    `TriggerExpression` (`kind.isWhen`), and adds an `effect` slot; the
+    TargetTransitionUsage shorthand gets the same treatment.  Guards now
+    appear in stv/boxes edge labels.
+  - **Known grammar gap** — the visitor emits
+    `EffectBehaviorMember.ownedRelatedElement = null` for `do <ref>` on
+    transitions, so effects are currently unobtainable from parsed
+    models; the simulator's effect slot and logging are wired and light
+    up the moment the reference lands (TODO).
+  - 30 new tests (`tests/sim_test.py`); plantuml 151, boxes 54, core
+    suites 707, conformance 123.
+
 - **Docs** — AGENTS.md pitfall 7: bare `import` without a visibility
   keyword is non-conformant per the OMG standard (visibility is
   required; confirmed against the textual standard and XPect source);

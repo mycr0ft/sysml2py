@@ -34,7 +34,7 @@ __all__ = [
     "render_state_transition_view_svg", "boxes_view",
 ]
 __author__ = "Jon Fox"
-__version__ = "0.68.0"
+__version__ = "0.69.0"
 
 from sysmlpy.usage import (
     Item, Attribute, Part, Port, Action, Reference, UseCase, Requirement, Interface, Message,
@@ -429,6 +429,12 @@ def __getattr__(name):
                 "render_state_transition_view_svg"):
         from sysmlpy import boxes_view as bv
         fn = getattr(bv, name)
+        globals()[name] = fn
+        return fn
+    if name in ("StateSimulator", "SimulationError",
+                "build_state_machine", "run_tui"):
+        from sysmlpy import sim as _sim
+        fn = getattr(sim, name)
         globals()[name] = fn
         return fn
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -493,6 +493,26 @@ files = [
 ]
 
 [[package]]
+name = "transitions"
+version = "0.9.3"
+description = "A lightweight, object-oriented Python state machine implementation with many extensions."
+optional = true
+python-versions = "*"
+groups = ["main"]
+markers = "extra == \"sim\""
+files = [
+    {file = "transitions-0.9.3-py2.py3-none-any.whl", hash = "sha256:02463248f2b668d86f66636b1e3c9e8de84d93e22915247f4e1aa9ee1cae28aa"},
+    {file = "transitions-0.9.3.tar.gz", hash = "sha256:881fb75bb1654ed55d86060bb067f2c716f8e155f57bb73fd444e53713aafec8"},
+]
+
+[package.dependencies]
+six = "*"
+
+[package.extras]
+diagrams = ["pygraphviz"]
+test = ["pytest"]
+
+[[package]]
 name = "typing-extensions"
 version = "4.15.0"
 description = "Backported and Experimental Type Hints for Python 3.9+"
@@ -520,9 +540,10 @@ files = [
 [extras]
 graph = ["networkx"]
 kuzu = ["kuzu"]
+sim = ["transitions"]
 xlsx = ["openpyxl"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.9"
-content-hash = "9351e3d97639b34bea078777579d6f0bbbf60e04c37c09598e8a9cb2951e43b6"
+content-hash = "3282b5194f5b9c62412247546f892f1ec29d5293a605666fde2417c1663f35e5"

@@ -137,7 +137,7 @@ def _extract_accept_trigger(transition_usage: dict) -> Optional[str]:
 def _extract_transition_elements(transition_usage: dict) -> dict:
     """Return dict with keys: source, target, trigger, guard, name."""
     info = {"name": None, "source": None, "target": None,
-            "trigger": None, "guard": None}
+            "trigger": None, "guard": None, "effect": None}
     decl = transition_usage.get("declaration", {})
     decl_decl = decl.get("declaration", {}) if isinstance(decl, dict) else {}
     ident = decl_decl.get("identification", {}) if isinstance(decl_decl, dict) else {}
@@ -158,9 +158,21 @@ def _extract_transition_elements(transition_usage: dict) -> dict:
             if tgt:
                 info["target"] = tgt
         elif nm == "TriggerActionMember":
-            info["trigger"] = _extract_accept_trigger(transition_usage)
+            # Shorthand ``accept <Sig> [when <expr>]``: the trigger
+            # name AND its guard both live in this member.  Prefer the
+            # payload's declared name; fall back to the generic search.
+            trigger, guard = _payload_trigger_guard(rel)
+            if trigger:
+                info["trigger"] = trigger
+            else:
+                info["trigger"] = _extract_accept_trigger(
+                    transition_usage)
+            if guard and info["guard"] is None:
+                info["guard"] = guard
         elif nm == "GuardExpressionMember":
             info["guard"] = _extract_guard_expression(rel)
+        elif nm == "EffectBehaviorMember":
+            info["effect"] = _effect_text(rel)
     return info
 
 
@@ -192,6 +204,94 @@ def _extract_guard_expression(guard_member: dict) -> Optional[str]:
     if qn and isinstance(qn.get("names"), list) and qn["names"]:
         return qn["names"][-1]
     return None
+
+
+def _walk_named(node, target):
+    """Yield every dict named *target* anywhere under *node*."""
+    if isinstance(node, dict):
+        if node.get("name") == target:
+            yield node
+        for v in node.values():
+            yield from _walk_named(v, target)
+    elif isinstance(node, list):
+        for item in node:
+            yield from _walk_named(item, target)
+
+
+def _as_list(value):
+    """Normalize grammar dict memberships: dict OR list OR None."""
+    if value is None:
+        return []
+    return value if isinstance(value, list) else [value]
+
+
+def _qualified_name_leaf(node):
+    """Last name of the first QualifiedName under *node* (or None)."""
+    for qn in _walk_named(node, "QualifiedName"):
+        names = qn.get("names")
+        if isinstance(names, list) and names:
+            return names[-1]
+    return None
+
+
+def _payload_trigger_guard(trigger_member: dict) -> tuple:
+    """Recover ``(trigger_name, guard_text)`` from a TriggerActionMember.
+
+    In the ``accept <Sig> [when <expr>]`` shorthand both the trigger
+    name and its guard live inside the single TriggerActionMember::
+
+        TriggerAction -> AcceptParameterPart -> PayloadParameterMember
+        -> PayloadParameter
+
+    The payload's ``identification.declaredName`` is the trigger signal
+    name.  Its guard expression tree lives in ``PayloadParameter.tvp``
+    (TriggerValuePart) -> TriggerExpression with ``kind.isWhen`` set.
+    (The earlier generic QualifiedName search tripped over the guard
+    here: ``accept Engage when key`` was reported as trigger ``key`` —
+    the guard's own feature name.)
+    """
+    from sysmlpy.evaluator import _expression_text
+
+    trigger_action = trigger_member.get("ownedRelatedElement") or {}
+    part = trigger_action.get("part") or {}
+    for part_rel in _as_list(part.get("ownedRelationship")):
+        if part_rel.get("name") != "PayloadParameterMember":
+            continue
+        payload = part_rel.get("ownedRelatedElement") or {}
+        ident = payload.get("identification") or {}
+        trigger = ident.get("declaredName")
+        guard = None
+        tvp = payload.get("tvp") or {}
+        for tfv in _as_list(tvp.get("ownedRelationship")):
+            trigger_expr = tfv.get("ownedRelatedElement") or {}
+            if trigger_expr.get("name") != "TriggerExpression":
+                continue
+            kind = trigger_expr.get("kind") or {}
+            if not kind.get("isWhen"):
+                continue
+            for oem in _as_list(trigger_expr.get("ownedRelationship")):
+                expr = (oem.get("ownedRelatedElement") or {}).get(
+                    "expression")
+                if expr:
+                    guard = _expression_text(expr) or \
+                        _qualified_name_leaf(expr)
+        return trigger, guard
+    return None, None
+
+
+def _effect_text(effect_member: dict):
+    """Recover a readable effect name/text from an EffectBehaviorMember."""
+    from sysmlpy.evaluator import _expression_text
+
+    node = effect_member.get("memberElement") or \
+        effect_member.get("ownedRelatedElement") or {}
+    if not isinstance(node, dict):
+        return None
+    for expr in _walk_named(node, "OwnedExpression"):
+        text = _expression_text(expr.get("expression") or expr)
+        if text:
+            return text
+    return _qualified_name_leaf(node)
 
 
 def _state_action_label(member_name: str) -> str:
@@ -437,16 +537,27 @@ def _extract_target_transition_usage(ttu: dict) -> Optional[dict]:
     """
     info = {"name": None, "source": None, "target": None,
             "trigger": None, "guard": None}
+    info["effect"] = None
     rel1 = ttu.get("ownedRelationship1", {})
     if isinstance(rel1, dict) and rel1.get("name") == "TriggerActionMember":
-        payload = _find_named(rel1, "PayloadParameter")
-        if payload is not None:
-            qn = _find_named(payload, "QualifiedName")
-            if qn and isinstance(qn.get("names"), list) and qn["names"]:
-                info["trigger"] = qn["names"][-1]
+        trigger, guard = _payload_trigger_guard(rel1)
+        if trigger:
+            info["trigger"] = trigger
+        else:
+            payload = _find_named(rel1, "PayloadParameter")
+            if payload is not None:
+                qn = _find_named(payload, "QualifiedName")
+                if qn and isinstance(qn.get("names"), list) and \
+                        qn["names"]:
+                    info["trigger"] = qn["names"][-1]
+        if guard and info["guard"] is None:
+            info["guard"] = guard
     rel2 = ttu.get("ownedRelationship2", {})
     if isinstance(rel2, dict) and rel2.get("name") == "GuardExpressionMember":
         info["guard"] = _extract_guard_expression(rel2)
+    rel3 = ttu.get("ownedRelationship3", {})
+    if isinstance(rel3, dict) and rel3.get("name") == "EffectBehaviorMember":
+        info["effect"] = _effect_text(rel3)
     rel4 = ttu.get("ownedRelationship4", {})
     if isinstance(rel4, dict) and rel4.get("name") == "TransitionSuccessionMember":
         orel = rel4.get("ownedRelatedElement", {})
