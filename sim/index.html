@@ -660,12 +660,17 @@ state is shown while you drive.</p>
   references round-trip (<code>do logState</code> → <code>logState</code>), and the
   send/assignment forms surface their declarations (<code>send Alert to
   logger</code>, <code>x := 5</code>).</li>
+<li><strong>Composite states</strong> expand with qualified names
+  (<code>Composite.Sub</code>): a transition targeting a composite enters its
+  initial substate (UML default entry), the region runs its own
+  transitions, and a transition declared on the composite applies
+  from every substate — deeper transitions win the fall-through.</li>
 </ul>
 <h2 id="scope-of-the-mvp">Scope of the MVP<a class="headerlink" href="#scope-of-the-mvp" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Flat machines: a composite state simulates as one state; its
-  internal region is a follow-up (substates referenced by machine-level
-  transitions are flattened implicitly, with a note).</li>
+<li>Parallel regions raise <code>SimulationError</code> (top-level or inside a
+  composite).  Substates referenced by bare name from outside their
+  region are flattened implicitly, with a note.</li>
 <li>One machine per simulator (<code>--focus</code> picks which); parallel regions
   raise <code>SimulationError</code> for now.</li>
 <li>Effects are logged, not executed; effect-side assignments (their

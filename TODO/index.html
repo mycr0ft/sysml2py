@@ -658,11 +658,16 @@ are complete.  Follow-up work is organized under the
     emits <code>EffectBehaviorUsage</code> (reference form round-trips) plus
     readable <code>text</code> for send/accept/assignment forms; assignment
     effects render <code>target := value</code>.</li>
-<li>[ ] <strong>sim follow-ups</strong> — composite-state regions (composites are
-    in the descriptor; simulated flat for now), parallel regions
-    (raise, by design, for now), and <em>executing</em> assignment effects
-    via <code>set_value</code> (the text <code>x := 5</code> is now available — parse and
-    apply).</li>
+<li>[x] <strong>sim: composite-state regions</strong> (v0.69.0) — regions expand
+    flat with qualified names (<code>Composite.Sub</code>, nesting supported):
+    entering a composite lands in its initial substate, region
+    transitions run inside, transitions declared on the composite
+    apply from every substate (UML composite transitions, deeper
+    transitions win the fall-through); parallel regions raise.</li>
+<li>[ ] <strong>sim follow-ups</strong> — parallel regions (raise, by design, for
+    now), history/deep-history pseudostates, and <em>executing</em>
+    assignment effects via <code>set_value</code> (the text <code>x := 5</code> is now
+    available — parse and apply).</li>
 <li>[x] <strong>Phase 2d (unreleased)</strong> — package view namespace enclosure
     (pilot <code>VStructure.casePackage</code>): packages render as
     <code>package "Name" { members }</code> with owned members nested inside;
