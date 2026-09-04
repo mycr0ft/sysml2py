@@ -35,14 +35,18 @@ class definitions, which is awkward for arbitrary parsed models.
 
 Scope of this MVP (deliberate cuts, tracked in TODO.md):
 
-- flat machines only: a composite state simulates as one state and its
-  internal region is a follow-up (the machine descriptors carry the
-  composites, so the hook point exists); transition endpoints that
-  name substates are flattened implicitly so simple models run
+- composite regions expand flat with qualified names
+  (``Composite.Sub``): entering a composite lands in its initial
+  substate, the region runs its own transitions, and transitions
+  declared on the composite apply from every substate (UML
+  composite transitions; deeper transitions win the fall-through).
+  Substates referenced by bare name from outside their region are
+  still flattened implicitly
 - one machine per simulator (``focus`` picks which); parallel regions
-  raise :class:`SimulationError`
-- effects are logged, not executed; effect-side assignments would
-  flow through :meth:`StateSimulator.set_value` and are a follow-up
+  — top-level or inside a composite — raise :class:`SimulationError`
+- effects are logged, not executed; assignment effects surface as
+  ``target := value`` text — executing them would flow through
+  :meth:`StateSimulator.set_value` and is a follow-up
 - completion transitions (no ``accept`` trigger) fire automatically on
   entering a state (run-to-completion), and manually via
   :meth:`StateSimulator.step`
@@ -238,14 +242,98 @@ def build_state_machine(model, focus: Optional[str] = None,
     def _state_name(s):
         return s["name"] if isinstance(s, dict) else s
 
+    def _has_region(s):
+        return isinstance(s, dict) and (s.get("states") or
+                                        s.get("composites"))
+
+    # Composite regions are expanded flat with qualified names
+    # (``Composite.Sub``, ``Composite.Inner.Deep``):
+    #   - a transition targeting a composite enters its initial
+    #     substate (UML default entry),
+    #   - a transition declared *on* a composite applies in every
+    #     substate (UML composite transition), emitted after the
+    #     region's own transitions so deeper transitions win the
+    #     fall-through,
+    #   - a region declaring parallel raises (MVP cut).
     states: List[str] = []
-    for s in sm.get("states", []):
-        nm = _state_name(s)
-        if nm and nm not in states:
-            states.append(nm)
+    raw: List[dict] = []
+
+    def _expand_region(level, prefix):
+        local_flat: Dict[str, str] = {}
+        entry_of: Dict[str, str] = {}
+        substates_of: Dict[str, List[str]] = {}
+
+        for s in level.get("states", []):
+            nm = _state_name(s)
+            if nm is None:
+                continue
+            if isinstance(s, dict) and s.get("parallel"):
+                raise SimulationError(
+                    f"Composite state {nm!r} in "
+                    f"{sm.get('name')!r} declares parallel regions; "
+                    "parallel simulation is beyond this MVP.")
+            if _has_region(s):
+                flat_prefix = prefix + nm + "."
+                inner_flat, inner_entry, inner_subs = _expand_region(
+                    s, flat_prefix)
+                init = s.get("initial")
+                entry = None
+                if init:
+                    entry = inner_flat.get(init) or inner_entry.get(init)
+                    if entry is None:
+                        notes.append(
+                            f"composite {nm!r}: initial {init!r} not "
+                            "found; entering at the first substate")
+                if entry is None:
+                    entry = next(iter(inner_flat.values()), None)
+                if entry is None:
+                    # region without simulating states: a leaf
+                    flat = prefix + nm
+                    states.append(flat)
+                    local_flat[nm] = flat
+                    substates_of[nm] = [flat]
+                    continue
+                entry_of[nm] = entry
+                substates_of[nm] = (list(inner_flat.values()) +
+                                    list(inner_entry.values()))
+            else:
+                flat = prefix + nm
+                states.append(flat)
+                local_flat[nm] = flat
+                substates_of[nm] = [flat]
+
+        for t in level.get("transitions", []):
+            src, tgt = t.get("source"), t.get("target")
+            if src in substates_of and src not in local_flat:
+                # composite as source: one transition per substate
+                q_tgt = (local_flat.get(tgt) or entry_of.get(tgt)
+                         or tgt)
+                for sub in substates_of[src]:
+                    raw.append({
+                        "name": ((t.get("name") or "t") +
+                                 f"@{sub}"),
+                        "source": sub, "target": q_tgt,
+                        "trigger": t.get("trigger"),
+                        "guard": t.get("guard"),
+                        "effect": t.get("effect"),
+                    })
+                continue
+            raw.append({
+                "name": t.get("name"),
+                "source": (local_flat.get(src) or entry_of.get(src)
+                           or src),
+                "target": (local_flat.get(tgt) or entry_of.get(tgt)
+                           or tgt),
+                "trigger": t.get("trigger"),
+                "guard": t.get("guard"),
+                "effect": t.get("effect"),
+            })
+        return local_flat, entry_of, substates_of
+
+    _, entry_of, _ = _expand_region(sm, "")
 
     transitions: List[TransitionSpec] = []
-    for t in sm.get("transitions", []):
+    for t in raw:
         source, target = t.get("source"), t.get("target")
         if source is None or target is None:
             notes.append(
@@ -254,12 +342,12 @@ def build_state_machine(model, focus: Optional[str] = None,
             continue
         for endpoint in (source, target):
             if endpoint not in states:
-                # a composite substate referenced from the machine
-                # level — simulated flat (documented MVP cut)
+                # a substate referenced by bare name from outside its
+                # composite — simulated flat (documented MVP cut)
                 states.append(endpoint)
                 notes.append(
                     f"state {endpoint!r} added implicitly (referenced "
-                    "by a transition; composites are simulated flat)")
+                    "by a transition outside its composite region)")
         transitions.append(TransitionSpec(
             name=t.get("name"), source=source, target=target,
             trigger=t.get("trigger"), guard=t.get("guard"),
@@ -271,6 +359,11 @@ def build_state_machine(model, focus: Optional[str] = None,
             "simulate.")
 
     initial = sm.get("initial")
+    if initial in entry_of:
+        notes.append(
+            f"entering composite {initial!r} at its initial substate "
+            f"{entry_of[initial]!r}")
+        initial = entry_of[initial]
     if initial is None or initial not in states:
         fallback = states[0]
         notes.append(

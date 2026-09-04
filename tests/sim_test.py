@@ -356,6 +356,126 @@ class TestCompositeFlattening:
         assert sim.state == "inner"
 
 
+class TestCompositeRegions:
+    """Composite states expand flat with qualified names: entering a
+    composite lands in its initial substate, its region runs its own
+    transitions, and transitions declared on the composite apply from
+    every substate (UML composite transitions)."""
+
+    MODEL = """
+    package M {
+        attribute key : ScalarValues::Boolean := true;
+        state def Machine {
+            entry; then a;
+            state a;
+            transition go first a accept Go then b;
+            transition stop first b accept Stop then a;
+
+            state b {
+                entry; then warmup;
+                state warmup;
+                state running;
+                transition spin first warmup accept Spun then running;
+                transition halt first running accept Halt then warmup;
+            }
+        }
+    }
+    """
+
+    def test_expansion_and_entry_point(self):
+        md = build_state_machine(sysmlpy.loads(self.MODEL))
+        assert md.states == ["a", "b.warmup", "b.running"]
+        # 'go' targets the composite -> enters its initial substate
+        go = next(t for t in md.transitions if t.name == "go")
+        assert go.target == "b.warmup"
+        # the note fires when the machine's *initial* state is the
+        # composite; a retargeting transition stays silent
+
+    def test_region_transitions_run_inside(self):
+        sim = StateSimulator(sysmlpy.loads(self.MODEL))
+        assert sim.send("Go") is True
+        assert sim.state == "b.warmup"        # entry point
+        assert sim.send("Spun") is True
+        assert sim.state == "b.running"       # region-internal
+        assert sim.send("Halt") is True
+        assert sim.state == "b.warmup"
+
+    def test_composite_transition_applies_from_any_substate(self):
+        sim = StateSimulator(sysmlpy.loads(self.MODEL))
+        sim.send("Go")
+        assert sim.send("Stop") is True       # from b.warmup
+        assert sim.state == "a"
+        sim.send("Go")
+        assert sim.send("Spun") is True       # now in b.running
+        assert sim.send("Stop") is True       # still exits
+        assert sim.state == "a"
+
+    def test_nested_composites_qualify(self):
+        model = sysmlpy.loads("""
+        package M {
+            state def Machine {
+                entry; then outer;
+                state outer {
+                    entry; then o1;
+                    state o1;
+                    transition dive first o1 accept Dive then deep;
+                    state deep {
+                        entry; then d1;
+                        state d1;
+                    }
+                }
+            }
+        }
+        """)
+        sim = StateSimulator(model)
+        assert sim.state == "outer.o1"
+        assert sim.send("Dive") is True
+        assert sim.state == "outer.deep.d1"
+
+    def test_initial_composite_enters_substate(self):
+        model = sysmlpy.loads("""
+        package M {
+            state def Machine {
+                entry; then comp;
+                state comp {
+                    entry; then c1;
+                    state c1;
+                    state c2;
+                    transition flip first c1 accept Flip then c2;
+                }
+            }
+        }
+        """)
+        md = build_state_machine(model)
+        assert md.initial == "comp.c1"
+        assert ("entering composite 'comp' at its initial substate "
+                "'comp.c1'") in md.notes
+        sim = StateSimulator(model)
+        assert sim.state == "comp.c1"
+        assert sim.send("Flip") is True
+        assert sim.state == "comp.c2"
+
+    def test_parallel_region_inside_composite_raises(self, monkeypatch):
+        # The textual ``parallel`` keyword is not parseable yet (grammar
+        # gap, see boxes-view tests) — feed a synthetic composite whose
+        # region declares parallel.
+        def _fake_collect(visit):
+            return [{"name": "M", "parallel": False,
+                     "states": [
+                         {"name": "a"},
+                         {"name": "comp", "parallel": True,
+                          "states": ["p1", "p2"], "initial": "p1",
+                          "transitions": [], "composites": []},
+                     ],
+                     "initial": "a",
+                     "transitions": [], "composites": []}]
+
+        monkeypatch.setattr(boxes_view, "_collect_state_machine",
+                            _fake_collect)
+        with pytest.raises(SimulationError, match="(?i)parallel"):
+            StateSimulator(sysmlpy.loads("package P { part def Q; }"))
+
+
 class TestTUI:
     def test_headless_drive_via_input_func(self):
         lines = iter(["set key=true", "Engage", "q"])

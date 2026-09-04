@@ -111,12 +111,17 @@ sim.reset()                   # back to the initial state, log cleared
   references round-trip (`do logState` → `logState`), and the
   send/assignment forms surface their declarations (`send Alert to
   logger`, `x := 5`).
+- **Composite states** expand with qualified names
+  (`Composite.Sub`): a transition targeting a composite enters its
+  initial substate (UML default entry), the region runs its own
+  transitions, and a transition declared on the composite applies
+  from every substate — deeper transitions win the fall-through.
 
 ## Scope of the MVP
 
-- Flat machines: a composite state simulates as one state; its
-  internal region is a follow-up (substates referenced by machine-level
-  transitions are flattened implicitly, with a note).
+- Parallel regions raise `SimulationError` (top-level or inside a
+  composite).  Substates referenced by bare name from outside their
+  region are flattened implicitly, with a note.
 - One machine per simulator (`--focus` picks which); parallel regions
   raise `SimulationError` for now.
 - Effects are logged, not executed; effect-side assignments (their

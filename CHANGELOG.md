@@ -32,7 +32,14 @@
     a readable sibling `text` (e.g. `send Alert to logger`);
     assignment effects render `target := value` (e.g. `x := 5`) in the
     simulator.  The simulator's effect logging lights up untouched.
-  - 32 new tests (`tests/sim_test.py`); plantuml 151, boxes 54, core
+  - **Composite-state regions simulate** — regions expand flat with
+    qualified names (`Composite.Sub`, nesting supported): transitions
+    targeting a composite enter its initial substate (UML default
+    entry), the region runs its own transitions, and transitions
+    declared on the composite apply from every substate (UML
+    composite transitions — deeper transitions win the fall-through).
+    Parallel regions (top-level or inside a composite) raise.
+  - 38 new tests (`tests/sim_test.py`); plantuml 151, boxes 54, core
     suites 707, conformance 123.
 
 - **Docs** — AGENTS.md pitfall 7: bare `import` without a visibility
