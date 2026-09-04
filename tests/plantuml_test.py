@@ -5,6 +5,8 @@ Tests for the PlantUML generator module.
 """
 
 import pytest
+import re
+
 import sysmlpy
 from sysmlpy.plantuml import (
     to_plantuml,
@@ -908,6 +910,143 @@ class TestActionFlowView:
         # f1 should not be auto-included since auto_include_flows is False
         # and f1 is not in A's direct subtree
         assert "f1" not in puml
+
+
+class TestActionFlowControlNodes:
+    """Control nodes in the Action Flow View (initial / decision / merge /
+    fork / join / final) extracted from action grammar bodies."""
+
+    CONTROL_MODEL = """
+    package P {
+        part vehicle {
+            action cruise {
+                first start;
+                then warmup;
+                then decide;
+                if speedOK then engage;
+                if low then warmup;
+                else done;
+                action warmup;
+                action engage;
+            }
+        }
+    }
+    """
+
+    def _afv(self, text=None, **kw):
+        from sysmlpy.plantuml import as_action_flow_view
+        return as_action_flow_view(
+            sysmlpy.loads(text or self.CONTROL_MODEL), **kw)
+
+    def test_initial_node(self):
+        puml = self._afv()
+        assert 'circle " " as CN' in puml
+        assert "<<initial>>" in puml
+        # the initial dot feeds the first chained action
+        import re
+        m = re.search(r'(CN\d+) \.\.[a-z]*> ', puml)
+        assert m, "initial node has no outgoing succession"
+
+    def test_decision_node_hexagon(self):
+        puml = self._afv()
+        assert 'hexagon "decide"' in puml
+        assert "<<decide>>" in puml
+
+    def test_guarded_branch_labels(self):
+        puml = self._afv()
+        assert ": speedOK" in puml
+        assert ": low" in puml
+
+    def test_final_node_done(self):
+        puml = self._afv()
+        assert 'circle "done"' in puml
+        assert "<<final>>" in puml
+        assert ": else" in puml
+
+    def test_loop_back_edge(self):
+        puml = self._afv()
+        # decide -> warmup (low) reuses warmup's action alias, no new node
+        assert ": low" in puml
+        warmup_alias = re.findall(r'rectangle "warmup" as (E\d+)', puml)
+        assert len(warmup_alias) == 1
+
+    def test_merge_node(self):
+        text = """
+        package P {
+            action a1 {
+                first start;
+                then merge m;
+                then act;
+                if true then m;
+                else done;
+                action act;
+            }
+        }
+        """
+        puml = self._afv(text)
+        assert 'hexagon "m"' in puml
+        assert "<<merge>>" in puml
+        # guarded edge loops back to the merge node alias
+        assert ": true" in puml
+
+    def test_fork_join_nodes(self):
+        text = """
+        package P {
+            action a1 {
+                first start;
+                then split;
+                then act;
+                then sync;
+                then done;
+                fork split;
+                join sync;
+            }
+        }
+        """
+        puml = self._afv(text)
+        assert '<<fork>>' in puml
+        assert '<<join>>' in puml
+
+    def test_no_control_chain_when_plain_body(self):
+        text = """
+        package P {
+            action a1 {
+                action b;
+                action c;
+                flow f1 from b to c;
+            }
+        }
+        """
+        puml = self._afv(text)
+        assert 'circle " " as CN' not in puml   # no initial node declared
+        assert 'hexagon "' not in puml
+        assert 'circle "done"' not in puml
+
+    def test_no_undeclared_alias_artifacts(self):
+        """Every relationship endpoint must be a declared node (grammar-only
+        ControlNode children used to leak as anonymous boxes)."""
+        puml = self._afv()
+        declared = set(re.findall(r'as (E\d+|CN\d+)', puml))
+        for line in puml.splitlines():
+            m = re.match(r'(E\d+|CN\d+) (?:[^ ]+) (E\d+|CN\d+)', line)
+            if m and not line.startswith(("'", "title")):
+                assert m.group(1) in declared, f"undeclared src: {line}"
+                assert m.group(2) in declared, f"undeclared dst: {line}"
+
+    def test_focus_includes_own_chain(self):
+        from sysmlpy.plantuml import as_action_flow_view
+        model = sysmlpy.loads(self.CONTROL_MODEL)
+        cruise = model.find('cruise')[0]
+        puml = as_action_flow_view(model, focus=cruise)
+        assert "<<initial>>" in puml
+        assert "<<decide>>" in puml
+        assert "<<final>>" in puml
+
+    def test_control_chain_succession_arrow_style(self):
+        puml = self._afv()
+        # control edges use dotted successions, not solid flow arrows
+        assert "..>" in puml
+        # object flow arrows (--> ) may also appear; control ones are dotted
 
 
 class TestInterconnectionView:

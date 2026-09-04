@@ -173,16 +173,18 @@ generate_puml("08-package-view", as_package_view(model8))
 # 9. Action Flow View
 print("\n10. Action Flow View")
 model13 = sysmlpy.loads("""
-package Activity {
-    action def Start;
-    action def Process;
-    action def End;
-    part system {
-        action start : Start;
-        action process : Process;
-        action finish : End;
-        flow f1 from start to process;
-        flow f2 from process to finish;
+package Operation {
+    part vehicle {
+        action cruise {
+            first start;
+            then warmup;
+            then decide;
+            if speedOK then engage;
+            if low then warmup;
+            else done;
+            action warmup;
+            action engage;
+        }
     }
 }
 """)

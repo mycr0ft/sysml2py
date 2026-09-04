@@ -53,30 +53,44 @@ skinparam rectangle<<action def>> {
 skinparam rectangle<<action>> {
     StereotypeFontSize 11
 }
+' Control nodes (initial/final/decision/merge/fork/join)
+skinparam circle<<initial>> {
+    BackgroundColor black
+    BorderColor black
+}
+skinparam circle<<final>> {
+    BackgroundColor white
+    BorderColor black
+}
+skinparam hexagon {
+    BackgroundColor white
+    BorderColor black
+}
 
 top to bottom direction
 
-title av [model] 8370dad7-7d72-422f-9e52-1c142980c2a9 [Action Flow View]
+title av [model] ef0084db-665f-4851-9736-7fa4ad49e491 [Action Flow View]
 
 hide circle
 
-rectangle "Start" as E1 <<action def>>
-rectangle "Process" as E2 <<action def>>
-rectangle "End" as E3 <<action def>>
-rectangle "system" as E4 <<part>>
-rectangle "start" as E5 <<action>>
-rectangle "process" as E6 <<action>>
-rectangle "finish" as E7 <<action>>
-rectangle "f0aa8014-0f9b-49cc-846f-cee266eff82d" as E8 <<flow>>
-rectangle "79a8cb3d-79bd-4589-b86b-9b0fb43aa451" as E9 <<flow>>
+rectangle "vehicle" as E1 <<part>>
+rectangle "cruise" as E2 <<action>>
+rectangle "warmup" as E4 <<action>>
+rectangle "engage" as E5 <<action>>
 
-E4 *-- E5
-E4 *-- E6
-E4 *-- E7
-E4 *-- E8
-E4 *-- E9
+E1 *-- E2
+E2 *-- E4
+E2 *-- E5
 
-E5 --> E6 : flow
-E6 --> E7 : flow
+
+circle " " as CN1 <<initial>>
+CN1 ..> E4
+hexagon "decide" as CN2 <<decide>>
+E4 ..> CN2
+CN2 ..> E5 : speedOK
+CN2 ..> E4 : low
+circle "done" as CN3 <<final>>
+CN2 ..> CN3 : else
+
 
 @enduml

@@ -577,7 +577,7 @@ print(as_package_view(model, style="bw"))
 ```
 
 #### Action Flow View (AFV) — `as_action_flow_view()`
-Corresponds to SysML v2 ``ActionFlowView`` (short name ``afv``). Shows actions with their control and object flows. Auto-includes connected flow elements.
+Corresponds to SysML v2 ``ActionFlowView`` (short name ``afv``). Shows actions with their control and object flows. Auto-includes connected flow elements. Control nodes render too: `first start` → solid initial dot, `decide`/`merge`/`fork`/`join` → hexagon nodes, `done`/`terminate` targets → final circle, with dotted succession edges (`..>`) and guard conditions as labels.
 
 ![Action Flow View](docs/plantuml-examples/10-action-flow-view.png)
 

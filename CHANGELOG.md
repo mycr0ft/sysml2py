@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## Unreleased
+
+- **Action Flow View control nodes** — `as_action_flow_view()` now renders
+  SysML v2 control nodes from action bodies: `first start` as a solid
+  initial dot, `decide`/`merge`/`fork`/`join` as hexagon nodes with
+  stereotypes, and `done`/`terminate` succession targets as a final
+  circle. Chain edges are dotted successions (`..>`, per the pilot's
+  `VAction`) with guard conditions (`if <cond> then X`) and `else`
+  as labels. Grammar-only `ControlNode` children no longer leak as
+  anonymous containment boxes. 11 new tests
+  (`TestActionFlowControlNodes`); boxes-backed afv control nodes are
+  a follow-up.
+
 ## v0.68.0 (2026-09-03)
 
 ### :white_check_mark: Boxes-backed views (iv + afv) & legend defaults

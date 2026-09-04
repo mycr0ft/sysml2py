@@ -1545,6 +1545,19 @@ def as_action_flow_view(model, focus=None, elements=None, style="bw", direction=
             "skinparam rectangle<<action>> {",
             "    StereotypeFontSize 11",
             "}",
+            "' Control nodes (initial/final/decision/merge/fork/join)",
+            "skinparam circle<<initial>> {",
+            "    BackgroundColor black",
+            "    BorderColor black",
+            "}",
+            "skinparam circle<<final>> {",
+            "    BackgroundColor white",
+            "    BorderColor black",
+            "}",
+            "skinparam hexagon {",
+            "    BackgroundColor white",
+            "    BorderColor black",
+            "}",
         ])
     else:
         lines.extend([
@@ -1632,6 +1645,7 @@ def as_action_flow_view(model, focus=None, elements=None, style="bw", direction=
     # Filter for action-flow relevant element types
     afv_types = {"action", "flow", "attribute", "port", "part"}
 
+    declared_aliases = set()
     for alias, name, stereotype, elem, is_included in elements_list:
         sysml_type = getattr(elem, 'sysml_type', '')
         if sysml_type in afv_types:
@@ -1642,12 +1656,18 @@ def as_action_flow_view(model, focus=None, elements=None, style="bw", direction=
             elif sysml_type == 'view':
                 keyword = "folder"
             lines.append(f'{keyword} "{name}" as {alias} {stereotype}')
+            declared_aliases.add(alias)
 
     lines.append("")
 
-    # Render containment and typing relationships
+    # Render containment and typing relationships. Skip edges whose
+    # endpoints were not rendered (e.g. grammar-only ControlNode children
+    # of actions — those surface as hexagon chain nodes below instead).
     for src, arrow, dst, label, is_external in relationships:
         if is_external and not show_external:
+            continue
+        if not is_external and (src not in declared_aliases
+                                or dst not in declared_aliases):
             continue
         if is_external:
             arrow = f"-[dotted,thickness=1,#999999]{arrow.lstrip('-')}"
@@ -1691,6 +1711,16 @@ def as_action_flow_view(model, focus=None, elements=None, style="bw", direction=
                 flow_name = None
             label_text = flow_name if flow_name else "flow"
             lines.append(f'{from_alias} {ARROW_STYLES["flow"]} {to_alias} : {label_text}')
+
+    lines.append("")
+
+    # Render control-flow chains: initial node, decision/merge/fork/join
+    # nodes, final (done/terminate) targets, and their succession edges
+    # (dotted ..> per the official successions notation).
+    control_chains = _extract_control_chains(model)
+    if control_chains:
+        _render_control_chains(model, control_chains, gen, id_map, lines,
+                               show_external=show_external)
 
     lines.append("")
 
@@ -1843,6 +1873,281 @@ def _extract_flow_connections(model):
         _scan_element(child)
 
     return connections
+
+
+def _extract_control_chains(model):
+    """Extract per-action control-flow chains (initial/decide/merge/fork/join
+    nodes plus final targets) from action grammar bodies.
+
+    SysML v2 control nodes appear inside action bodies as
+
+    - ``first start;``  -> InitialNodeMember (the initial node)
+    - ``decide`` / ``merge`` / ``fork`` / ``join``  -> ControlNode grammar
+    - ``then X`` / ``if <cond> then X`` / ``else X``  ->
+      ActionTargetSuccessionMember (succession edges)
+    - ``done`` (and ``terminate``) as succession targets -> final node
+
+    The body items in source order carry the chain: an
+    ``EmptySuccessionMember`` marks that the following declared node
+    continues the succession chain; ``ActionTargetSuccessionMember``
+    entries reference previously declared (or later declared) nodes
+    by name.
+
+    Returns a list of ``(owner_element, nodes, edges)`` where
+
+    - ``nodes`` is ``[(kind, name, ref)]`` with ``kind`` one of
+      ``initial``/``final``/``control``/``action`` and ``ref`` the
+      grammar object or semantic element;
+    - ``edges`` is ``[(src_ref, dst_ref, label)]`` with refs of
+      ``('initial',)`` / ``('final',)`` / ``('control', grammar)`` /
+      ``('action', element)``.
+
+    Only actions whose bodies actually carry control members produce
+    chains.
+    """
+    chains = []
+    sem_by_grammar = {}
+
+    def _index(el):
+        g = getattr(el, 'grammar', None)
+        if g is not None and id(g) not in sem_by_grammar:
+            sem_by_grammar[id(g)] = el
+        for child in getattr(el, 'children', None) or []:
+            _index(child)
+
+    for child in getattr(model, 'children', []):
+        _index(child)
+
+    def _kids(value):
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return value
+        return [value]
+
+    def _inner_usage(member):
+        """First usage-level node under an ActionNodeMember/BehaviorUsageMember."""
+        for sub in _kids(getattr(member, 'children', None)):
+            for node in _kids(sub):
+                return node
+        return None
+
+    def _resolve_target(name, registry):
+        if name in ('done', 'terminate'):
+            return ('final',)
+        if name in ('start',):
+            return ('initial',)
+        return registry.get(name)
+
+    def _scan_body(owner, body):
+        items = []
+        for item in _kids(getattr(body, 'children', None)):
+            for member in _kids(getattr(item, 'children', None)):
+                items.append(member)
+        if not items:
+            return
+
+        # Pass 1: register declared nodes by name for target resolution.
+        registry = {}
+        for member in items:
+            mname = member.__class__.__name__
+            if mname not in ('ActionNodeMember', 'BehaviorUsageMember'):
+                continue
+            for sub in _kids(getattr(member, 'children', None)):
+                for node in _kids(getattr(sub, 'children', None)):
+                    if node.__class__.__name__ == 'ControlNode':
+                        dname = getattr(node, 'declared_name', None)
+                        if dname:
+                            registry[dname] = ('control', node)
+                    else:
+                        sem = sem_by_grammar.get(id(node))
+                        name = getattr(sem, 'name', None) if sem is not None else None
+                        if name:
+                            registry.setdefault(name, ('action', sem))
+
+        # Pass 2: walk the chain in source order.
+        nodes = []          # (kind, name, ref)
+        edges = []          # (src_ref, dst_ref, label)
+        last = None         # current chain tail
+        last_decision = None
+        pending_empty = False
+        seen_kinds = set()
+
+        for member in items:
+            mname = member.__class__.__name__
+            if mname == 'EmptySuccessionMember':
+                pending_empty = True
+            elif mname == 'InitialNodeMember':
+                nodes.append(('initial', None, None))
+                last = ('initial',)
+                seen_kinds.add('initial')
+                pending_empty = False
+            elif mname == 'ActionTargetSuccessionMember':
+                tgt = getattr(member, 'declared_name', None)
+                cond = getattr(member, 'condition', None)
+                kw = getattr(member, 'keyword', 'then')
+                if tgt is None:
+                    continue
+                if (cond or kw == 'else') and last_decision is not None:
+                    src = last_decision
+                else:
+                    src = last
+                if tgt in ('done', 'terminate'):
+                    dst = ('final',)
+                else:
+                    dst = registry.get(tgt)
+                if dst is None:
+                    continue
+                label = cond if cond else ('else' if kw == 'else' else None)
+                edges.append((src, dst, label))
+                # Advance the chain on plain 'then'; guarded/else branches
+                # fan out from the decision node and do not advance it.
+                if not cond and kw == 'then':
+                    last = dst
+                    if dst[0] == 'control' and getattr(dst[1], 'keyword', None) == 'decide':
+                        last_decision = dst
+                seen_kinds.add('edges')
+            elif mname in ('ActionNodeMember', 'BehaviorUsageMember'):
+                ref = None
+                for sub in _kids(getattr(member, 'children', None)):
+                    for node in _kids(getattr(sub, 'children', None)):
+                        if node.__class__.__name__ == 'ControlNode':
+                            ref = ('control', node)
+                        else:
+                            sem = sem_by_grammar.get(id(node))
+                            if sem is not None:
+                                ref = ('action', sem)
+                if ref is None:
+                    continue
+                nodes.append(ref)
+                seen_kinds.add(ref[0])
+                if pending_empty:
+                    if last is not None:
+                        edges.append((last, ref, None))
+                    last = ref
+                    if (ref[0] == 'control'
+                            and getattr(ref[1], 'keyword', None) == 'decide'):
+                        last_decision = ref
+                pending_empty = False
+
+        if edges:
+            chains.append((owner, nodes, edges, seen_kinds))
+
+    def _walk(element, depth=0):
+        if depth > 30:
+            return
+        if getattr(element, 'sysml_type', '') == 'action':
+            grammar = getattr(element, 'grammar', None)
+            body = getattr(grammar, 'body', None) if grammar is not None else None
+            if body is not None:
+                _scan_body(element, body)
+        for child in getattr(element, 'children', None) or []:
+            _walk(child, depth + 1)
+
+    for child in getattr(model, 'children', []):
+        _walk(child)
+
+    return chains
+    for child in getattr(model, 'children', []):
+        _walk(child)
+
+    return chains
+
+
+def _render_control_chains(model, control_chains, gen, id_map, lines,
+                           show_external=False):
+    """Emit PlantUML nodes + edges for extracted control-flow chains.
+
+    Shapes (monochrome-friendly, no color):
+
+    - initial:   solid black dot (``circle <<initial>>``) — the official
+      initial-node notation
+    - final:     labeled circle (``circle <<final>>``) for ``done`` /
+      ``terminate`` succession targets
+    - decision / merge / fork / join: hexagon nodes with stereotypes
+      (the graph renderer's stand-in for the official diamond / bar
+      shapes)
+    - chain edges: dotted ``..>`` successions (pilot ``VAction``),
+      with guard conditions / ``else`` as labels
+    """
+    ctrl_counter = 0
+
+    def _next_alias():
+        nonlocal ctrl_counter
+        ctrl_counter += 1
+        return f"CN{ctrl_counter}"
+
+    def _node_label(kind, name, keyword=None):
+        if kind == 'initial':
+            return " "
+        if kind == 'final':
+            return name or "done"
+        # control nodes: keep the declared name, else the keyword itself
+        return name or keyword or ""
+
+    def _node_stereotype(kind, keyword=None):
+        if kind == 'initial':
+            return "<<initial>>"
+        if kind == 'final':
+            return "<<final>>"
+        return f"<<{keyword}>>"
+
+    # Per-chain rendering: each action owns its initial / final nodes,
+    # so node identity is scoped to the chain being emitted.
+    emitted_any = False
+    for owner, nodes, edges, seen in control_chains:
+        if gen._included_ids and id(owner) not in gen._included_ids:
+            continue
+
+        chain_alias = {}   # ref identity -> PlantUML alias (chain-scoped)
+
+        def _alias_of(ref):
+            """Alias for an edge endpoint ref, declaring the node if new."""
+            nonlocal ctrl_counter
+            if ref is None:
+                return None
+            kind = ref[0]
+            if kind == 'initial':
+                if 'initial' not in chain_alias:
+                    chain_alias['initial'] = _next_alias()
+                    lines.append(f'circle " " as {chain_alias["initial"]} '
+                                 f'<<initial>>')
+                return chain_alias['initial']
+            if kind == 'final':
+                if 'final' not in chain_alias:
+                    chain_alias['final'] = _next_alias()
+                    lines.append(f'circle "done" as {chain_alias["final"]} '
+                                 f'<<final>>')
+                return chain_alias['final']
+            if kind == 'control':
+                key = ('control', id(ref[1]))
+                if key not in chain_alias:
+                    chain_alias[key] = _next_alias()
+                    kw = getattr(ref[1], 'keyword', None)
+                    name = getattr(ref[1], 'declared_name', None)
+                    lines.append(f'hexagon "{_node_label(kind, name, kw)}" '
+                                 f'as {chain_alias[key]} '
+                                 f'{_node_stereotype(kind, kw)}')
+                return chain_alias[key]
+            if kind == 'action':
+                return id_map.get(id(ref[1]))
+            return None
+
+        for src, dst, label in edges:
+            s_alias = _alias_of(src)
+            d_alias = _alias_of(dst)
+            if not s_alias or not d_alias:
+                continue  # endpoint outside the rendered selection
+            arrow = ARROW_STYLES["succession_flow"]
+            if label:
+                lines.append(f'{s_alias} {arrow} {d_alias} : {label}')
+            else:
+                lines.append(f'{s_alias} {arrow} {d_alias}')
+            emitted_any = True
+
+    if emitted_any:
+        lines.append("")
+
 
 
 def _extract_connection_endpoints(conn_element):
