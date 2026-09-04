@@ -64,7 +64,7 @@ skinparam rectangle<<flow>> {
 
 top to bottom direction
 
-title iv [model] 40f0e227-426d-4169-9d3d-4bac19cc6a7b [Interconnection View]
+title iv [model] 1ce16c7d-309c-4d93-9fc0-1c30b1922ee5 [Interconnection View]
 
 hide circle
 
@@ -79,8 +79,8 @@ rectangle "Controller" as E8 <<part def>>
 rectangle "s" as E9 <<part>>
 rectangle "p" as E10 <<part>>
 rectangle "a" as E11 <<part>>
-rectangle "17d624dc-a310-4e98-b761-6a94fca46c92" as E12 <<flow>>
-rectangle "dff1603d-4c14-4ef9-8cd3-bd680b48a5de" as E13 <<flow>>
+rectangle "f32e1389-224e-4795-ab1b-d032999c5f24" as E12 <<flow>>
+rectangle "e020a2ee-6988-422a-9b7b-8f3e87b76df3" as E13 <<flow>>
 
 E1 *-- E2
 E3 *-- E4
