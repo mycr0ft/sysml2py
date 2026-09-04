@@ -654,6 +654,12 @@ are complete.  Follow-up work is organized under the
     Relationship legends now opt-in (<code>include_legend=False</code> default) — standard-notation
     legends were noise; monochrome <code>bw</code> stays the default style (color-vision
     accessibility; a dedicated palette option is tracked).</li>
+<li>[x] <strong>Phase 2d (unreleased)</strong> — package view namespace enclosure
+    (pilot <code>VStructure.casePackage</code>): packages render as
+    <code>package "Name" { members }</code> with owned members nested inside;
+    definitions as leaf boxes (no feature explosion); containment by
+    enclosure only; typing/specialization arrows kept between members
+    (unlabeled — typing sits in <code>name : Type</code> labels).</li>
 <li>[x] <strong>Phase 2c (unreleased)</strong> — iv notation fidelity: enclosure
     nesting (no <code>*--</code> composition edges), typed usage labels
     (<code>s : Sensor</code>, no <code>--:|&gt;</code> arrows), consumed definitions dropped
