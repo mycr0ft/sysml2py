@@ -28,12 +28,15 @@ are complete.  Follow-up work is organized under the
     Relationship legends now opt-in (`include_legend=False` default) — standard-notation
     legends were noise; monochrome `bw` stays the default style (color-vision
     accessibility; a dedicated palette option is tracked).
+  - [x] **sim: transition `do` effects live** (v0.69.0) — visitor
+    emits `EffectBehaviorUsage` (reference form round-trips) plus
+    readable `text` for send/accept/assignment forms; assignment
+    effects render `target := value`.
   - [ ] **sim follow-ups** — composite-state regions (composites are
     in the descriptor; simulated flat for now), parallel regions
-    (raise, by design, for now), effect-side assignments via
-    `set_value`, and the grammar's dropped `do <ref>` on transitions
-    (`EffectBehaviorMember.ownedRelatedElement` is null — when the
-    visitor emits the reference, simulator effects go live untouched).
+    (raise, by design, for now), and *executing* assignment effects
+    via `set_value` (the text `x := 5` is now available — parse and
+    apply).
   - [x] **Phase 2d (unreleased)** — package view namespace enclosure
     (pilot `VStructure.casePackage`): packages render as
     `package "Name" { members }` with owned members nested inside;

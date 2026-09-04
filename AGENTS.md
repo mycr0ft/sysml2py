@@ -143,7 +143,7 @@ else:
 | `project_test.py` | 17 | `load_files()`, `load_project()` |
 | `store_test.py` | 46 | Storage backends (networkx/kuzu are skipped if not installed) |
 | `conformance_test.py` | 123 | OMG 2026-03 XPect parse conformance (slow) |
-| `sim_test.py` | 30 | State-machine simulation (`sim` extra) |
+| `sim_test.py` | 32 | State-machine simulation (`sim` extra) |
 
 ---
 

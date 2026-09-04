@@ -117,7 +117,10 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   completion, effects are logged, and an interactive TUI shows the live
   state with the transitions available from it (`--run "T1; T2"`
   scripts sessions).  Guards also appear in boxes-view edge labels
-  (the shorthand-`when` extraction fix).
+  (the shorthand-`when` extraction fix), and transition `do` effects
+  now parse through to the simulator — references round-trip, while
+  send/assignment declarations surface as text (`send Alert to
+  logger`, `x := 5`).
 - **Relationship legends opt-in** — `include_legend=False` by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome `bw` remains the default style

@@ -2137,6 +2137,10 @@ class EffectBehaviorMember:
     def __init__(self, definition):
         self.keyword = "do"
         self.children = None
+        # send/accept/assignment effects (not yet class-constructable)
+        # ride a sibling ``text`` key emitted by the visitor.
+        self.text = definition.get("text") \
+            if isinstance(definition, dict) else None
         if valid_definition(definition, self.__class__.__name__):
             if definition.get("ownedRelatedElement") is not None:
                 self.children = EffectBehaviorUsage(definition["ownedRelatedElement"])
@@ -2144,6 +2148,8 @@ class EffectBehaviorMember:
     def dump(self):
         if self.children is not None:
             return " ".join([self.keyword, self.children.dump()])
+        if self.text:
+            return " ".join([self.keyword, self.text])
         return ""
 
     def get_definition(self):
@@ -2153,6 +2159,8 @@ class EffectBehaviorMember:
         }
         if self.children is not None:
             output["ownedRelatedElement"] = self.children.get_definition()
+        if self.text and self.children is None:
+            output["text"] = self.text
         return output
 
 

@@ -69,11 +69,14 @@ class TestExtraction:
         assert by_name["slow"].guard == "speed > 40"
         assert by_name["resume"].trigger == "SpeedOK"
         assert by_name["resume"].guard is None
-        # The visitor currently drops ``do <ref>`` on transitions
-        # (EffectBehaviorMember.ownedRelatedElement is null); the sim
-        # carries the effect slot, it just stays None until the
-        # grammar gains the reference.  Documented MVP cut.
-        assert all(t.effect is None for t in md.transitions)
+        # effects resolve from parsed models (``do <ref>`` rides the
+        # visitor's EffectBehaviorMember.ownedRelatedElement)
+        assert by_name["engage"].effect == "logState"
+        assert by_name["hold"].effect == "hold"
+        assert by_name["slow"].effect == "logState"
+        assert by_name["resume"].effect is None
+        assert by_name["stop"].effect is None
+        assert by_name["cancel"].effect is None
 
     def test_completion_transition_has_no_trigger(self):
         model = sysmlpy.loads("""
@@ -257,28 +260,60 @@ class TestLogging:
         assert rec.guard_ok is True
         assert rec.to_state == "engaged"
 
-    def test_effect_logged_when_present(self, monkeypatch):
-        """Effect wiring: the visitor currently yields None for ``do
-        <ref>``, so feed a synthetic descriptor carrying an effect to
-        pin the logging."""
-        def _fake_collect(visit):
-            return [{"name": "M", "parallel": False,
-                     "states": ["a", "b"], "initial": "a",
-                     "transitions": [{"name": "go", "source": "a",
-                                      "target": "b", "trigger": "go",
-                                      "guard": None, "effect": "act"}],
-                     "composites": []}]
+    def test_effect_logged_when_present(self):
+        sim = _sim()
+        sim.send("Engage")           # do logState
+        assert sim.log[-1].effects == ["logState"]
 
-        monkeypatch.setattr(boxes_view, "_collect_state_machine",
-                            _fake_collect)
-        sim = StateSimulator(sysmlpy.loads("package P { part def Q; }"))
-        sim.send("go")
-        assert sim.log[-1].effects == ["act"]
-        assert sim.log[-1].to_state == "b"
+    def test_effect_send_form_surfaces_as_text(self):
+        sim = _sim("""
+        package M {
+            part def logger;
+            state def Machine {
+                entry; then a;
+                state a;
+                state b;
+                transition go first a accept Go do send Alert to logger then b;
+                transition back first b accept Kick then a;
+            }
+        }
+        """)
+        md = sim.descriptor
+        effects = {t.name: t.effect for t in md.transitions}
+        assert effects["go"] == "send Alert to logger"
+        sim.send("Go")
+        assert sim.log[-1].effects == ["send Alert to logger"]
+
+    def test_effect_assignment_rendered(self):
+        sim = _sim("""
+        package M {
+            attribute x : ScalarValues::Integer := 0;
+            state def Machine {
+                entry; then a;
+                state a;
+                state b;
+                transition set1 first a accept Set do x := 5 then b;
+                transition back first b accept Kick then a;
+            }
+        }
+        """)
+        effects = {t.name: t.effect for t in sim.descriptor.transitions}
+        assert effects["set1"] == "x := 5"
+        sim.send("Set")
+        assert sim.log[-1].effects == ["x := 5"]
 
     def test_no_effect_logged_when_none(self):
-        sim = _sim()
-        sim.send("Engage")
+        sim = _sim("""
+        package M {
+            state def Machine {
+                entry; then a;
+                state a;
+                state b;
+                transition go first a accept Kick then b;
+            }
+        }
+        """)
+        sim.send("Kick")
         assert sim.log[-1].effects == []
 
 

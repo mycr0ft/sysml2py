@@ -5739,37 +5739,136 @@ def _visit_guard_expression_member(ctx):
     }
 
 
-def _visit_effect_behavior_member(ctx):
-    """Visit an effectBehaviorMember context."""
+def _ctx_spaced_text(ctx):
+    """Source text of an ANTLR context with single spaces between
+    tokens (``getText()`` glues terminals: ``send Alert to logger``
+    would come out ``sendAlerttologger``)."""
     if ctx is None:
         return None
-    
-    behavior = None
-    if hasattr(ctx, 'transitionEffect') and ctx.transitionEffect():
-        te = ctx.transitionEffect()
-        if isinstance(te, list):
-            te = te[0]
-        if te:
-            behavior = _visit_transition_effect(te)
-    
-    return {
+
+    parts = []
+
+    def _collect(node):
+        n = node.getChildCount() if hasattr(node, "getChildCount") else 0
+        if n == 0:
+            text = node.getText()
+            if text:
+                parts.append(text)
+            return
+        for i in range(n):
+            _collect(node.getChild(i))
+
+    _collect(ctx)
+    return " ".join(parts).strip() or None
+
+
+def _visit_effect_behavior_member(ctx):
+    """Visit an effectBehaviorMember context.
+
+    effectBehaviorMember : DO effectBehaviorUsage ;
+    effectBehaviorUsage  : emptyActionUsage_ | transitionPerformActionUsage
+                         | transitionAcceptActionUsage | transitionSendActionUsage
+                         | transitionAssignmentActionUsage ;
+
+    ``do <behavior-reference>`` (by far the common transition effect)
+    rides through transitionPerformActionUsage ->
+    performActionUsageDeclaration -> ownedReferenceSubsetting, whose
+    qualifiedName is the referenced behavior's name.  We emit the shape
+    the grammar classes expect (EffectBehaviorUsage / PerformedActionUsage
+    / PerformActionUsageDeclaration) so ``EffectBehaviorMember.dump()``
+    round-trips the effect.  The send/accept/assignment alternatives are
+    emitted as ``text`` fallbacks (readable, not class-constructed).
+    """
+    if ctx is None:
+        return None
+
+    behavior, fallback_text = None, None
+    if hasattr(ctx, 'effectBehaviorUsage') and ctx.effectBehaviorUsage():
+        behavior, fallback_text = _visit_effect_behavior_usage(
+            ctx.effectBehaviorUsage())
+
+    member = {
         "name": "EffectBehaviorMember",
         "ownedRelatedElement": behavior
     }
+    if fallback_text:
+        # Sibling key: read by the view extractors, ignored (and so
+        # safely dropped) by the grammar classes.
+        member["text"] = fallback_text
+    return member
 
 
-def _visit_transition_effect(ctx):
-    """Visit a transitionEffect context."""
+def _visit_effect_behavior_usage(ctx):
+    """Visit an effectBehaviorUsage context (one of five alternatives)."""
     if ctx is None:
         return None
-    
-    body = None
-    if hasattr(ctx, 'actionBody') and ctx.actionBody():
-        body = _visit_action_body(ctx.actionBody())
-    
+
+    if hasattr(ctx, 'transitionPerformActionUsage') and \
+            ctx.transitionPerformActionUsage():
+        pu = ctx.transitionPerformActionUsage()
+        if isinstance(pu, list):
+            pu = pu[0]
+        return _visit_transition_perform_action_usage(pu), None
+
+    # send / accept / assignment: no class-constructable shape yet —
+    # the caller surfaces the declaration via a sibling ``text`` on the
+    # EffectBehaviorMember dict (see _visit_effect_behavior_member).
+    for alt_name, kind in (
+        ('transitionSendActionUsage', 'send'),
+        ('transitionAcceptActionUsage', 'accept'),
+        ('transitionAssignmentActionUsage', 'assign'),
+    ):
+        if hasattr(ctx, alt_name):
+            sub = getattr(ctx, alt_name)()
+            if sub:
+                if isinstance(sub, list):
+                    sub = sub[0]
+                node = None
+                for decl_name in ('sendNodeDeclaration',
+                                   'acceptNodeDeclaration',
+                                   'assignmentNodeDeclaration'):
+                    if hasattr(sub, decl_name):
+                        node = getattr(sub, decl_name)()
+                        if node:
+                            break
+                # Spaced text; the ``send``/``accept`` keyword already
+                # sits in the declaration, no kind prefix needed.
+                text = _ctx_spaced_text(
+                    node if node is not None else sub)
+                return None, text
+    # emptyActionUsage_
+    return None, None
+
+
+def _visit_transition_perform_action_usage(ctx):
+    """transitionPerformActionUsage : performActionUsageDeclaration
+    ( LBRACE actionBodyItem* RBRACE )? ;"""
+    if ctx is None:
+        return None
+
+    declaration = None
+    if hasattr(ctx, 'performActionUsageDeclaration') and \
+            ctx.performActionUsageDeclaration():
+        declaration = _visit_perform_action_usage_declaration(
+            ctx.performActionUsageDeclaration())
+
+    items = []
+    if hasattr(ctx, 'actionBodyItem') and ctx.actionBodyItem():
+        body_items = ctx.actionBodyItem()
+        if not isinstance(body_items, list):
+            body_items = [body_items]
+        for item_ctx in body_items:
+            item_dict = _visit_action_body_item(item_ctx)
+            if item_dict:
+                items.append(item_dict)
+
     return {
-        "name": "TransitionEffect",
-        "body": body
+        "name": "EffectBehaviorUsage",
+        "usage": {
+            "name": "PerformedActionUsage",
+            "declaration": declaration,
+        },
+        "item": items,
     }
 
 

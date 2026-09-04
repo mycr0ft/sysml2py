@@ -172,7 +172,7 @@ def _extract_transition_elements(transition_usage: dict) -> dict:
         elif nm == "GuardExpressionMember":
             info["guard"] = _extract_guard_expression(rel)
         elif nm == "EffectBehaviorMember":
-            info["effect"] = _effect_text(rel)
+            info["effect"] = _effect_text(rel) or rel.get("text")
     return info
 
 
@@ -287,11 +287,32 @@ def _effect_text(effect_member: dict):
         effect_member.get("ownedRelatedElement") or {}
     if not isinstance(node, dict):
         return None
+    # Assignment effect (``do x := 5``): perform declaration with a
+    # reference target and a value part — render ``target := value``.
+    usage = node.get("usage") if isinstance(node.get("usage"), dict) \
+        else None
+    decl = usage.get("declaration") if usage else None
+    if isinstance(decl, dict) and decl.get("valuepart"):
+        target = _qualified_name_leaf(decl.get("ownedRelationship") or {})
+        value = None
+        for expr in _walk_named(decl["valuepart"], "OwnedExpression"):
+            value = _expression_text(expr.get("expression") or expr)
+            if value:
+                break
+        if target and value:
+            return f"{target} := {value}"
     for expr in _walk_named(node, "OwnedExpression"):
         text = _expression_text(expr.get("expression") or expr)
         if text:
             return text
-    return _qualified_name_leaf(node)
+    name = _qualified_name_leaf(node)
+    if name:
+        return name
+    # send/accept/assignment effects carry their declaration as raw
+    # ``text`` (the visitor's fallback for the alternatives it does not
+    # class-construct).
+    text = node.get("text")
+    return text if isinstance(text, str) and text else None
 
 
 def _state_action_label(member_name: str) -> str:
@@ -557,7 +578,7 @@ def _extract_target_transition_usage(ttu: dict) -> Optional[dict]:
         info["guard"] = _extract_guard_expression(rel2)
     rel3 = ttu.get("ownedRelationship3", {})
     if isinstance(rel3, dict) and rel3.get("name") == "EffectBehaviorMember":
-        info["effect"] = _effect_text(rel3)
+        info["effect"] = _effect_text(rel3) or rel3.get("text")
     rel4 = ttu.get("ownedRelationship4", {})
     if isinstance(rel4, dict) and rel4.get("name") == "TransitionSuccessionMember":
         orel = rel4.get("ownedRelatedElement", {})

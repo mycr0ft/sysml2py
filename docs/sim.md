@@ -107,7 +107,10 @@ sim.reset()                   # back to the initial state, log cleared
   values (`collect_values`, pint `Quantity`-aware) plus `set_value`
   overrides; a guard that cannot evaluate blocks the transition and is
   logged.
-- **Effects** (`do <action>`) are logged as text.
+- **Effects** (`do <action>`) are logged as text — behavior
+  references round-trip (`do logState` → `logState`), and the
+  send/assignment forms surface their declarations (`send Alert to
+  logger`, `x := 5`).
 
 ## Scope of the MVP
 
@@ -116,12 +119,11 @@ sim.reset()                   # back to the initial state, log cleared
   transitions are flattened implicitly, with a note).
 - One machine per simulator (`--focus` picks which); parallel regions
   raise `SimulationError` for now.
-- Effects are logged, not executed; effect-side assignments would flow
-  through `set_value` and are a follow-up.  (The ANTLR visitor
-  currently drops `do <ref>` references on transitions —
-  `EffectBehaviorMember.ownedRelatedElement` is `null` — so parsed
-  models report no effect text yet; the wiring lights up the moment
-  the reference is emitted.)
+- Effects are logged, not executed; effect-side assignments (their
+  `target := value` text is now available) would flow through
+  `set_value` and are a follow-up.  Composite regions and parallel
+  regions are flat/raise for now (the descriptor carries the
+  composites).
 
 ## Library choice
 

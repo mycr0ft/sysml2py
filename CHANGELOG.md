@@ -22,12 +22,17 @@
     `TriggerExpression` (`kind.isWhen`), and adds an `effect` slot; the
     TargetTransitionUsage shorthand gets the same treatment.  Guards now
     appear in stv/boxes edge labels.
-  - **Known grammar gap** — the visitor emits
-    `EffectBehaviorMember.ownedRelatedElement = null` for `do <ref>` on
-    transitions, so effects are currently unobtainable from parsed
-    models; the simulator's effect slot and logging are wired and light
-    up the moment the reference lands (TODO).
-  - 30 new tests (`tests/sim_test.py`); plantuml 151, boxes 54, core
+  - **Transition `do` effects now parse** — the visitor emitted
+    `EffectBehaviorMember.ownedRelatedElement = null` (the effect
+    reference was dropped at the visitor level).  It now visits the
+    grammar's real `effectBehaviorUsage` shape, emitting the
+    class-constructable `EffectBehaviorUsage`/`PerformedActionUsage`
+    dicts for `do <behavior-reference>` (round-trips through
+    `dump()`), and carries the send/accept/assignment declarations as
+    a readable sibling `text` (e.g. `send Alert to logger`);
+    assignment effects render `target := value` (e.g. `x := 5`) in the
+    simulator.  The simulator's effect logging lights up untouched.
+  - 32 new tests (`tests/sim_test.py`); plantuml 151, boxes 54, core
     suites 707, conformance 123.
 
 - **Docs** — AGENTS.md pitfall 7: bare `import` without a visibility
