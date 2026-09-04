@@ -5502,8 +5502,20 @@
   <code>VAction</code>) with guard conditions (<code>if &lt;cond&gt; then X</code>) and <code>else</code>
   as labels. Grammar-only <code>ControlNode</code> children no longer leak as
   anonymous containment boxes. 11 new tests
-  (<code>TestActionFlowControlNodes</code>); boxes-backed afv control nodes are
-  a follow-up.</li>
+  (<code>TestActionFlowControlNodes</code>).</li>
+<li><strong>Boxes-backed afv control nodes</strong> — <code>as_action_flow_view_boxes()</code>
+  renders the same chains through diagramboxes primitives: <code>first
+  start</code> as a filled start dot, <code>decide</code>/<code>merge</code> as <strong>diamonds</strong>
+  (<code>DecisionNode</code>, parented inside the composite action), done /
+  terminate targets as done bullseyes, fork/join as bars; chain edges
+  are dashed successions with guard labels. Requires diagramboxes
+  0.5.0 (<code>parent=</code> support on the diamond/bar factories). +6 tests
+  (<code>TestActionFlowControlBoxes</code>, 54 total in boxes_view_test).</li>
+<li><strong>diagramboxes 0.5.0 port routing</strong> — the sugiyama engine's port
+  routing is obstacle-aware: side-facing port edges wrap around node
+  bodies through free bands instead of slicing through boxes placed
+  between the endpoints; single-ported edges anchor at the port
+  boundary. Benefits the boxes iv/stv/afv under <code>routing='sugiyama'</code>.</li>
 </ul>
 <h2 id="v0680-2026-09-03">v0.68.0 (2026-09-03)<a class="headerlink" href="#v0680-2026-09-03" title="Permanent link">&para;</a></h2>
 <h3 id="white_check_mark-boxes-backed-views-iv-afv-legend-defaults">:white_check_mark: Boxes-backed views (iv + afv) &amp; legend defaults<a class="headerlink" href="#white_check_mark-boxes-backed-views-iv-afv-legend-defaults" title="Permanent link">&para;</a></h3>
