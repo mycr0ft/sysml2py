@@ -804,10 +804,14 @@ are complete.  Follow-up work is organized under the
     dispatch) were silently dropped; new <code>Reference.load_from_grammar</code>
     (+ <code>usage_dump</code>) preserves name/typing/redefinition, byte-identical
     round-trips; <code>Reference.__init__</code> now initializes base-Usage state.</li>
-<li>[ ] <strong>Batch 2 — sim</strong>: executing assignment effects via <code>set_value</code>
-    (the <code>x := 5</code> text is available — parse and apply),
-    history/deep-history pseudostates; parallel regions (raise, by
-    design, for now).</li>
+<li>[x] <strong>Batch 2 — sim (v0.81.0)</strong>: executing assignment effects via
+    <code>set_value</code> (<code>do x := &lt;expr&gt;</code> evaluated + applied, recorded on
+    <code>StepRecord.assignments</code>; failures logged, never fatal);
+    history/deep-history pseudostates (<code>HistoryUsage</code> typing or
+    <code>h;</code>/<code>history;</code> name convention; shallow default,
+    <code>deep_history=True</code> option + <code>sysmlpy sim --deep-history</code>; region
+    default entry as the no-history fallback).  Parallel regions
+    still raise (by design, for now).</li>
 <li>[ ] <strong>Batch 3 — diff batch 2</strong>: rename detection (heuristic match on
     kind+signature), grammar-level fields (values, multiplicities,
     directions, doc strings), state-machine diff via sim's

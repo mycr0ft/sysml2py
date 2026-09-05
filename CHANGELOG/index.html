@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0810-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.81.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0800-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3152,6 +3163,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0810-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.81.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0800-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5778,6 +5800,30 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0810-2026-09-05">v0.81.0 (2026-09-05)<a class="headerlink" href="#v0810-2026-09-05" title="Permanent link">&para;</a></h2>
+<p><strong>Goal 11 Batch 2 — sim: assignment effects + history pseudostates.</strong></p>
+<ol>
+<li><em>Assignment effects execute</em>: <code>do x := 5</code> (general
+   <code>do &lt;name&gt; := &lt;expr&gt;</code>) is evaluated via <code>evaluate_expression</code> and
+   applied through <code>StateSimulator.set_value</code>, so guards evaluated
+   later see the new value.  Applied pairs surface on
+   <code>StepRecord.assignments</code> (and the log repr).  Failed evaluations
+   (unknown name, type errors) never abort the simulation — the
+   effect is logged with a <code>(not evaluated: ...)</code> annotation.</li>
+<li><em>History pseudostates</em>: <code>state h : HistoryUsage;</code> /
+   <code>h : HistoryUsage;</code> (typed) and bare <code>h;</code>/<code>history;</code> (name
+   convention, untyped references only) are recognized as history
+   markers — <code>boxes_view._collect_state_machine</code> reports them in a
+   new per-region <code>pseudostates</code> list, they are excluded from the
+   state list, and transitions targeting them re-enter the region's
+   last active substate (falling back to the region's default entry
+   when nothing was recorded yet).  Deep history (restore the deepest
+   visited state) via <code>StateSimulator(..., deep_history=True)</code> and
+   <code>sysmlpy sim --deep-history</code> — the language has no deep-history
+   form, so it is a simulator option.</li>
+</ol>
+<p>Sim tests 38 → 52 (<code>tests/sim_test.py</code>).  Fast suite 1394,
+conformance 123/123.</p>
 <h2 id="v0800-2026-09-05">v0.80.0 (2026-09-05)<a class="headerlink" href="#v0800-2026-09-05" title="Permanent link">&para;</a></h2>
 <p><strong>Constraint textual bodies</strong> — natural-language constraint capture.</p>
 <ol>
