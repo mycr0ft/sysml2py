@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0770-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.77.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0760-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3097,6 +3108,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0770-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.77.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0760-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5668,6 +5690,46 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0770-2026-09-05">v0.77.0 (2026-09-05)<a class="headerlink" href="#v0770-2026-09-05" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Goal 10 batch 3: CayleyStore hardening + query parity (Goal 10
+  complete)</strong> — verified against a live Cayley v0.7 server
+  (<code>podman run -d --name cayley -p 64210:64210
+  docker.io/cayleygraph/cayley</code>).  Fixes, all found by probing the
+  real server:</li>
+<li><code>clear()</code> called a nonexistent <code>_query_label</code> (AttributeError);
+    now label-scoped via the <code>_store_label</code> marker</li>
+<li><code>_delete_quads()</code> posted to <code>/api/v1/write</code> (which <em>adds</em> quads —
+    a silent no-op for existing ones) instead of <code>/api/v1/delete</code>;
+    nothing was ever actually deleted</li>
+<li><code>delete()</code> built its quad list but never sent it; now performs
+    true deletion including incoming relationship edges (no ghost
+    links in <code>parents()</code>/<code>children()</code>)</li>
+<li><code>get()</code> leaked <code>_is_element</code>/<code>_store_label</code> markers and folded
+    relationship edges into the data dict; now returns exactly the
+    <code>put()</code> data (parity with InMemory/NetworkX)</li>
+<li><code>put()</code> overwrite semantics: replaces property quads, keeps
+    relationship edges (was non-deterministic on re-put)</li>
+<li><code>__len__</code> counted the whole database (<code>g.V().count()</code>) instead
+    of this store's elements</li>
+<li><code>query()</code> glob parity: <code>name="p*"</code> etc. now use the client-side
+    <code>fnmatch</code> path (Cayley <code>has()</code> matches literally); verified
+    identical results to NetworkXStore across 9 filter shapes</li>
+<li><code>query()</code> with no filters returned raw dicts instead of IDs</li>
+<li><code>subgraph()</code> created bogus self-edges and wiped properties with
+    a second empty <code>put()</code></li>
+<li><strong>Label namespacing</strong>: Cayley gizmo queries are quad-label-blind —
+  two stores sharing a server with the same subject IDs see each
+  other's quads.  Stored subjects now carry the store label
+  (<code>&lt;label&gt;:&lt;element_id&gt;</code>); the public API keeps unprefixed IDs.
+  Discovered when the previously-unrunnable
+  <code>tests/cayley_store_test.py</code> (22 tests, requires a live server)
+  collided with the new <code>TestCayleyStore</code> class.</li>
+<li><code>requests</code> added as the optional <code>cayley</code> extra
+  (<code>poetry install --extras cayley</code>).</li>
+<li>21 new tests (<code>tests/store_test.py::TestCayleyStore</code>, skipped when
+  no server at localhost:64210).</li>
+</ul>
 <h2 id="v0760-2026-09-05">v0.76.0 (2026-09-05)<a class="headerlink" href="#v0760-2026-09-05" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Goal 10 batch 2: connector-end type compatibility</strong> —

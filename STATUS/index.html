@@ -1549,7 +1549,10 @@
   connector-end type compatibility (<code>CONNECTOR_END_TYPE_MISMATCH</code>,
   31 rule codes) and lexer-based import extraction for dependency
   scanning (bare imports fixed, comment/string false positives
-  gone).</li>
+  gone).  v0.77.0 closes Goal 10 with CayleyStore hardening +
+  query parity, verified against a live podman Cayley v0.7 server
+  (delete/clear/get/put/len/query fixes, label-namespaced
+  subjects, NetworkX-identical glob query results).</li>
 <li><strong>Relationship legends opt-in</strong> — <code>include_legend=False</code> by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome <code>bw</code> remains the default style
