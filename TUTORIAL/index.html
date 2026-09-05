@@ -704,6 +704,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#semantic-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semantic Analysis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#model-diff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Diff
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-line-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command-Line Tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#partial-parse-recovery-v0380" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -719,6 +752,28 @@
     <span class="md-ellipsis">
       
         Loading Functions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-backends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage Backends
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-go-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to Go Next
       
     </span>
   </a>
@@ -1287,6 +1342,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#semantic-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semantic Analysis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#model-diff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Diff
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-line-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command-Line Tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#partial-parse-recovery-v0380" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1302,6 +1390,28 @@
     <span class="md-ellipsis">
       
         Loading Functions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-backends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage Backends
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-go-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to Go Next
       
     </span>
   </a>
@@ -1363,16 +1473,19 @@
 <a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">a</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="mi">100</span> <span class="o">*</span> <span class="n">ureg</span><span class="o">.</span><span class="n">kilogram</span><span class="p">)</span>
 <a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="n">p</span><span class="o">.</span><span class="n">add_child</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
 <a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="nb">print</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">dump</span><span class="p">())</span>
-<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="c1"># → part &lt;'3.1'&gt; Stage_1 { attribute mass = 100 [kilogram]; }</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="c1"># → part &lt;'3.1'&gt; Stage_1 { attribute mass= 100[kilogram]; }</span>
 </code></pre></div>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
-<p><code>sysmlpy</code> has three layers:</p>
+<p><code>sysmlpy</code> has four layers:</p>
 <ol>
 <li><strong>Public API</strong> (<code>usage.py</code>) — Python classes you use directly: <code>Part</code>, <code>Item</code>, <code>Action</code>, <code>State</code>, etc.</li>
-<li><strong>Grammar Layer</strong> (<code>grammar/classes.py</code>) — ~319 internal classes that mirror the ANTLR parse tree. Used for round-trip parsing.</li>
-<li><strong>ANTLR Parser</strong> (<code>antlr/</code>, <code>antlr_visitor.py</code>) — Parses SysML v2 text into an internal dict, then into grammar objects.</li>
+<li><strong>Grammar Layer</strong> (<code>grammar/classes.py</code>) — ~360 internal classes that mirror the ANTLR parse tree. Used for round-trip parsing.</li>
+<li><strong>ANTLR Parser</strong> (<code>antlr/</code>, <code>antlr_visitor.py</code>) — Parses SysML v2 text into an internal dict, then into grammar objects. Two-stage SLL→LL prediction keeps large models fast (identical trees, errors, and diagnostics).</li>
+<li><strong>Analysis layer</strong> (<code>semantic.py</code>, <code>store.py</code>, <code>plantuml.py</code>, <code>diff.py</code>) — semantic analysis, graph stores, view rendering, and model diffing.</li>
 </ol>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>SysML text → ANTLR Lexer/Parser → Visitor → dict → Grammar Classes → Public API Classes
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>                                                                        ↓
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>                                                       analyze() · stores · views · diff
 </code></pre></div>
 <h2 id="sysml-v2-to-python-mapping">SysML v2 to Python Mapping<a class="headerlink" href="#sysml-v2-to-python-mapping" title="Permanent link">&para;</a></h2>
 <h3 id="base-classes">Base Classes<a class="headerlink" href="#base-classes" title="Permanent link">&para;</a></h3>
@@ -1904,7 +2017,7 @@ dump, and navigation behavior is preserved.</p>
 <a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="s2">            do run;</span>
 <a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="s2">            exit stop;</span>
 <a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="s2">        }</span>
-<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="s2">        transition off to on if key_turned;</span>
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="s2">        transition ignite first off accept KeyTurn then on;</span>
 <a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="s2">    }</span>
 <a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="s2">}</span>
 <a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a><span class="s2">"""</span><span class="p">)</span>
@@ -1924,7 +2037,7 @@ dump, and navigation behavior is preserved.</p>
 <a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="n">a</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="mi">1000</span> <span class="o">*</span> <span class="n">ureg</span><span class="o">.</span><span class="n">newton</span><span class="p">)</span>
 <a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">get_value</span><span class="p">())</span>  <span class="c1"># 1000 newton</span>
 <a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="n">a</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span> <span class="o">+</span> <span class="mi">199</span> <span class="o">*</span> <span class="n">ureg</span><span class="o">.</span><span class="n">newton</span><span class="p">)</span>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">dump</span><span class="p">())</span>  <span class="c1"># attribute thrust = 1199.0 [newton];</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">dump</span><span class="p">())</span>  <span class="c1"># attribute thrust= 1199[newton];</span>
 </code></pre></div>
 <h2 id="model-navigation-v0302">Model Navigation (v0.30.2+)<a class="headerlink" href="#model-navigation-v0302" title="Permanent link">&para;</a></h2>
 <p>These methods are available on <code>Model</code>, <code>Package</code>, and every usage node for navigating and analyzing models.</p>
@@ -1948,31 +2061,36 @@ dump, and navigation behavior is preserved.</p>
 <a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="c1"># Find by type string using sysml_type=</span>
 <a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="n">all_parts</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">sysml_type</span><span class="o">=</span><span class="s2">"part"</span><span class="p">)</span>
 <a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">all_parts</span><span class="p">)</span><span class="si">}</span><span class="s2"> parts: </span><span class="si">{</span><span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">all_parts</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="c1"># → Found 4 parts: ['engine1', 'chassis', 'wheel1', 'wheel2']</span>
-<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>
-<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a><span class="c1"># Find by class</span>
-<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a><span class="n">all_parts</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">sysml_type</span><span class="o">=</span><span class="n">Part</span><span class="p">)</span>
-<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a>
-<a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a><span class="c1"># Find by name (single or ambiguous)</span>
-<a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_one</span><span class="p">(</span><span class="s2">"engine1"</span><span class="p">)</span>  <span class="c1"># returns element or None</span>
-<a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a><span class="k">assert</span> <span class="n">engine</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-<a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a>
-<a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a><span class="c1"># find_one() raises LookupError on multiple matches</span>
-<a id="__codelineno-12-29" name="__codelineno-12-29" href="#__codelineno-12-29"></a><span class="c1"># model.find_one("wheel")  → LookupError: 2 matches</span>
-<a id="__codelineno-12-30" name="__codelineno-12-30" href="#__codelineno-12-30"></a>
-<a id="__codelineno-12-31" name="__codelineno-12-31" href="#__codelineno-12-31"></a><span class="c1"># Shorthand for all parts</span>
-<a id="__codelineno-12-32" name="__codelineno-12-32" href="#__codelineno-12-32"></a><span class="n">all_parts</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="s2">"part"</span><span class="p">)</span>
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="c1"># → Found 5 parts: ['Engine', 'engine1', 'chassis', 'wheel1', 'wheel2']</span>
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="c1">#   (find() is recursive and includes definitions)</span>
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a><span class="c1"># Find by class</span>
+<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a><span class="n">all_parts</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">sysml_type</span><span class="o">=</span><span class="n">Part</span><span class="p">)</span>
+<a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a>
+<a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a><span class="c1"># Find by name (single or ambiguous)</span>
+<a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_one</span><span class="p">(</span><span class="s2">"engine1"</span><span class="p">)</span>  <span class="c1"># returns element or None</span>
+<a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a><span class="k">assert</span> <span class="n">engine</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+<a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a>
+<a id="__codelineno-12-29" name="__codelineno-12-29" href="#__codelineno-12-29"></a><span class="c1"># find_one() raises LookupError on multiple matches</span>
+<a id="__codelineno-12-30" name="__codelineno-12-30" href="#__codelineno-12-30"></a><span class="c1"># model.find_one("wheel")  → LookupError: 2 matches</span>
+<a id="__codelineno-12-31" name="__codelineno-12-31" href="#__codelineno-12-31"></a>
+<a id="__codelineno-12-32" name="__codelineno-12-32" href="#__codelineno-12-32"></a><span class="c1"># Shorthand for all parts</span>
+<a id="__codelineno-12-33" name="__codelineno-12-33" href="#__codelineno-12-33"></a><span class="n">all_parts</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="s2">"part"</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="count">count<a class="headerlink" href="#count" title="Permanent link">&para;</a></h3>
-<p>Count elements by type across the full tree:</p>
+<p>Count elements by type across packages (non-recursive — direct
+package children):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Count specific type</span>
 <a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="n">part_count</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">'part'</span><span class="p">)</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Parts: </span><span class="si">{</span><span class="n">part_count</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>  <span class="c1"># → Parts: 4</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Parts: </span><span class="si">{</span><span class="n">part_count</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>  <span class="c1"># → Parts: 3 (Engine, engine1, chassis)</span>
 <a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
 <a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="c1"># Count all types</span>
 <a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="n">counts</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
 <a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">counts</span><span class="p">)</span>
-<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="c1"># → {'part': 4, 'attribute': 1}</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="c1"># → {'part': 3}</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="c1"># For a full recursive count, use find() with sysml_type=</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">sysml_type</span><span class="o">=</span><span class="s2">"part"</span><span class="p">))</span>  <span class="c1"># → 5</span>
 </code></pre></div>
 <h3 id="traverse">traverse<a class="headerlink" href="#traverse" title="Permanent link">&para;</a></h3>
 <p>Walk the element tree with a callback function:</p>
@@ -2017,25 +2135,26 @@ dump, and navigation behavior is preserved.</p>
 <a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
 <a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="c1"># Graph statistics</span>
 <a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">stats</span><span class="p">())</span>
-<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="c1"># → {'nodes': 7, 'edges': 6, 'density': 0.286, ...}</span>
-<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>
-<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="c1"># Find connected components</span>
-<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="n">components</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">connected_components</span><span class="p">()</span>
-<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Connected components: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">components</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>
-<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="c1"># Find cycles (useful for detecting circular type references)</span>
-<a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a><span class="n">cycles</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">cycles</span><span class="p">()</span>
-<a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cycles: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">cycles</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a>
-<a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a><span class="c1"># Node centrality (which elements have the most connections)</span>
-<a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a><span class="n">centrality</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">centrality</span><span class="p">()</span>
-<a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a><span class="n">top</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">centrality</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)[:</span><span class="mi">3</span><span class="p">]</span>
-<a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a><span class="k">for</span> <span class="n">eid</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">top</span><span class="p">:</span>
-<a id="__codelineno-16-20" name="__codelineno-16-20" href="#__codelineno-16-20"></a>    <span class="n">data</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">eid</span><span class="p">)</span>
-<a id="__codelineno-16-21" name="__codelineno-16-21" href="#__codelineno-16-21"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">'name'</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">score</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<a id="__codelineno-16-22" name="__codelineno-16-22" href="#__codelineno-16-22"></a>
-<a id="__codelineno-16-23" name="__codelineno-16-23" href="#__codelineno-16-23"></a><span class="c1"># Export to GraphML for visualization in Gephi or Cytoscape</span>
-<a id="__codelineno-16-24" name="__codelineno-16-24" href="#__codelineno-16-24"></a><span class="n">store</span><span class="o">.</span><span class="n">export_graphml</span><span class="p">(</span><span class="s2">"model.graphml"</span><span class="p">)</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="c1"># → {'nodes': 7, 'edges': 6, 'density': 0.143,</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="c1">#    'is_connected': True, 'avg_degree': 1.71}</span>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>
+<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="c1"># Find connected components</span>
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="n">components</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">connected_components</span><span class="p">()</span>
+<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Connected components: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">components</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>
+<a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a><span class="c1"># Find cycles (useful for detecting circular type references)</span>
+<a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a><span class="n">cycles</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">cycles</span><span class="p">()</span>
+<a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cycles: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">cycles</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a>
+<a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a><span class="c1"># Node centrality (which elements have the most connections)</span>
+<a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a><span class="n">centrality</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">centrality</span><span class="p">()</span>
+<a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a><span class="n">top</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">centrality</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)[:</span><span class="mi">3</span><span class="p">]</span>
+<a id="__codelineno-16-20" name="__codelineno-16-20" href="#__codelineno-16-20"></a><span class="k">for</span> <span class="n">eid</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">top</span><span class="p">:</span>
+<a id="__codelineno-16-21" name="__codelineno-16-21" href="#__codelineno-16-21"></a>    <span class="n">data</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">eid</span><span class="p">)</span>
+<a id="__codelineno-16-22" name="__codelineno-16-22" href="#__codelineno-16-22"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">'name'</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">score</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-16-23" name="__codelineno-16-23" href="#__codelineno-16-23"></a>
+<a id="__codelineno-16-24" name="__codelineno-16-24" href="#__codelineno-16-24"></a><span class="c1"># Export to GraphML for visualization in Gephi or Cytoscape</span>
+<a id="__codelineno-16-25" name="__codelineno-16-25" href="#__codelineno-16-25"></a><span class="n">store</span><span class="o">.</span><span class="n">export_graphml</span><span class="p">(</span><span class="s2">"model.graphml"</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="path_between">path_between<a class="headerlink" href="#path_between" title="Permanent link">&para;</a></h3>
 <p>Find the path between two elements by name:</p>
@@ -2053,33 +2172,111 @@ dump, and navigation behavior is preserved.</p>
 <a id="__codelineno-17-12" name="__codelineno-17-12" href="#__codelineno-17-12"></a><span class="n">path</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">path_between</span><span class="p">(</span><span class="s1">'engine1'</span><span class="p">,</span> <span class="s1">'nonexistent'</span><span class="p">)</span>
 <a id="__codelineno-17-13" name="__codelineno-17-13" href="#__codelineno-17-13"></a><span class="nb">print</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>  <span class="c1"># → None</span>
 </code></pre></div>
+<h2 id="semantic-analysis">Semantic Analysis<a class="headerlink" href="#semantic-analysis" title="Permanent link">&para;</a></h2>
+<p>Parsing only checks syntax. <code>analyze()</code> runs the full semantic
+engine — 31 rule codes covering symbol resolution, imports, OCL
+well-formedness, expression typing, and unit dimensions:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">loads</span><span class="p">,</span> <span class="n">analyze</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="n">model</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="s2">"""</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="s2">    package Types {</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="s2">        part def Engine;</span>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="s2">    }</span>
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="s2">    package Vehicle {</span>
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="s2">        import Types::*;</span>
+<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="s2">        part myCar : Engine;    # resolved via import</span>
+<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="s2">        part myWheel : Wheel;   # undefined!</span>
+<a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a><span class="s2">    }</span>
+<a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a><span class="s2">"""</span><span class="p">)</span>
+<a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a>
+<a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a><span class="n">result</span> <span class="o">=</span> <span class="n">analyze</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+<a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a>
+<a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a><span class="k">for</span> <span class="n">issue</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+<a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">issue</span><span class="o">.</span><span class="n">severity</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">issue</span><span class="o">.</span><span class="n">code</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">issue</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a><span class="c1"># → [error] UNDEFINED_SYMBOL: Undefined symbol 'Wheel' referenced in Part 'myWheel'</span>
+<a id="__codelineno-18-19" name="__codelineno-18-19" href="#__codelineno-18-19"></a>
+<a id="__codelineno-18-20" name="__codelineno-18-20" href="#__codelineno-18-20"></a><span class="n">result</span><span class="o">.</span><span class="n">errors</span>          <span class="c1"># errors only</span>
+<a id="__codelineno-18-21" name="__codelineno-18-21" href="#__codelineno-18-21"></a><span class="n">result</span><span class="o">.</span><span class="n">warnings</span>        <span class="c1"># warnings only</span>
+<a id="__codelineno-18-22" name="__codelineno-18-22" href="#__codelineno-18-22"></a><span class="nb">bool</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>           <span class="c1"># True when no errors (warnings are OK)</span>
+<a id="__codelineno-18-23" name="__codelineno-18-23" href="#__codelineno-18-23"></a><span class="n">result</span><span class="o">.</span><span class="n">raise_on_errors</span><span class="p">()</span>   <span class="c1"># ValueError if any errors exist</span>
+<a id="__codelineno-18-24" name="__codelineno-18-24" href="#__codelineno-18-24"></a><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>            <span class="c1"># total issue count (AnalysisResult is a list)</span>
+</code></pre></div>
+<p>Highlights of what the analyzer checks:</p>
+<ul>
+<li><strong>Symbol resolution</strong> — qualified names (<code>P::A</code>), imports
+  (<code>import Types::*</code>, membership, <code>::**</code> recursion, visibility),
+  inheritance chains</li>
+<li><strong>Expression validation</strong> — operand types (<code>"a" + 5</code> is an error),
+  unit compatibility (<code>[m] + [kg]</code>), and <code>*</code>/<code>/</code> dimension
+  <em>derivation</em> (<code>[N]</code> inferred from <code>[kg] * [m/s^2]</code>)</li>
+<li><strong>OCL well-formedness</strong> — duplicate names, cyclic specialization,
+  subsetting/redefinition compatibility, part/port typing, feature
+  chaining, multiplicity bounds</li>
+<li><strong>Structure checks</strong> — connector ends (unresolved chains, direction
+  wiring, port-definition compatibility), state machines, requirement
+  subjects, traceability and verification coverage</li>
+</ul>
+<p>The complete rule-code catalogue lives in <a href="../STATUS/">STATUS.md</a>.</p>
+<h2 id="model-diff">Model Diff<a class="headerlink" href="#model-diff" title="Permanent link">&para;</a></h2>
+<p>Compare two models semantically — additions, removals, and changed
+signatures (typing, requirement subject, documentation):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">diff_models</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="n">old</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s2">"v1.sysml"</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="n">new</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s2">"v2.sysml"</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="n">d</span> <span class="o">=</span> <span class="n">diff_models</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">)</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="n">d</span><span class="o">.</span><span class="n">is_empty</span><span class="p">()</span>           <span class="c1"># False when the models differ</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="n">d</span><span class="o">.</span><span class="n">added</span><span class="p">,</span> <span class="n">d</span><span class="o">.</span><span class="n">removed</span><span class="p">,</span> <span class="n">d</span><span class="o">.</span><span class="n">changed</span>
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">as_text</span><span class="p">())</span>     <span class="c1"># +/-/~ unified text view</span>
+<a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="nb">print</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">as_markdown</span><span class="p">())</span> <span class="c1"># for release notes / PRs</span>
+<a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="c1"># JSON output for tooling: sysmlpy diff old.sysml new.sysml --format json</span>
+</code></pre></div>
+<p>Identity is <code>(kind, qualified name)</code> — repurposing a name across
+roles reports removed + added rather than a silent change. The same
+engine backs the CLI: <code>sysmlpy diff old.sysml new.sysml</code>.</p>
+<h2 id="command-line-tools">Command-Line Tools<a class="headerlink" href="#command-line-tools" title="Permanent link">&para;</a></h2>
+<p>Everything above is scriptable from the shell with CI-friendly exit
+codes (<code>0</code> clean, <code>1</code> findings/error, <code>2</code> load failure):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>sysmlpy<span class="w"> </span>analyze<span class="w"> </span>model.sysml<span class="w">        </span><span class="c1"># semantic gate</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>sysmlpy<span class="w"> </span>diff<span class="w"> </span>old.sysml<span class="w"> </span>new.sysml<span class="w">   </span><span class="c1"># semantic diff</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>sysmlpy<span class="w"> </span>view<span class="w"> </span>model.sysml<span class="w">           </span><span class="c1"># PlantUML / Markdown / HTML views</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>sysmlpy<span class="w"> </span>format<span class="w"> </span>model.sysml<span class="w">         </span><span class="c1"># canonicalize</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>sysmlpy<span class="w"> </span>trace<span class="w"> </span>model.sysml<span class="w">          </span><span class="c1"># requirement traceability</span>
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>sysmlpy<span class="w"> </span><span class="nb">export</span><span class="w"> </span>model.sysml<span class="w">         </span><span class="c1"># JSON interchange</span>
+<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>sysmlpy<span class="w"> </span><span class="nb">eval</span><span class="w"> </span>model.sysml<span class="w">           </span><span class="c1"># evaluate expressions/values</span>
+<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>sysmlpy<span class="w"> </span>sim<span class="w"> </span>model.sysml<span class="w">            </span><span class="c1"># simulate a state machine</span>
+<a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>sysmlpy<span class="w"> </span>xlsx<span class="w"> </span>model.sysml<span class="w">           </span><span class="c1"># Excel workbook of tabular views</span>
+</code></pre></div>
+<p>See the <a href="https://github.com/mycr0ft/sysmlpy#command-line-tools">README CLI table</a>
+for all flags, and <a href="docs/sim.md">sim.md</a> for simulation specifics.</p>
 <h2 id="partial-parse-recovery-v0380">Partial Parse Recovery (v0.38.0+)<a class="headerlink" href="#partial-parse-recovery-v0380" title="Permanent link">&para;</a></h2>
 <p>By default <code>loads</code> / <code>load</code> raise <code>SysMLSyntaxError</code> on malformed input.
 When you want to keep whatever <em>did</em> parse — e.g. linting a file the spec
 rejects, or triaging a broken model — use the <code>_partial</code> variants:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">loads_partial</span><span class="p">,</span> <span class="n">load_partial</span><span class="p">,</span> <span class="n">PartialParseError</span>
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>
-<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="c1"># Canonical example: a visibility-less `import ScalarValues;`</span>
-<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="n">text</span> <span class="o">=</span> <span class="s2">"""package ImportVisibility {</span>
-<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="s2">    public import ScalarValues;</span>
-<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="s2">    private import ScalarValues;</span>
-<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="s2">    protected import ScalarValues;</span>
-<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="s2">    import ScalarValues;              # &lt;- rejected by the grammar</span>
-<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="s2">}"""</span>
-<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>
-<a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a><span class="k">try</span><span class="p">:</span>
-<a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a>    <span class="n">model</span> <span class="o">=</span> <span class="n">load_partial</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-<a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="k">except</span> <span class="n">PartialParseError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-<a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>    <span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">errors</span><span class="p">))</span>       <span class="c1"># → 1  ("Syntax error at 5:4: extraneous input 'import' ...")</span>
-<a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">partial</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>  <span class="c1"># → True</span>
-<a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a>
-<a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy.formatting</span><span class="w"> </span><span class="kn">import</span> <span class="n">classtree</span>
-<a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">classtree</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">partial</span><span class="p">)</span><span class="o">.</span><span class="n">dump</span><span class="p">())</span>
-<a id="__codelineno-18-19" name="__codelineno-18-19" href="#__codelineno-18-19"></a>    <span class="c1"># package ImportVisibility {</span>
-<a id="__codelineno-18-20" name="__codelineno-18-20" href="#__codelineno-18-20"></a>    <span class="c1">#    public import ScalarValues;</span>
-<a id="__codelineno-18-21" name="__codelineno-18-21" href="#__codelineno-18-21"></a>    <span class="c1">#    private import ScalarValues;</span>
-<a id="__codelineno-18-22" name="__codelineno-18-22" href="#__codelineno-18-22"></a>    <span class="c1">#    protected import ScalarValues;</span>
-<a id="__codelineno-18-23" name="__codelineno-18-23" href="#__codelineno-18-23"></a>    <span class="c1"># }</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">loads_partial</span><span class="p">,</span> <span class="n">load_partial</span><span class="p">,</span> <span class="n">PartialParseError</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="c1"># Canonical example: a visibility-less `import ScalarValues;`</span>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="n">text</span> <span class="o">=</span> <span class="s2">"""package ImportVisibility {</span>
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="s2">    public import ScalarValues;</span>
+<a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="s2">    private import ScalarValues;</span>
+<a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="s2">    protected import ScalarValues;</span>
+<a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="s2">    import ScalarValues;              # &lt;- rejected by the grammar</span>
+<a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="s2">}"""</span>
+<a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>
+<a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a>    <span class="n">model</span> <span class="o">=</span> <span class="n">load_partial</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+<a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a><span class="k">except</span> <span class="n">PartialParseError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+<a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a>    <span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">errors</span><span class="p">))</span>       <span class="c1"># → 1  ("Syntax error at 5:4: extraneous input 'import' ...")</span>
+<a id="__codelineno-21-15" name="__codelineno-21-15" href="#__codelineno-21-15"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">partial</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>  <span class="c1"># → True</span>
+<a id="__codelineno-21-16" name="__codelineno-21-16" href="#__codelineno-21-16"></a>
+<a id="__codelineno-21-17" name="__codelineno-21-17" href="#__codelineno-21-17"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy.formatting</span><span class="w"> </span><span class="kn">import</span> <span class="n">classtree</span>
+<a id="__codelineno-21-18" name="__codelineno-21-18" href="#__codelineno-21-18"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">classtree</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">partial</span><span class="p">)</span><span class="o">.</span><span class="n">dump</span><span class="p">())</span>
+<a id="__codelineno-21-19" name="__codelineno-21-19" href="#__codelineno-21-19"></a>    <span class="c1"># package ImportVisibility {</span>
+<a id="__codelineno-21-20" name="__codelineno-21-20" href="#__codelineno-21-20"></a>    <span class="c1">#    public import ScalarValues;</span>
+<a id="__codelineno-21-21" name="__codelineno-21-21" href="#__codelineno-21-21"></a>    <span class="c1">#    private import ScalarValues;</span>
+<a id="__codelineno-21-22" name="__codelineno-21-22" href="#__codelineno-21-22"></a>    <span class="c1">#    protected import ScalarValues;</span>
+<a id="__codelineno-21-23" name="__codelineno-21-23" href="#__codelineno-21-23"></a>    <span class="c1"># }</span>
 </code></pre></div>
 <ul>
 <li><code>loads_partial(text)</code> returns the visitor <strong>dict</strong> (raising
@@ -2130,10 +2327,65 @@ rejects, or triaging a broken model — use the <code>_partial</code> variants:<
 </tr>
 </tbody>
 </table>
+<h2 id="storage-backends">Storage Backends<a class="headerlink" href="#storage-backends" title="Permanent link">&para;</a></h2>
+<p>Models can be exported to graph stores for analysis and persistence —
+memory, NetworkX, Kùzu (embedded, Cypher), or Cayley (HTTP server):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="n">store</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">to_graph</span><span class="p">()</span>          <span class="c1"># NetworkX by default</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">stats</span><span class="p">())</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="n">store</span><span class="o">.</span><span class="n">export_graphml</span><span class="p">(</span><span class="s2">"model.graphml"</span><span class="p">)</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_store</span>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="n">kuzu</span> <span class="o">=</span> <span class="n">create_store</span><span class="p">(</span><span class="s2">"kuzu"</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="s2">"model.db"</span><span class="p">)</span>     <span class="c1"># persists to disk</span>
+</code></pre></div>
+<p>See the README's <em>Storage Backends</em> section for backend-by-backend
+examples.</p>
+<h2 id="where-to-go-next">Where to Go Next<a class="headerlink" href="#where-to-go-next" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>Document</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Full feature walkthrough</td>
+<td><a href="docs/quickstart.md">Quick Start</a></td>
+</tr>
+<tr>
+<td>Architecture &amp; capabilities</td>
+<td><a href="docs/PROJECT_SUMMARY.md">Project Summary</a></td>
+</tr>
+<tr>
+<td>Analyzer rule codes &amp; conformance</td>
+<td><a href="../STATUS/">STATUS.md</a></td>
+</tr>
+<tr>
+<td>State-machine simulation</td>
+<td><a href="docs/sim.md">docs/sim.md</a></td>
+</tr>
+<tr>
+<td>Guard conditions (<code>if</code> vs <code>guard</code>)</td>
+<td><a href="docs/GUARDS.md">docs/GUARDS.md</a></td>
+</tr>
+<tr>
+<td>Boxes visualizer (Java-free rendering)</td>
+<td><a href="docs/boxes_view.md">docs/boxes_view.md</a></td>
+</tr>
+<tr>
+<td>Language server setup</td>
+<td><a href="docs/LSP.md">docs/LSP.md</a>, <a href="docs/LSP_EDITORS.md">docs/LSP_EDITORS.md</a></td>
+</tr>
+<tr>
+<td>Release history</td>
+<td><a href="../CHANGELOG/">CHANGELOG.md</a></td>
+</tr>
+</tbody>
+</table>
 <h2 id="conformance">Conformance<a class="headerlink" href="#conformance" title="Permanent link">&para;</a></h2>
 <p><strong>100% of 123 OMG XPect conformance tests pass</strong> (123/123).</p>
 <p>Run the full suite:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>pytest<span class="w"> </span>-m<span class="w"> </span>conformance
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>pytest<span class="w"> </span>-m<span class="w"> </span>conformance
 </code></pre></div></p>
 
 

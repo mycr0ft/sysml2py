@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0780-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.78.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0770-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3108,6 +3119,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0780-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.78.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0770-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5690,6 +5712,43 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0780-2026-09-05">v0.78.0 (2026-09-05)<a class="headerlink" href="#v0780-2026-09-05" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Documentation consolidation</strong> — README refreshed: new
+  <em>Command-Line Tools</em> section (all 12 subcommands + <code>sysmlpy-lsp</code>,
+  CI exit codes, examples), stale claims removed (the "dimension
+  derivation not yet implemented" note — shipped in v0.75.0 — and a
+  mismatched legacy example), Cayley instructions updated with the
+  tested podman command, OCL table points to the full 31-code
+  catalogue.  <code>docs/index.md</code> rewritten (new highlights + links incl.
+  sim/LSP/GUARDS/archive).  TUTORIAL refreshed with semantic
+  analysis, model diff, CLI, and storage-backend sections, plus a
+  "Where to Go Next" table.  PROJECT_SUMMARY refreshed (v0.60.0 →
+  v0.78.0 state).  New <code>docs/archive/</code> holds retired documents
+  (PySysML2 comparison, completed development plan, reference
+  analyses) with a provenance README.</li>
+<li><strong>Every documented snippet now validated against the code</strong> — the
+  audit found the docs had drifted (or never worked):</li>
+<li><code>classtree(loads(text))</code> — the README/TUTORIAL-documented form —
+    <strong>always raised TypeError</strong> (it only accepted grammar dicts;
+    <code>tests/class_test.py</code> had silently shadowed <code>loads</code> with
+    <code>load_grammar</code>).  The Model form is now supported and returns
+    the model's RootNamespace.</li>
+<li><code>load_partial(text)</code> success path returned a <code>RootNamespace</code>
+    grammar object, violating its own docstring ("typed Model") —
+    now returns a real <code>Model</code> via <code>Model._load_definition</code>.</li>
+<li><code>Reference.dump()</code> dropped the <code>: Type</code> suffix whenever the
+    typed-by element had no children (falsy via
+    <code>Searchable.__len__</code>) — <code>set_type(Item(...))</code> rendered as bare
+    <code>ref driver;</code>.  Now <code>ref driver : Person;</code> as documented.</li>
+<li>Grammar reality documented: bare <code>import X;</code> is invalid (a
+    visibility keyword is required); dump formats corrected
+    (<code>mass= 100[kilogram]</code>, <code>thrust= 1199[newton]</code>); <code>count()</code> is
+    package-level/non-recursive; <code>AnalysisResult</code> has no <code>summary()</code>.</li>
+<li>3 new tests (classtree Model form, Reference typed dump,
+  load_partial Model contract).  Fast suite 1327, conformance
+  123/123.</li>
+</ul>
 <h2 id="v0770-2026-09-05">v0.77.0 (2026-09-05)<a class="headerlink" href="#v0770-2026-09-05" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Goal 10 batch 3: CayleyStore hardening + query parity (Goal 10
