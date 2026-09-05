@@ -844,3 +844,196 @@ class TestDeepChainDirections:
         }
         """)
         assert self._issues(model) == []
+
+
+class TestPortOwnedChainSegments:
+    """Goal 9 batch 6: chains through port typings (a.p1.bus.pb)."""
+
+    def _issues(self, model):
+        return [i for i in analyze(model)
+                if i.code == "CONNECTOR_DIRECTION_MISMATCH"]
+
+    def test_deep_via_port_out_out_warns(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def BusDef {
+                out port pb;
+            }
+            port def Tunnel {
+                part bus : BusDef;
+            }
+            part def A {
+                port p1 : Tunnel;
+            }
+            part def B {
+                out port p2;
+            }
+            part a : A;
+            part b : B;
+            connection c1 connect a.p1.bus.pb to b.p2;
+        }
+        """)
+        issues = self._issues(model)
+        assert len(issues) == 1
+        assert "pb" in issues[0].message
+
+    def test_deep_via_port_out_in_clean(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def BusDef {
+                in port pb;
+            }
+            port def Tunnel {
+                part bus : BusDef;
+            }
+            part def A {
+                port p1 : Tunnel;
+            }
+            part def B {
+                out port p2;
+            }
+            part a : A;
+            part b : B;
+            connection c1 connect a.p1.bus.pb to b.p2;
+        }
+        """)
+        assert self._issues(model) == []
+
+
+class TestUnresolvedConnectorEnd:
+    """Goal 9 batch 6: unresolvable connection-end chains."""
+
+    def _issues(self, model):
+        return [i for i in analyze(model)
+                if i.code == "UNRESOLVED_CONNECTOR_END"]
+
+    def test_unknown_middle_segment(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def A {
+                out port p1;
+            }
+            part def B {
+                in port p2;
+            }
+            part a : A;
+            part b : B;
+            connection c1 connect a.px to b.p2;
+        }
+        """)
+        issues = self._issues(model)
+        assert len(issues) == 1
+        assert issues[0].severity == "error"
+        assert "a.px" in issues[0].message
+
+    def test_known_def_missing_port(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def A {
+                out port p1;
+            }
+            part def B {
+                in port p2;
+            }
+            part a : A;
+            part b : B;
+            connection c1 connect a.p9 to b.p2;
+        }
+        """)
+        assert len(self._issues(model)) == 1
+
+    def test_inherited_port_skipped(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def Base {
+                out port px;
+            }
+            part def A :> Base {
+            }
+            part def B {
+                in port p2;
+            }
+            part a : A;
+            part b : B;
+            connection c1 connect a.px to b.p2;
+        }
+        """)
+        assert self._issues(model) == []
+
+    def test_resolved_ends_clean(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def A {
+                out port p1;
+            }
+            part def B {
+                in port p2;
+            }
+            part a : A;
+            part b : B;
+            connection c1 connect a.p1 to b.p2;
+        }
+        """)
+        assert self._issues(model) == []
+
+
+class TestSatisfySubjectType:
+    """Goal 9 batch 6: subject type vs by-part type compatibility."""
+
+    def _issues(self, model):
+        return [i for i in analyze(model)
+                if i.code == "SATISFY_SUBJECT_TYPE_MISMATCH"]
+
+    def test_unrelated_types_warn(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def Vehicle;
+            part def Rock;
+            requirement top {
+                subject s : Vehicle;
+            }
+            part r : Rock;
+            satisfy top by r;
+        }
+        """)
+        issues = self._issues(model)
+        assert len(issues) == 1
+        assert issues[0].severity == "warning"
+        assert "Rock" in issues[0].message
+
+    def test_subtype_clean(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def Vehicle;
+            part def Car :> Vehicle;
+            requirement top {
+                subject s : Vehicle;
+            }
+            part v : Car;
+            satisfy top by v;
+        }
+        """)
+        assert self._issues(model) == []
+
+    def test_untyped_part_skipped(self):
+        model = sysmlpy_loads("""
+        package M {
+            requirement top {
+                subject s : Vehicle;
+            }
+            part v;
+            satisfy top by v;
+        }
+        """)
+        assert self._issues(model) == []
+
+    def test_no_subject_skipped(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def Rock;
+            requirement top;
+            part r : Rock;
+            satisfy top by r;
+        }
+        """)
+        assert self._issues(model) == []

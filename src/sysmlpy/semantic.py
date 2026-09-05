@@ -3344,11 +3344,67 @@ class SemanticAnalyzer:
                 reference=ref,
             ))
 
+        # superclassifier map for subject-type compatibility: walk
+        # part/item definitions and collect ``:>`` targets
+        supertypes: dict = {}
+        for element, scope_path in self._walk_usages(model):
+            if type(element).__name__ not in ("Part", "Item"):
+                continue
+            if not getattr(element, "is_definition", False):
+                continue
+            grammar = getattr(element, "grammar", None)
+            if grammar is None:
+                continue
+            try:
+                d = grammar.get_definition()
+            except Exception:
+                continue
+            if not isinstance(d, dict):
+                continue
+            defn = d.get("definition") or {}
+            decl = defn.get("declaration") or {}
+            scp = decl.get("subclassificationpart") or {}
+            sups = set()
+            for rel in _as_list_dicts(scp.get("ownedRelationship")):
+                if rel.get("name") != "OwnedSubclassification":
+                    continue
+                sc = rel.get("superclassifier") or {}
+                names = sc.get("names")
+                if isinstance(names, list) and names:
+                    sups.add("::".join(str(n) for n in names))
+            if sups and element.name:
+                supertypes.setdefault(element.name, set()).update(sups)
+
+        def _is_subtype(sub: str, sup: str, seen=None) -> bool:
+            if sub == sup:
+                return True
+            if seen is None:
+                seen = set()
+            if sub in seen:
+                return False
+            seen.add(sub)
+            for st in supertypes.get(sub, ()):
+                if _is_subtype(st, sup, seen):
+                    return True
+            return False
+
+        def subject_issue(req_name, subj_type, part_name, part_type):
+            issues.append(SemanticIssue(
+                severity="warning",
+                code="SATISFY_SUBJECT_TYPE_MISMATCH",
+                message=(
+                    f"satisfy 'by {part_name}' ({part_type}) is not "
+                    f"related to requirement '{req_name}' subject "
+                    f"type '{subj_type}'"),
+                reference=req_name,
+            ))
+
         for element, scope_path in self._walk_usages(model):
             gname = (element.grammar.__class__.__name__
                      if getattr(element, "grammar", None) is not None else "")
             if gname == "SatisfyRequirementUsage":
-                # package-level wrapper; .ssm dump is the by reference
+                # package-level wrapper; .ssm dump is the by reference,
+                # .ors dump the target requirement
                 g = element.grammar
                 ssm = getattr(g, "ssm", None)
                 if ssm is None:
@@ -3358,6 +3414,14 @@ class SemanticAnalyzer:
                     continue
                 if not self._is_resolved(ref, symtab, scope_path, lib_roots):
                     issue(element, ref)
+                ors = getattr(g, "ors", None)
+                target = ors.dump().strip().rstrip(";").strip() \
+                    if ors is not None else None
+                if target:
+                    self._check_subject_type(
+                        element, target, ref, symtab, scope_path,
+                        lib_roots, supertypes, _is_subtype,
+                        subject_issue)
                 continue
             if gname not in ("RequirementDefinition", "RequirementUsage"):
                 continue
@@ -3379,7 +3443,64 @@ class SemanticAnalyzer:
                 if not self._is_resolved(
                         by_ref, symtab, scope_path, lib_roots):
                     issue(element, by_ref)
+                ors = sat.get("ors") or {}
+                rf = ors.get("referencedFeature") or {}
+                names = rf.get("names") if isinstance(rf, dict) else None
+                if names:
+                    target = "::".join(str(n) for n in names)
+                    self._check_subject_type(
+                        element, target, by_ref, symtab, scope_path,
+                        lib_roots, supertypes, _is_subtype,
+                        subject_issue)
         return issues
+
+    def _check_subject_type(
+        self,
+        satisfy_obj: Any,
+        target_ref: str,
+        by_ref: str,
+        symtab: "SymbolTable",
+        scope_path: list[str],
+        lib_roots: list,
+        supertypes: dict,
+        is_subtype,
+        issue_fn,
+    ) -> None:
+        """SATISFY_SUBJECT_TYPE_MISMATCH (warning, conservative).
+
+        ``satisfy <req> by <part>`` binds *part* as the satisfying
+        element of *req*'s subject.  When both the subject's type and
+        the by-part's type are known model definitions and neither is
+        a (transitive) specialization of the other, flag a warning.
+        Anything unresolvable — library types, untyped parts,
+        requirements without a typed subject — is skipped.
+        """
+        target = self._resolve_element(target_ref, symtab, scope_path)
+        if target is None:
+            return
+        subject = getattr(target, "subject", None)
+        if not subject:
+            return
+        subj_type = subject[1]
+        if not subj_type or subj_type not in supertypes and (
+                subj_type not in getattr(symtab, "_definition_features",
+                                         {})):
+            return
+        by_el = self._resolve_element(by_ref, symtab, scope_path)
+        if by_el is None:
+            return
+        part_type = self._get_element_type(by_el)
+        if not part_type:
+            return
+        # both sides must be model-known (skip library typings)
+        if part_type not in supertypes and (
+                part_type not in getattr(symtab, "_definition_features",
+                                         {})):
+            return
+        if is_subtype(part_type, subj_type) or is_subtype(
+                subj_type, part_type):
+            return
+        issue_fn(target_ref, subj_type, by_ref, part_type)
 
     def _check_verify_targets(
         self,
@@ -3457,9 +3578,10 @@ class SemanticAnalyzer:
         except Exception:
             return issues
 
-        scope_ports: dict = {}   # def/usage name -> {port: direction}
+        scope_ports: dict = {}   # def/usage name -> {port: direction|None}
         part_typing: dict = {}   # part usage name -> typed-by name
         member_typing: dict = {}  # (container name, member) -> typed-by
+        supertypes: dict = {}    # def name -> {superclassifier names}
         connections: list = []   # (name, scope_stack, [chain, ...])
 
         def walk2(node, scope_stack):
@@ -3471,11 +3593,39 @@ class SemanticAnalyzer:
                         nm.endswith("Usage") or nm.endswith("Definition")):
                     if nm != "PortUsage":
                         new_stack = scope_stack + [declared]
+                    if nm.endswith("Definition"):
+                        # superclassifiers (``part def A :> B``) ride the
+                        # definition dict's declaration.subclassificationpart
+                        sups = set()
+                        defn = node.get("definition") or {}
+                        decl = defn.get("declaration") or {}
+                        scp = decl.get("subclassificationpart") or {}
+                        for rel in _as_list_dicts(
+                                scp.get("ownedRelationship")):
+                            if rel.get("name") != "OwnedSubclassification":
+                                continue
+                            sc = rel.get("superclassifier") or {}
+                            names = sc.get("names")
+                            if isinstance(names, list) and names:
+                                sups.add("::".join(
+                                    str(n) for n in names))
+                        if sups:
+                            supertypes.setdefault(declared, set()).update(
+                                sups)
                     if nm == "PortUsage":
                         d = _port_direction(node)
-                        if d and scope_stack:
+                        if scope_stack:
+                            # record even undirected ports: existence
+                            # drives end resolution, None direction
+                            # just skips the direction check
                             scope_ports.setdefault(
                                 scope_stack[-1], {})[declared] = d
+                        t = _usage_typed_by(node)
+                        if t:
+                            part_typing[declared] = t
+                            if scope_stack:
+                                member_typing[(scope_stack[-1],
+                                               declared)] = t
                     elif nm == "ConnectionUsage":
                         chains = []
                         part = node.get("part") or {}
@@ -3509,25 +3659,33 @@ class SemanticAnalyzer:
 
         walk2(visit, [])
 
-        def end_direction(chain, scope_stack):
-            if len(chain) == 2:
-                part_name, port_name = chain
-                t = part_typing.get(part_name)
-                if t and port_name in scope_ports.get(t, {}):
-                    return scope_ports[t][port_name]
-                return scope_ports.get(part_name, {}).get(port_name)
+        def end_resolve(chain, scope_stack):
+            """(direction|None, fully_resolved) for an end chain.
+
+            ``fully_resolved`` is False only when a segment provably
+            does not exist in a *known, non-specializing* container —
+            containers typed by library defs, unknown names and
+            subclasses (inherited members) resolve as "present but
+            direction-unknown" to stay conservative.
+            """
+            if not chain:
+                return None, True
             if len(chain) == 1:
                 port_name = chain[0]
                 for scope in reversed(scope_stack):
-                    if port_name in scope_ports.get(scope, {}):
-                        return scope_ports[scope][port_name]
+                    ports = scope_ports.get(scope)
+                    if ports is not None and port_name in ports:
+                        return ports[port_name], True
                     t = part_typing.get(scope)
-                    if t and port_name in scope_ports.get(t, {}):
-                        return scope_ports[t][port_name]
-            # deep chains (>=3 segments: bus.a.p3) — resolve segment by
-            # segment: seg0 via the part's typing, middle segments via
-            # member typing in the resolved container, final port via
-            # the container's port directions.
+                    if t:
+                        ports = scope_ports.get(t)
+                        if ports is not None and port_name in ports:
+                            return ports[port_name], True
+                        if t not in supertypes and t not in scope_ports:
+                            # known library/external type: cannot
+                            # verify members
+                            return None, True
+                return None, False
             first = chain[0]
             cur = part_typing.get(first)
             if cur is None:
@@ -3537,20 +3695,47 @@ class SemanticAnalyzer:
                         cur = t
                         break
             if cur is None:
-                return None
+                return None, False
             for seg in chain[1:-1]:
                 t = member_typing.get((cur, seg))
                 if t is None:
                     # members declared on the seg0 *usage* itself
                     t = member_typing.get((first, seg))
                 if t is None:
-                    return None
+                    return None, cur in supertypes or (
+                            cur not in scope_ports
+                            and cur not in part_typing)
                 cur = t
-            return scope_ports.get(cur, {}).get(chain[-1])
+            ports = scope_ports.get(cur)
+            if ports is not None and chain[-1] in ports:
+                return ports[chain[-1]], True
+            if cur in supertypes:
+                return None, True   # inherited port possible
+            if cur in scope_ports:
+                return None, False  # known container, no such port
+            return None, True       # external/library type: skip
 
         for cname, cstack, chains in connections:
-            d1 = end_direction(chains[0], cstack)
-            d2 = end_direction(chains[1], cstack)
+            d1, r1 = end_resolve(chains[0], cstack)
+            d2, r2 = end_resolve(chains[1], cstack)
+            if not r1:
+                issues.append(SemanticIssue(
+                    severity="error",
+                    code="UNRESOLVED_CONNECTOR_END",
+                    message=(
+                        f"Connection '{cname}' end "
+                        f"'{'.'.join(chains[0])}' does not resolve"),
+                    reference=cname,
+                ))
+            if not r2:
+                issues.append(SemanticIssue(
+                    severity="error",
+                    code="UNRESOLVED_CONNECTOR_END",
+                    message=(
+                        f"Connection '{cname}' end "
+                        f"'{'.'.join(chains[1])}' does not resolve"),
+                    reference=cname,
+                ))
             if not d1 or not d2:
                 continue
             if d1 == "inout" or d2 == "inout":

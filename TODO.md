@@ -102,11 +102,14 @@ are complete.  Follow-up work is organized under the
   - [x] **Batch 5 (v0.72.0)** — nested-satisfy coverage bug fix
     (false REQUIREMENT_UNCOVERED), `UNRESOLVED_SATISFY_PART` (error),
     deep feature-chain ends (>=3 segments) in direction checks.
-  - [ ] **Batch 6 candidates** — abstract-typing warnings (needs spec
-    research first: typing by abstract defs inside abstract
-    definitions is legitimate via redefinition), `satisfy` subject
-    *type* compatibility (subject type vs by-part type needs an
-    inheritance walk), port-owned parts in chains (a.p1.bus).
+  - [x] **Batch 6 (v0.73.0)** — `UNRESOLVED_CONNECTOR_END` (error;
+    conservative resolution with library/subclass skips), chains
+    through port typings (`a.p1.bus.pb`), `SATISFY_SUBJECT_TYPE_MISMATCH`
+    (warning; subject vs by-part inheritance walk).  Abstract-typing
+    warnings **dropped by design**: typing by abstract defs is valid
+    SysML v2 — flagging would be a false positive by construction.
+- [x] **Goal 9 — Validator depth** complete after 6 batches (v0.69.0 –
+  v0.73.0): 29 rule codes total.
 - [ ] **Goal 10 — Technical stubs** (connector-end compatibility, `*`/`/` unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)
 
 Legacy candidate follow-up work:

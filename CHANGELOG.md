@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## v0.73.0 (2026-09-05)
+
+- **Goal 9 batch 6: connector ends + subject types** —
+  - `UNRESOLVED_CONNECTOR_END` (error): a connection-end chain whose
+    segment provably does not resolve in a known, non-specializing
+    container is flagged.  Conservative skips: containers typed by
+    library/external defs, unknown (non-model) types, and subclasses
+    (inherited members could supply the missing feature).
+  - **Chains through port typings** (`connect a.p1.bus.pb to b.p2`):
+    port usages now contribute their typing to the resolution maps,
+    so feature chains crossing port-owned structure resolve.
+  - `SATISFY_SUBJECT_TYPE_MISMATCH` (warning): `satisfy <req> by
+    <part>` where the by-part's type is unrelated (no specialization
+    path either way) to the requirement's typed subject.  Skips
+    untyped parts, absent subjects and library types.
+  - **Abstract-typing warnings dropped by design** — typing a part by
+    an abstract definition is valid SysML v2 (instances come from
+    concrete specializations); flagging it would generate false
+    positives.  The spec research question is settled as "no check".
+- 10 new validator tests (77).
+
 ## v0.72.0 (2026-09-04)
 
 - **Goal 9 batch 5: satisfy parts + nested coverage + deep chains** —
