@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0760-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.76.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0750-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3086,6 +3097,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0760-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.76.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0750-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5646,6 +5668,33 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0760-2026-09-05">v0.76.0 (2026-09-05)<a class="headerlink" href="#v0760-2026-09-05" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Goal 10 batch 2: connector-end type compatibility</strong> —
+  <code>CONNECTOR_END_TYPE_MISMATCH</code> (warning, rule code 31): when both
+  ends of a connection resolve to typings that are <em>local</em> <code>port
+  def</code> names and neither is a (transitive) specialization of the
+  other, the connection is flagged — conjugation only makes ports of
+  the same (or related) port definition compatible.  Chained ends
+  (<code>e.drive to w.hub</code>) resolve typing through member maps; ends
+  typed by library/external port definitions and part-to-part ends
+  are skipped (no local subclass data; direct part connections are
+  idiomatic SysML).  Implemented in the Goal 9 batch 6 connector
+  walk, which already resolves end chains — the old
+  <code>_check_connector_end</code> stub (<code>pass</code>) is superseded.</li>
+<li><strong>Goal 10 batch 2: regex -&gt; parser import extraction</strong> —
+  <code>_extract_imports</code> (dependency scanning for <code>load_files</code> /
+  <code>load_project</code>) now scans the SysML v2 lexer token stream instead
+  of a raw-text regex, fixing three defects: bare <code>import X::Y;</code>
+  (no visibility keyword) was missed entirely; imports inside
+  comments produced false positives; imports inside string literals
+  (<code>doc about "..."</code>) produced false positives.  Scanning tolerates
+  syntax errors (dependency scanning must not require a parseable
+  file).  The remaining regex use in project.py
+  (<code>_defines_package</code>) is a simple file-header check, kept.</li>
+<li>11 new tests (7 connector in <code>tests/validator_test.py</code>, 4
+  extraction in <code>tests/project_test.py</code>).</li>
+</ul>
 <h2 id="v0750-2026-09-05">v0.75.0 (2026-09-05)<a class="headerlink" href="#v0750-2026-09-05" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Goal 10 batch 1: <code>*</code>/<code>/</code> unit-dimension derivation</strong> — the
