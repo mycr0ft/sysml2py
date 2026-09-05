@@ -1,5 +1,42 @@
 # CHANGELOG
 
+## v0.78.0 (2026-09-05)
+
+- **Documentation consolidation** — README refreshed: new
+  *Command-Line Tools* section (all 12 subcommands + `sysmlpy-lsp`,
+  CI exit codes, examples), stale claims removed (the "dimension
+  derivation not yet implemented" note — shipped in v0.75.0 — and a
+  mismatched legacy example), Cayley instructions updated with the
+  tested podman command, OCL table points to the full 31-code
+  catalogue.  `docs/index.md` rewritten (new highlights + links incl.
+  sim/LSP/GUARDS/archive).  TUTORIAL refreshed with semantic
+  analysis, model diff, CLI, and storage-backend sections, plus a
+  "Where to Go Next" table.  PROJECT_SUMMARY refreshed (v0.60.0 →
+  v0.78.0 state).  New `docs/archive/` holds retired documents
+  (PySysML2 comparison, completed development plan, reference
+  analyses) with a provenance README.
+- **Every documented snippet now validated against the code** — the
+  audit found the docs had drifted (or never worked):
+  - `classtree(loads(text))` — the README/TUTORIAL-documented form —
+    **always raised TypeError** (it only accepted grammar dicts;
+    `tests/class_test.py` had silently shadowed `loads` with
+    `load_grammar`).  The Model form is now supported and returns
+    the model's RootNamespace.
+  - `load_partial(text)` success path returned a `RootNamespace`
+    grammar object, violating its own docstring ("typed Model") —
+    now returns a real `Model` via `Model._load_definition`.
+  - `Reference.dump()` dropped the `: Type` suffix whenever the
+    typed-by element had no children (falsy via
+    `Searchable.__len__`) — `set_type(Item(...))` rendered as bare
+    `ref driver;`.  Now `ref driver : Person;` as documented.
+  - Grammar reality documented: bare `import X;` is invalid (a
+    visibility keyword is required); dump formats corrected
+    (`mass= 100[kilogram]`, `thrust= 1199[newton]`); `count()` is
+    package-level/non-recursive; `AnalysisResult` has no `summary()`.
+- 3 new tests (classtree Model form, Reference typed dump,
+  load_partial Model contract).  Fast suite 1327, conformance
+  123/123.
+
 ## v0.77.0 (2026-09-05)
 
 - **Goal 10 batch 3: CayleyStore hardening + query parity (Goal 10

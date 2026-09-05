@@ -34,7 +34,7 @@ __all__ = [
     "render_state_transition_view_svg", "boxes_view",
 ]
 __author__ = "Jon Fox"
-__version__ = "0.77.0"
+__version__ = "0.78.0"
 
 from sysmlpy.usage import (
     Item, Attribute, Part, Port, Action, Reference, UseCase, Requirement, Interface, Message,
@@ -243,8 +243,11 @@ def load_partial(text):
     partial, errors = _parse_with_recovery(source)
     if errors:
         raise PartialParseError(errors, partial, source)
-    from sysmlpy.formatting import classtree
-    return classtree(partial)
+    # Success path returns a real Model (matching the docstring and
+    # load()); before v0.78.0 this returned a RootNamespace grammar
+    # object by mistake.
+    from sysmlpy.definition import Model
+    return Model()._load_definition(partial["ownedRelationship"])
 
 
 def load(fp) -> Model:

@@ -1,10 +1,11 @@
 # sysmlpy — Project Work Summary
 
 > **For:** Future agents and team members
-> **Last Updated:** August 31, 2026
-> **Current Version:** v0.60.0
+> **Last Updated:** September 5, 2026
+> **Current Version:** v0.78.0
 > **Repository:** https://github.com/mycr0ft/sysmlpy
-> **Master Development Plan:** [docs/DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)
+> **Roadmap:** the 10-goal Adoption Roadmap (docs/DEVELOPMENT_PLAN.md,
+> now archived) is **complete** as of v0.77.0 — see CHANGELOG.md
 
 ---
 
@@ -332,6 +333,29 @@ The `analyze()` function now includes stylistic checks that warn about naming co
 | `INCOMPATIBLE_FEATURE_CHAIN` | Feature.chaining_compatible | Chained features (`a.b.c`) with incompatible types |
 | `INVALID_MULTIPLICITY_BOUNDS` | Multiplicity.bounds_valid | Lower bound > upper bound (e.g., `[5..2]`) |
 | `UNRESOLVED_IMPORT` | — | Import target does not exist |
+
+### Semantic Model Diff (v0.74.0 — Goal 8 batch 1)
+
+`sysmlpy.diff` compares two models semantically: `diff_models(old, new)`
+/ `diff_files(a, b)` produce added/removed/changed element reports keyed
+by `(kind, qualified name)` — repurposing a name across roles surfaces
+as removed+added, not a silent change. Signatures compare typing,
+requirement subject, and doc. Renders text (`+/-/~`), Markdown, JSON;
+backs the `sysmlpy diff` CLI. 16 tests (`tests/diff_test.py`).
+
+### Goal 9/10 Validator Hardening (v0.69.0 → v0.77.0)
+
+- 29 new rule codes across six batches (state machines, triggers,
+  coverage, traceability, satisfies, connectors, subject types) plus
+  `UNIT_DIMENSION_DERIVATION_MISMATCH` (`*`/`/` dimension algebra,
+  v0.75.0) — **31 rule codes total**
+- Connector-end type compatibility (`CONNECTOR_END_TYPE_MISMATCH`,
+  v0.76.0): unrelated local `port def` typings on a connection flagged
+- Lexer-based import extraction for dependency scanning (v0.76.0):
+  bare imports, no comment/string false positives
+- CayleyStore hardening + query parity (v0.77.0): true delete/clear,
+  marker-free `get()`, glob query parity with NetworkX,
+  label-namespaced subjects, verified against a live server
 
 ### Storage Backends
 

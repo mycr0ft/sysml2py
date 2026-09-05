@@ -14,23 +14,19 @@ and dropped the textX parser in favor of [an ANTLR4 parser grammar](https://gith
 changed our unit library to pint.
 The project had diverged so much from sysml2py that a new name, sysmlpy, was selected.
 
-> **⚠️ Constraints are changing.** As of v0.55.0, `analyze()` performs
-> full expression validation: identifiers are **resolved against the
-> symbol table** (v0.54.0) and operators are **type- and
-> unit-checked** — `flag and n`, `"a" + 5`, and `[m] + [kg]` all raise
-> `OPERAND_TYPE_MISMATCH` / `UNIT_DIMENSION_MISMATCH` errors. Deterministic
-> literal expressions can be reduced with `const_fold()` (v0.55.0).
-> v0.56.0 adds two-stage SLL→LL parsing (38% faster on large models)
-> and graph query extensions (`all_paths`, `impact_analysis`,
-> `execute_cypher`, …). Track progress in
-> [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md).
+**What you get**: full SysML v2 parsing (ANTLR4, 123/123 OMG XPect
+conformance), round-trip `dump()`, a semantic analyzer with 31 rule
+codes (name resolution, type/unit-checked expressions, OCL
+well-formedness), 17 PlantUML views + Java-free boxes rendering,
+state-machine simulation, Excel export, a `sysmlpy diff` semantic
+model differ, and graph storage backends (memory / NetworkX / Kùzu /
+Cayley).
 
-> **Scope reminder** — a green parse result means the file **parsed
-> syntactically**. Expression validation (name resolution, type and
-> unit checks) runs only when you call `analyze(model)` explicitly.
-> Multiplication/division dimension *derivation* (inferring
-> `[N]` from `[kg] * [m/s^2]`) is not yet implemented. See
-> [STATUS.md §Known Issues](STATUS.md#known-issues).
+> **Scope note** — a green parse result means the file **parsed
+> syntactically**. Expression validation (name resolution, type,
+> unit, and dimension checks) runs when you call `analyze(model)`.
+> Expression validation also derives dimensions through `*` and `/`
+> (`[N]` inferred from `[kg] * [m/s^2]`, v0.75.0).
 
 For release history, see [CHANGELOG.md](CHANGELOG.md).
 
@@ -56,6 +52,50 @@ Multiple installation methods are supported by sysmlpy, including:
 |       ![PyPI logo](https://simpleicons.org/icons/pypi.svg)        |     PyPI     |                 ``python -m pip install sysmlpy[graph]`` (with graph analysis)                  |
 |       ![PyPI logo](https://simpleicons.org/icons/pypi.svg)        |     PyPI     |              ``python -m pip install sysmlpy[cayley]`` (with Cayley graph DB)              |
 |     ![GitHub logo](https://simpleicons.org/icons/github.svg)      |    GitHub    | ``python -m pip install https://github.com/mycr0ft/sysmlpy/archive/refs/heads/main.zip`` |
+
+## Command-Line Tools
+
+sysmlpy ships a CLI (`sysmlpy`, plus `sysmlpy-lsp` for editor support).
+Exit codes: `0` = success/clean, `1` = findings at/above the failure
+threshold or operational error, `2` = parse/load failure — so
+`analyze` and `diff` drop straight into CI pipelines.
+
+| Command | Purpose |
+|---------|---------|
+| `sysmlpy parse <file>` | Parse a file and print a representation |
+| `sysmlpy analyze <file...>` | Semantic analysis; CI-friendly exit codes |
+| `sysmlpy diff <old> <new>` | Semantic model diff (text/markdown/json) |
+| `sysmlpy view <file>` | Render a PlantUML / Markdown / HTML view |
+| `sysmlpy format <file...>` | Pretty-print (canonicalize) SysML files (alias `fmt`) |
+| `sysmlpy trace <file>` | Requirement traceability & verification coverage |
+| `sysmlpy export <file>` | Export to the JSON interchange format |
+| `sysmlpy import <file>` | Import a JSON interchange document as SysML text |
+| `sysmlpy eval <file>` | Evaluate expressions, attribute values, constraints |
+| `sysmlpy sim <file>` | Simulate a state machine (guards evaluated for real) |
+| `sysmlpy xlsx <file>` | Export tabular views to an Excel workbook |
+| `sysmlpy-lsp` | Language server (stdio) for SysML v2 editors |
+
+Examples:
+
+```bash
+# CI gate: fail the build when analysis finds errors (threshold via --fail-on)
+sysmlpy analyze model.sysml
+
+# What changed between two revisions?
+sysmlpy diff old.sysml new.sysml --format markdown > changes.md
+
+# Canonicalize a model in place, and render a BDD-style view
+sysmlpy format model.sysml
+sysmlpy view model.sysml --view sv > model.puml
+
+# Drive a state machine interactively
+sysmlpy sim traffic_light.sysml
+
+# Excel workbook of the tabular views
+sysmlpy xlsx bill_of_materials.sysml -o bom.xlsx
+```
+
+Every subcommand accepts `--help` for its own flags.
 
 ## Documentation
 
@@ -99,36 +139,8 @@ for child in sensor:
 "camera" in sensor  # → True
 ```
 
-It will output the following:
-```
-part <'3.1'> Stage_1 {
-    attribute mass= 100 [kilogram];
-    attribute thrust= 1199.0 [newton];
-}
-```
-
-The package is able to handle Items, Parts, and Attributes.
-
-```python
-a = Part(name='camera')
-b = Item(name='lens')
-d = Attribute(name='mass')
-c = Part(name='sensor')
-c.add_child(a)
-c.add_child(b)
-a.add_child(d)
-print(c.dump())
-```
-
-will return:
-```
-part sensor {
-   part camera {
-      attribute mass;
-   }
-   item lens;
-}
-```
+`print(sensor.dump())` renders the SysML text shown above:
+`part sensor { part camera { attribute mass= 100[kilogram]; } item lens; }`.
 
 Actions
 -------
@@ -237,10 +249,11 @@ len(model)         # → number of direct children
 print(str(model))
 # → package Vehicle { ... }
 
-# Typed property accessors
-model.packages        # direct Package children
-model.parts           # direct Part children
-model.actions         # direct Action children
+# Typed property accessors (available on packages and usage elements;
+# a Model root exposes .packages, package nodes expose .parts, etc.)
+model.packages        # direct Package children of the model root
+pkg = model.find_one("Vehicle")
+pkg.parts             # direct Part children (definitions and usages)
 ```
 
 All search methods accept `sysml_type=` (keyword string or class) and `recursive=`:
@@ -310,9 +323,9 @@ model = loads("""
         part def Engine;
     }
     package Vehicle {
-        import Types::*;
-        part myCar : Engine;    # resolved via import
-        part myWheel : Wheel;   # undefined!
+        private import Types::*;
+        part myCar : Engine;    // resolved via import
+        part myWheel : Wheel;   // undefined!
     }
 """)
 
@@ -365,6 +378,11 @@ The analyzer resolves three import patterns with visibility enforcement:
 | Protected import | `protected import Types::*` | `protected` | Visible to child scopes only, not re-exported |
 
 ### OCL Well-Formedness Checks
+
+The analyzer implements **31 rule codes** in total (severity-tagged
+`error`/`warning`), spanning OCL well-formedness, state machines,
+requirements, traceability, connectors, and unit-dimension checks —
+see [STATUS.md](STATUS.md) for the complete catalogue. Highlights:
 
 | Code | Rule | Description |
 |------|------|-------------|
@@ -492,15 +510,20 @@ centrality = store.centrality()
 store.export_graphml("model.graphml")
 ```
 
-**Running Cayley with Docker:**
+**Running Cayley with Podman or Docker:**
 
 ```bash
-# In-memory backend
-docker run -p 64210:64210 --rm cayley/cayley
+# Simplest (tested): persistent BoltDB inside the container
+podman run -d --name cayley -p 64210:64210 docker.io/cayleygraph/cayley
 
-# Persistent BoltDB backend
-docker run -p 64210:64210 -v /data:/data --rm cayley/cayley -db boltdb -dbpath /data/cayley.db
+# Docker equivalents
+docker run -p 64210:64210 --rm cayley/cayley           # in-memory backend
+docker run -p 64210:64210 -v /data:/data --rm cayley/cayley \
+    -db boltdb -dbpath /data/cayley.db                  # persistent
 ```
+
+Stored subjects are label-namespaced (`<label>:<element_id>`), so
+several stores can share one server without query bleed.
 
 **Quad Model:** Elements are stored as quads where the subject is the element UUID, predicates are property names (e.g., `name`, `sysml_type`), and objects are property values. Relationships are stored as quads where the predicate is the relationship type (e.g., `parent_child`, `typed_by`). Labels provide namespace isolation for multi-tenant scenarios.
 

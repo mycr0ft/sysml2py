@@ -79,6 +79,16 @@ def test_partial_parse_error_fields_are_well_typed():
     assert isinstance(str(err), str)
 
 
+def test_load_partial_clean_returns_model_type():
+    """v0.78.0: the success path returns a real Model (not a
+    RootNamespace grammar object) — matching the docstring."""
+    from sysmlpy import Model
+    from sysmlpy.definition import Model as ModelDef
+    m = load_partial("package P { part def E; part e1 : E; }")
+    assert isinstance(m, ModelDef)
+    assert "part def E" in m.dump()
+
+
 def test_load_partial_clean_returns_model():
     """On well-formed input, ``load_partial`` behaves like ``load``."""
     text = "package P { part def V; }"

@@ -134,8 +134,9 @@ else:
 | File | Count | What it tests |
 |------|-------|--------------|
 | `grammar_test.py` | 79 (all pass) | Parse → grammar object → `dump()` round-trips |
-| `class_test.py` | 54 | Programmatic API: `Part()`, `Action()`, `dump()`, etc. |
+| `class_test.py` | 77 | Programmatic API: `Part()`, `Action()`, `dump()`, etc. |
 | `main_test.py` | 7 | `load()` / `loads()` / `load_grammar()` public API |
+| `partial_test.py` | 7 | Partial-parse recovery (`loads_partial` / `load_partial`) |
 | `plantuml_test.py` | 108 | All `as_*_view()` functions |
 | `semantic_test.py` | 116 | `analyze()`, OCL checks, symbol resolution, imports |
 | `navigate_test.py` | 33 | `Searchable` mixin, model traversal |

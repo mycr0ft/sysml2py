@@ -920,3 +920,35 @@ def test_toplevel_multiplicity_bounds_preserved():
     assert spec is not None and spec.multiplicity is not None
     strip = lambda s: "".join(s.split())
     assert strip(m.dump()) == strip("package P { attribute x[5..2]; }")
+
+
+def test_classtree_accepts_model_object():
+    """v0.78.0: classtree(loads(text)) — the documented Model form —
+    must work, not raise TypeError. Previously only the grammar-dict
+    form (load_grammar) worked."""
+    from sysmlpy import loads
+    from sysmlpy.formatting import classtree
+
+    text = """package P {
+    part def E;
+    part e1 : E { attribute mass = 100 [kg]; }
+}"""
+    tree = classtree(loads(text))
+    out = tree.dump()
+    assert "part def E" in out
+    assert "part e1: E" in out
+
+
+def test_reference_set_type_renders():
+    """v0.78.0: Reference.dump() renders ": Type" even when the
+    typed-by element has no children (falsy via Searchable.__len__)."""
+    from sysmlpy import Item, Reference
+
+    person = Item(name="Person")
+    r = Reference(name="driver")
+    r.set_type(person)
+    assert r.dump() == "ref driver : Person;"
+
+    r2 = Reference(name="payload", redefines=True)
+    r2.set_type(person)
+    assert r2.dump() == "ref :>> payload : Person;"

@@ -44,4 +44,21 @@ def reformat(model):
 
 
 def classtree(model):
+    """Convert a model into a dumpable RootNamespace tree.
+
+    Accepts:
+    - a visitor grammar dict (historical input shape, e.g. from
+      ``load_grammar(text)``),
+    - a public-API ``Model`` from ``loads(text)`` — its ``.grammar``
+      is already a ``RootNamespace`` and is returned directly.
+
+    ``tree.dump()`` then renders SysML text.  Passing a ``Model``
+    used to raise ``TypeError``; the README/TUTORIAL documented the
+    Model form, so it is now supported (v0.78.0).
+    """
+    if isinstance(model, dict):
+        return RootNamespace(model)
+    grammar = getattr(model, "grammar", None)
+    if grammar is not None and grammar.__class__.__name__ == "RootNamespace":
+        return grammar
     return RootNamespace(model)

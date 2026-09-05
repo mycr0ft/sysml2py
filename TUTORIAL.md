@@ -29,19 +29,22 @@ a = Attribute(name="mass")
 a.set_value(100 * ureg.kilogram)
 p.add_child(a)
 print(p.dump())
-# → part <'3.1'> Stage_1 { attribute mass = 100 [kilogram]; }
+# → part <'3.1'> Stage_1 { attribute mass= 100[kilogram]; }
 ```
 
 ## Architecture
 
-`sysmlpy` has three layers:
+`sysmlpy` has four layers:
 
 1. **Public API** (`usage.py`) — Python classes you use directly: `Part`, `Item`, `Action`, `State`, etc.
-2. **Grammar Layer** (`grammar/classes.py`) — ~319 internal classes that mirror the ANTLR parse tree. Used for round-trip parsing.
-3. **ANTLR Parser** (`antlr/`, `antlr_visitor.py`) — Parses SysML v2 text into an internal dict, then into grammar objects.
+2. **Grammar Layer** (`grammar/classes.py`) — ~360 internal classes that mirror the ANTLR parse tree. Used for round-trip parsing.
+3. **ANTLR Parser** (`antlr/`, `antlr_visitor.py`) — Parses SysML v2 text into an internal dict, then into grammar objects. Two-stage SLL→LL prediction keeps large models fast (identical trees, errors, and diagnostics).
+4. **Analysis layer** (`semantic.py`, `store.py`, `plantuml.py`, `diff.py`) — semantic analysis, graph stores, view rendering, and model diffing.
 
 ```
 SysML text → ANTLR Lexer/Parser → Visitor → dict → Grammar Classes → Public API Classes
+                                                                        ↓
+                                                       analyze() · stores · views · diff
 ```
 
 ## SysML v2 to Python Mapping
@@ -311,7 +314,7 @@ package States {
             do run;
             exit stop;
         }
-        transition off to on if key_turned;
+        transition ignite first off accept KeyTurn then on;
     }
 }
 """)
@@ -337,7 +340,7 @@ a = Attribute(name="thrust")
 a.set_value(1000 * ureg.newton)
 print(a.get_value())  # 1000 newton
 a.set_value(a.get_value() + 199 * ureg.newton)
-print(a.dump())  # attribute thrust = 1199.0 [newton];
+print(a.dump())  # attribute thrust= 1199[newton];
 ```
 
 ## Model Navigation (v0.30.2+)
@@ -367,7 +370,8 @@ package Vehicle {
 # Find by type string using sysml_type=
 all_parts = model.find(sysml_type="part")
 print(f"Found {len(all_parts)} parts: {[p.name for p in all_parts]}")
-# → Found 4 parts: ['engine1', 'chassis', 'wheel1', 'wheel2']
+# → Found 5 parts: ['Engine', 'engine1', 'chassis', 'wheel1', 'wheel2']
+#   (find() is recursive and includes definitions)
 
 # Find by class
 all_parts = model.find(sysml_type=Part)
@@ -385,17 +389,21 @@ all_parts = model.all("part")
 
 ### count
 
-Count elements by type across the full tree:
+Count elements by type across packages (non-recursive — direct
+package children):
 
 ```python
 # Count specific type
 part_count = model.count('part')
-print(f"Parts: {part_count}")  # → Parts: 4
+print(f"Parts: {part_count}")  # → Parts: 3 (Engine, engine1, chassis)
 
 # Count all types
 counts = model.count()
 print(counts)
-# → {'part': 4, 'attribute': 1}
+# → {'part': 3}
+
+# For a full recursive count, use find() with sysml_type=
+len(model.find(sysml_type="part"))  # → 5
 ```
 
 ### traverse
@@ -452,7 +460,8 @@ store = model.to_graph()
 
 # Graph statistics
 print(store.stats())
-# → {'nodes': 7, 'edges': 6, 'density': 0.286, ...}
+# → {'nodes': 7, 'edges': 6, 'density': 0.143,
+#    'is_connected': True, 'avg_degree': 1.71}
 
 # Find connected components
 components = store.connected_components()
@@ -492,6 +501,99 @@ print(path)
 path = model.path_between('engine1', 'nonexistent')
 print(path)  # → None
 ```
+
+## Semantic Analysis
+
+Parsing only checks syntax. `analyze()` runs the full semantic
+engine — 31 rule codes covering symbol resolution, imports, OCL
+well-formedness, expression typing, and unit dimensions:
+
+```python
+from sysmlpy import loads, analyze
+
+model = loads("""
+    package Types {
+        part def Engine;
+    }
+    package Vehicle {
+        import Types::*;
+        part myCar : Engine;    # resolved via import
+        part myWheel : Wheel;   # undefined!
+    }
+""")
+
+result = analyze(model)
+
+for issue in result:
+    print(f"[{issue.severity}] {issue.code}: {issue.message}")
+# → [error] UNDEFINED_SYMBOL: Undefined symbol 'Wheel' referenced in Part 'myWheel'
+
+result.errors          # errors only
+result.warnings        # warnings only
+bool(result)           # True when no errors (warnings are OK)
+result.raise_on_errors()   # ValueError if any errors exist
+len(result)            # total issue count (AnalysisResult is a list)
+```
+
+Highlights of what the analyzer checks:
+
+- **Symbol resolution** — qualified names (`P::A`), imports
+  (`import Types::*`, membership, `::**` recursion, visibility),
+  inheritance chains
+- **Expression validation** — operand types (`"a" + 5` is an error),
+  unit compatibility (`[m] + [kg]`), and `*`/`/` dimension
+  *derivation* (`[N]` inferred from `[kg] * [m/s^2]`)
+- **OCL well-formedness** — duplicate names, cyclic specialization,
+  subsetting/redefinition compatibility, part/port typing, feature
+  chaining, multiplicity bounds
+- **Structure checks** — connector ends (unresolved chains, direction
+  wiring, port-definition compatibility), state machines, requirement
+  subjects, traceability and verification coverage
+
+The complete rule-code catalogue lives in [STATUS.md](STATUS.md).
+
+## Model Diff
+
+Compare two models semantically — additions, removals, and changed
+signatures (typing, requirement subject, documentation):
+
+```python
+from sysmlpy import diff_models
+
+old = loads(open("v1.sysml").read())
+new = loads(open("v2.sysml").read())
+
+d = diff_models(old, new)
+d.is_empty()           # False when the models differ
+d.added, d.removed, d.changed
+print(d.as_text())     # +/-/~ unified text view
+print(d.as_markdown()) # for release notes / PRs
+# JSON output for tooling: sysmlpy diff old.sysml new.sysml --format json
+```
+
+Identity is `(kind, qualified name)` — repurposing a name across
+roles reports removed + added rather than a silent change. The same
+engine backs the CLI: `sysmlpy diff old.sysml new.sysml`.
+
+## Command-Line Tools
+
+Everything above is scriptable from the shell with CI-friendly exit
+codes (`0` clean, `1` findings/error, `2` load failure):
+
+```bash
+sysmlpy analyze model.sysml        # semantic gate
+sysmlpy diff old.sysml new.sysml   # semantic diff
+sysmlpy view model.sysml           # PlantUML / Markdown / HTML views
+sysmlpy format model.sysml         # canonicalize
+sysmlpy trace model.sysml          # requirement traceability
+sysmlpy export model.sysml         # JSON interchange
+sysmlpy eval model.sysml           # evaluate expressions/values
+sysmlpy sim model.sysml            # simulate a state machine
+sysmlpy xlsx model.sysml           # Excel workbook of tabular views
+```
+
+See the [README CLI table](https://github.com/mycr0ft/sysmlpy#command-line-tools)
+for all flags, and [sim.md](docs/sim.md) for simulation specifics.
 
 ## Partial Parse Recovery (v0.38.0+)
 
@@ -542,6 +644,36 @@ except PartialParseError as e:
 | `load_grammar(text)` | Parse into grammar dict (internal) |
 | `load_antlr(text)` | Explicit ANTLR4 parsing path |
 | `load_grammar_antlr(text)` | Parse into grammar dict via ANTLR4 |
+
+## Storage Backends
+
+Models can be exported to graph stores for analysis and persistence —
+memory, NetworkX, Kùzu (embedded, Cypher), or Cayley (HTTP server):
+
+```python
+store = model.to_graph()          # NetworkX by default
+print(store.stats())
+store.export_graphml("model.graphml")
+
+from sysmlpy.store import create_store
+kuzu = create_store("kuzu", database="model.db")     # persists to disk
+```
+
+See the README's *Storage Backends* section for backend-by-backend
+examples.
+
+## Where to Go Next
+
+| Topic | Document |
+|-------|----------|
+| Full feature walkthrough | [Quick Start](docs/quickstart.md) |
+| Architecture & capabilities | [Project Summary](docs/PROJECT_SUMMARY.md) |
+| Analyzer rule codes & conformance | [STATUS.md](STATUS.md) |
+| State-machine simulation | [docs/sim.md](docs/sim.md) |
+| Guard conditions (`if` vs `guard`) | [docs/GUARDS.md](docs/GUARDS.md) |
+| Boxes visualizer (Java-free rendering) | [docs/boxes_view.md](docs/boxes_view.md) |
+| Language server setup | [docs/LSP.md](docs/LSP.md), [docs/LSP_EDITORS.md](docs/LSP_EDITORS.md) |
+| Release history | [CHANGELOG.md](CHANGELOG.md) |
 
 ## Conformance
 

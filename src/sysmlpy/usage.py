@@ -4472,14 +4472,17 @@ class Reference(Usage):
     def dump(self):
         name_str = getattr(self, 'name', "") or ""
         type_str = ""
-        
-        if self.ref_type:
+
+        # NOTE: `is not None`, not truthiness — elements are falsy when
+        # they have no children (Searchable.__len__), so a freshly built
+        # typed-by Item would evaluate False and drop the ": Type".
+        if self.ref_type is not None:
             type_name = getattr(self.ref_type, 'name', str(self.ref_type))
             type_str = f" : {type_name}"
-        
+
         if self.redefines:
             return f"ref :>> {name_str}{type_str};"
-        
+
         return f"ref {name_str}{type_str};"
 
 
