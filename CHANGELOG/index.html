@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0800-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.80.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0791-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3141,6 +3152,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0800-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.80.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0791-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5756,6 +5778,34 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0800-2026-09-05">v0.80.0 (2026-09-05)<a class="headerlink" href="#v0800-2026-09-05" title="Permanent link">&para;</a></h2>
+<p><strong>Constraint textual bodies</strong> — natural-language constraint capture.</p>
+<ol>
+<li><em>Tagged bodies</em>: <code>rep language "English" /* ... */</code> inside a
+   constraint (or calculation) body is now kept by the visitor (it was
+   silently dropped in body context) and exposed on the public API via
+   <code>Constraint.body_text</code> / <code>Constraint.body_language</code> /
+   <code>textual_representations()</code>.  <code>check_constraints()</code> reports such
+   constraints as "not machine-evaluable — textual body in language
+   'English': '...'" instead of skipping them.  Dump round-trips
+   byte-stably (canonical form drops the optional <code>rep</code> keyword —
+   grammatically identical, same precedent as <code>nonunique ordered</code>).</li>
+<li><em>Rescue pass</em> (<code>sysmlpy.antlr_parser</code>): when a parse fails, every
+   <code>constraint ... { ... }</code> body is trial-parsed and failing bodies are
+   salvaged as textual representations (default language <code>"English"</code>,
+   configurable via the new <code>rescue_language</code> parameter threaded
+   through <code>loads()</code> / <code>load_grammar()</code> / <code>parse()</code>), then the model is
+   re-parsed.  One natural-language constraint no longer fails the
+   whole model load; a <code>UserWarning</code> names every salvaged constraint.
+   Bodies containing <code>*/</code> cannot be wrapped and keep the original
+   error; valid constraint bodies are never touched.</li>
+</ol>
+<p>Also fixed: parsed <code>constraint</code> / <code>calculation</code> / <code>state</code> /
+<code>requirement</code> / <code>allocation</code> usages appeared in the object tree as
+anonymous (<code>name is None</code>) — ConstraintUsage's declaration chain nests
+one level deeper than the old name extraction walked.</p>
+<p>12 new tests (<code>tests/constraint_text_test.py</code>).  Fast suite 1380,
+conformance 123/123.</p>
 <h2 id="v0791-2026-09-05">v0.79.1 (2026-09-05)<a class="headerlink" href="#v0791-2026-09-05" title="Permanent link">&para;</a></h2>
 <p><strong><code>ref</code> usages now appear in the object tree</strong> — they were silently
 dropped at two levels:</p>

@@ -791,6 +791,14 @@ are complete.  Follow-up work is organized under the
     <code>descendants_depth_limited</code>, <code>neighborhood</code>, <code>impact_analysis</code>,
     <code>siblings</code>, <code>hub_elements</code>, <code>shortest_path_between_named</code>
     (client-side gizmo; NetworkX/Kuzu shape parity).</li>
+<li>[x] <strong>Follow-up feature (v0.80.0): constraint textual bodies</strong> —
+    <code>rep language "..." /* ... */</code> kept in constraint/calc bodies and
+    exposed via <code>Constraint.body_text</code>/<code>body_language</code>; unparsable
+    natural-language constraint bodies salvaged by the parser rescue
+    pass (rescue_language param, UserWarning per salvage) instead of
+    failing the model; check_constraints reports them as
+    non-evaluable.  Constraint name extraction fixed (declaration
+    walk).  Conditional-expression <em>evaluation</em> still open (below).</li>
 <li>[x] <strong>Follow-up fix (v0.79.1): <code>ref</code> usages in the object tree</strong> —
     package-level refs (visitor dispatch) and nested refs (class
     dispatch) were silently dropped; new <code>Reference.load_from_grammar</code>
