@@ -7,6 +7,7 @@ Subcommands
 parse     Parse a SysML file and print a representation (default: repr()).
 analyze   Run semantic analysis on one or more files; CI-friendly exit codes.
 view      Render a PlantUML / Markdown / HTML view of a model.
+diff      Semantic diff of two SysML files (review workflows).
 format    Canonicalize (pretty-print) SysML files (alias: fmt).
 
 Exit codes
@@ -32,7 +33,7 @@ from sysmlpy import loads
 
 # Subcommand table, also used to detect the legacy flat invocation form.
 SUBCOMMANDS = ("parse", "analyze", "view", "trace", "export", "import",
-               "eval", "xlsx", "sim", "format", "fmt")
+               "eval", "xlsx", "sim", "diff", "format", "fmt")
 
 
 # ---------------------------------------------------------------------------
@@ -101,6 +102,46 @@ def cmd_parse(args) -> int:
 # ---------------------------------------------------------------------------
 # sysmlpy analyze
 # ---------------------------------------------------------------------------
+
+def cmd_diff(args) -> int:
+    from sysmlpy.diff import diff_files
+
+    paths = [Path(f) for f in (args.old, args.new)]
+    for p in _missing_files(paths):
+        print(f"Error: File '{p}' not found.", file=sys.stderr)
+        return 2
+
+    try:
+        d = diff_files(args.old, args.new)
+    except Exception as e:
+        print(f"Parse error: {e}", file=sys.stderr)
+        return 2
+
+    if args.format == "json":
+        import json as _json
+        print(_json.dumps({
+            "summary": d.summary(),
+            "changes": [
+                {
+                    "change": c.change,
+                    "kind": c.kind,
+                    "qualified_name": c.qualified_name,
+                    "fields": [
+                        {"field": fc.field, "old": fc.old,
+                         "new": fc.new} for fc in c.fields
+                    ],
+                }
+                for c in d.changes
+            ],
+        }, indent=2))
+    elif args.format == "markdown":
+        print(d.as_markdown(), end="")
+    else:
+        print(d.as_text(), end="")
+
+    # CI-friendly: differences are findings
+    return 1 if not d.is_empty() else 0
+
 
 def cmd_analyze(args) -> int:
     from sysmlpy import analyze
@@ -703,6 +744,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="Suppress the trailing error/warning count",
     )
     p_analyze.set_defaults(func=cmd_analyze)
+
+    # -- diff ----------------------------------------------------------------
+    p_diff = sub.add_parser(
+        "diff",
+        help="Semantic diff of two SysML files",
+        description="Compare two SysML v2 files element-by-element and "
+                    "report added / removed / changed elements. Exit 0 "
+                    "when the models are semantically identical, 1 when "
+                    "they differ, 2 on parse/load failure.",
+    )
+    p_diff.add_argument("old", help="Old SysML v2 file")
+    p_diff.add_argument("new", help="New SysML v2 file")
+    p_diff.add_argument(
+        "--format", choices=("text", "markdown", "json"), default="text",
+        help="Output format: text (default), markdown or JSON",
+    )
+    p_diff.set_defaults(func=cmd_diff)
 
     # -- view ----------------------------------------------------------------
     p_view = sub.add_parser(

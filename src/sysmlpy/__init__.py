@@ -34,7 +34,7 @@ __all__ = [
     "render_state_transition_view_svg", "boxes_view",
 ]
 __author__ = "Jon Fox"
-__version__ = "0.73.0"
+__version__ = "0.74.0"
 
 from sysmlpy.usage import (
     Item, Attribute, Part, Port, Action, Reference, UseCase, Requirement, Interface, Message,
@@ -440,6 +440,12 @@ def __getattr__(name):
     if name == "set_stereotype_palette":
         from sysmlpy import plantuml as _pu
         fn = _pu.set_stereotype_palette
+        globals()[name] = fn
+        return fn
+    if name in ("ModelDiff", "ElementChange", "FieldChange",
+                "diff_models", "diff_files"):
+        from sysmlpy import diff as _diff
+        fn = getattr(_diff, name)
         globals()[name] = fn
         return fn
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

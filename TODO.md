@@ -78,7 +78,18 @@ are complete.  Follow-up work is organized under the
     (rename pending — PyPI name collision) for Java-free SVG/braille; traceability matrix md/html
     already exists in `traceability.py`.
 - [x] **Goal 7 — Spreadsheet bridge** *(v0.66.0: `sysmlpy.spreadsheet` — CSV export of tabular/data-value/matrix views (`output_format="csv"`, `view --format csv`), `write_xlsx()` workbook export + `sysmlpy xlsx` CLI (optional `openpyxl` extra `sysmlpy[xlsx]`), value import into evaluator bindings (`import_values_csv()`/`import_values_xlsx()`, `eval --set-file`, `parse_value_literal()`); 37 tests in `tests/spreadsheet_test.py`.)*
-- [ ] **Goal 8 — Semantic model diff** (review workflows)
+- [~] **Goal 8 — Semantic model diff** (review workflows)
+  - [x] **Batch 1 (v0.74.0): element-level diff** — `sysmlpy.diff`:
+    `diff_models()` / `diff_files()` with `(kind, qualified name)`
+    identity, Def/Usage kind suffix, field-level changes (typing,
+    subject, doc), text/Markdown/JSON rendering, `sysmlpy diff` CLI
+    (CI exit codes).  Model UUIDs excluded; renames surface as
+    removed+added pairs.
+  - [ ] **Batch 2 candidates** — rename detection (heuristic match on
+    kind+signature), grammar-level fields (values, multiplicities,
+    directions, doc strings), state-machine diff via sim's
+    `MachineDescriptor`, requirement trace edges in the diff, a
+    `--threshold` gate (fail only on requirement-affecting changes).
 - **Next release: v0.70.0** — next committed batch.
 - [~] **Goal 9 — Validator depth** (more OCL well-formedness checks)
   - [x] **Batch 1 (v0.69.0): state machines** — `UNRESOLVED_TRANSITION_ENDPOINT`

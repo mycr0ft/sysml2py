@@ -140,7 +140,9 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   batch 5 (v0.72.0) adds `UNRESOLVED_SATISFY_PART` and fixes nested
   satisfies silently reading as uncovered; batch 6 (v0.73.0) adds
   `UNRESOLVED_CONNECTOR_END` and `SATISFY_SUBJECT_TYPE_MISMATCH` and
-  completes Goal 9 at 29 rule codes.
+  completes Goal 9 at 29 rule codes.  Goal 8 (semantic model diff)
+  starts at v0.74.0: `sysmlpy.diff` element-level diff with text /
+  Markdown / JSON rendering and a CI-friendly `sysmlpy diff` CLI.
 - **Relationship legends opt-in** — `include_legend=False` by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome `bw` remains the default style

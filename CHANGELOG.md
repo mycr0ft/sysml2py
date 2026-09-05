@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## v0.74.0 (2026-09-05)
+
+- **Goal 8 batch 1: semantic model diff** (`sysmlpy.diff`) —
+  - `diff_models(old, new)` / `diff_files(a, b)` compare two models
+    element-by-element; identity is `(kind, qualified name)` with a
+    `Def`/`Usage` kind suffix, so repurposing a name across roles
+    reports as removed + added, not a silent change.
+  - Element signatures compare typing (`typed_by_name`, qualified),
+    requirement subjects and doc text; changes report field-level
+    old/new values.
+  - `ModelDiff` renders as monochrome text, Markdown (review
+    workflows) and JSON; renames surface as removed + added pairs
+    (heuristic rename detection is a tracked follow-up).
+  - CLI: `sysmlpy diff old.sysml new.sysml [--format
+    text|markdown|json]` — exit 0 identical, 1 differences, 2 load
+    failure (CI gate for review).
+  - Excluded by design: Model objects (random UUID per parse),
+    transitions (grammar-dict riders, not tree objects — sim
+    descriptor diff is a follow-up), values/multiplicities/directions
+    (grammar dicts — follow-up batch).
+- Lazy exports `diff_models` / `diff_files` / `ModelDiff` /
+  `ElementChange` / `FieldChange` from `sysmlpy.__getattr__`.
+- 16 new tests (`tests/diff_test.py`).
+
 ## v0.73.0 (2026-09-05)
 
 - **Goal 9 batch 6: connector ends + subject types** —

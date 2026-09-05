@@ -74,6 +74,7 @@ SysML text
 | `src/sysmlpy/semantic.py` | `analyze()`, `SemanticAnalyzer`, `SymbolTable`, `LibrarySymbolIndex` |
 | `src/sysmlpy/project.py` | `load_files()`, `load_project()`, `load_with_dependencies()` |
 | `src/sysmlpy/store.py` | Storage backends |
+| `src/sysmlpy/diff.py` | Semantic model diff (`diff_models`, `diff_files`, `ModelDiff`) |
 | `src/sysmlpy/sim.py` | State-machine simulation (optional `sim` extra, `transitions` library) |
 | `src/sysmlpy/boxes_view.py` | Optional boxes-backed state-machine visualizer |
 | `src/sysmlpy/formatting.py` | `classtree()` — model tree → SysML text |
@@ -140,6 +141,7 @@ else:
 | `navigate_test.py` | 33 | `Searchable` mixin, model traversal |
 | `import_test.py` | 31 | Import visibility/round-trip, `add_import()`, `.imports`, source-order preservation |
 | `validator_test.py` | 77 | Validator rules (+ state-machine/trigger/requirement/trace/direction/satisfy/connector checks) |
+| `diff_test.py` | 16 | Semantic model diff (`diff_models`/`diff_files`, rendering, CLI paths) |
 | `project_test.py` | 17 | `load_files()`, `load_project()` |
 | `store_test.py` | 46 | Storage backends (networkx/kuzu are skipped if not installed) |
 | `conformance_test.py` | 123 | OMG 2026-03 XPect parse conformance (slow) |
