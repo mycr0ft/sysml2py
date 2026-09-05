@@ -233,17 +233,73 @@ def _extract_imports(content: str) -> list[str]:
     Returns a list of qualified names like ``['ScalarValues', 'ISQ']``.
     Handles quoted package names (e.g., ``'Some Package'``) and the
     ``all`` keyword (e.g., ``import all Types::*``).
+
+    Since v0.76.0 this scans the SysML v2 lexer token stream instead
+    of a regex over raw text (Goal 10 "regex to parser" item), which
+    fixes three defects of the old regex:
+
+    - a bare ``import X::Y;`` (no visibility keyword) was missed —
+      the visibility prefix is optional per the SysML grammar and is
+      now correctly treated as such
+    - imports inside comments produced false positives
+    - imports inside string literals (e.g. ``doc about "..."``)
+      produced false positives
+
+    Syntax-error tolerance: the lexer keeps producing tokens for
+    partially broken sources (dependency scanning must not require a
+    parseable file), so scanning continues past stray tokens; an
+    import with a stray token in its name run is skipped.
     """
-    imports = []
-    # Match: [private|public|protected] import [all] <QualifiedName> [::*] [::**];
-    # Qualified name parts can be identifiers or quoted strings
-    pattern = _re.compile(
-        r'(?:private|public|protected)\s+import\s+(?:all\s+)?'
-        r"((?:[A-Za-z_][A-Za-z0-9_]*|'[^']*')(?:::(?:[A-Za-z_][A-Za-z0-9_]*|'[^']*'))*)"
-        r'(?:\:\:\*)?(?:\:\:\*\*)?\s*;'
-    )
-    for match in pattern.finditer(content):
-        imports.append(match.group(1))
+    imports: list[str] = []
+    try:
+        from sysmlpy.antlr_parser import _make_parser
+        from sysmlpy.antlr.SysMLv2Lexer import SysMLv2Lexer
+        _lexer, token_stream, _parser = _make_parser(content)
+        token_stream.fill()
+        tokens = token_stream.tokens
+    except Exception:
+        return imports
+
+    from antlr4.Token import Token
+
+    visible = [t for t in tokens
+               if t.type != Token.EOF
+               and t.channel == Token.DEFAULT_CHANNEL]
+
+    NAME_TYPES = frozenset((SysMLv2Lexer.IDENTIFIER, SysMLv2Lexer.STRING))
+    COLON_COLON = SysMLv2Lexer.COLON_COLON
+    STAR = SysMLv2Lexer.STAR
+    STAR_STAR = SysMLv2Lexer.STAR_STAR
+    SEMI = SysMLv2Lexer.SEMI
+    ALL = SysMLv2Lexer.ALL
+
+    i = 0
+    n = len(visible)
+    while i < n:
+        tok = visible[i]
+        if tok.type != SysMLv2Lexer.IMPORT:
+            i += 1
+            continue
+        # Collect the import run up to the terminating ';'
+        j = i + 1
+        parts: list[str] = []
+        aborted = False
+        while j < n and visible[j].type != SEMI:
+            t = visible[j]
+            if t.type in NAME_TYPES:
+                parts.append(t.text)
+            elif t.type in (ALL, COLON_COLON, STAR, STAR_STAR):
+                pass  # 'all' keyword, namespace separators, wildcards
+            else:
+                aborted = True  # stray token — not a well-formed import
+                break
+            j += 1
+        if parts and not aborted:
+            imports.append("::".join(parts))
+        # advance past the run (or the aborted token) and its ';' if present
+        i = j
+        if i < n and visible[i].type == SEMI:
+            i += 1
     return imports
 
 

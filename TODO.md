@@ -130,8 +130,15 @@ are complete.  Follow-up work is organized under the
     operands / bare literals / `%` / boolean levels.  Plus SLL error
     parity: `prediction_mode="sll_only"` keeps the fallback pass in
     SLL prediction (previously stage 2 silently ran LL).
-  - [ ] Connector-end compatibility depth
-  - [ ] regex→parser library extraction
+  - [x] **Batch 2 (v0.76.0): connector-end type compatibility** —
+    `CONNECTOR_END_TYPE_MISMATCH` (warning, rule code 31): both ends
+    local `port def` typings, unrelated by (transitive)
+    specialization -> flag; chained ends, library typings and
+    part-to-part ends skipped.  Supersedes the old `pass` stub.
+  - [x] **Batch 2 (v0.76.0): regex→parser import extraction** —
+    `_extract_imports` scans the lexer token stream: bare imports
+    extracted (missed by the regex), comment/string false positives
+    gone, syntax-error tolerant.
   - [ ] CayleyStore query extensions (parity with NetworkX/Kùzu)
 
 Legacy candidate follow-up work:

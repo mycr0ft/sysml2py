@@ -1,5 +1,32 @@
 # CHANGELOG
 
+## v0.76.0 (2026-09-05)
+
+- **Goal 10 batch 2: connector-end type compatibility** —
+  `CONNECTOR_END_TYPE_MISMATCH` (warning, rule code 31): when both
+  ends of a connection resolve to typings that are *local* `port
+  def` names and neither is a (transitive) specialization of the
+  other, the connection is flagged — conjugation only makes ports of
+  the same (or related) port definition compatible.  Chained ends
+  (`e.drive to w.hub`) resolve typing through member maps; ends
+  typed by library/external port definitions and part-to-part ends
+  are skipped (no local subclass data; direct part connections are
+  idiomatic SysML).  Implemented in the Goal 9 batch 6 connector
+  walk, which already resolves end chains — the old
+  `_check_connector_end` stub (`pass`) is superseded.
+- **Goal 10 batch 2: regex -> parser import extraction** —
+  `_extract_imports` (dependency scanning for `load_files` /
+  `load_project`) now scans the SysML v2 lexer token stream instead
+  of a raw-text regex, fixing three defects: bare `import X::Y;`
+  (no visibility keyword) was missed entirely; imports inside
+  comments produced false positives; imports inside string literals
+  (`doc about "..."`) produced false positives.  Scanning tolerates
+  syntax errors (dependency scanning must not require a parseable
+  file).  The remaining regex use in project.py
+  (`_defines_package`) is a simple file-header check, kept.
+- 11 new tests (7 connector in `tests/validator_test.py`, 4
+  extraction in `tests/project_test.py`).
+
 ## v0.75.0 (2026-09-05)
 
 - **Goal 10 batch 1: `*`/`/` unit-dimension derivation** — the

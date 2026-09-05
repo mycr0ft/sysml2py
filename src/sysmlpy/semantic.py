@@ -3845,7 +3845,7 @@ class SemanticAnalyzer:
         return issues
 
     def _check_connector_directions(self, model: Any) -> list[SemanticIssue]:
-        """Check connection-end port direction compatibility (Goal 9).
+        """Check connection ends: directions (Goal 9) + types (Goal 10).
 
         ``connection c connect a.p1 to b.p2;`` — when both end ports
         carry explicit directions and neither is ``inout``, wiring
@@ -3855,6 +3855,14 @@ class SemanticAnalyzer:
         error).  Ends without a direction keyword, ``inout`` ends,
         chains deeper than two segments and unresolvable parts are
         skipped.
+
+        Goal 10 (connector-end compatibility depth): when both ends
+        resolve to typings that are local ``port def`` names and
+        neither is a (transitive) specialization of the other, the
+        connection flags CONNECTOR_END_TYPE_MISMATCH (warning) —
+        conjugation only makes ports of the *same* (or related) port
+        definition compatible.  Ends typed by library/external port
+        definitions are skipped (no local subclass data).
         """
         issues: list[SemanticIssue] = []
         try:
@@ -3867,6 +3875,7 @@ class SemanticAnalyzer:
         part_typing: dict = {}   # part usage name -> typed-by name
         member_typing: dict = {}  # (container name, member) -> typed-by
         supertypes: dict = {}    # def name -> {superclassifier names}
+        port_defs: set = set()   # local port def names (Goal 10)
         connections: list = []   # (name, scope_stack, [chain, ...])
 
         def walk2(node, scope_stack):
@@ -3897,6 +3906,8 @@ class SemanticAnalyzer:
                         if sups:
                             supertypes.setdefault(declared, set()).update(
                                 sups)
+                        if nm == "PortDefinition":
+                            port_defs.add(declared)
                     if nm == "PortUsage":
                         d = _port_direction(node)
                         if scope_stack:
@@ -4000,6 +4011,55 @@ class SemanticAnalyzer:
                 return None, False  # known container, no such port
             return None, True       # external/library type: skip
 
+        def end_typing(chain, scope_stack):
+            """Typed-by name of an end chain's final segment, or None."""
+            if not chain:
+                return None
+            if len(chain) == 1:
+                name = chain[0]
+                for scope in reversed(scope_stack):
+                    t = member_typing.get((scope, name))
+                    if t:
+                        return t
+                return part_typing.get(name)
+            first = chain[0]
+            cur = part_typing.get(first)
+            if cur is None:
+                for scope in reversed(scope_stack):
+                    t = member_typing.get((scope, first))
+                    if t:
+                        cur = t
+                        break
+            if cur is None:
+                return None
+            for seg in chain[1:-1]:
+                t = member_typing.get((cur, seg))
+                if t is None:
+                    t = member_typing.get((first, seg))
+                if t is None:
+                    return None
+                cur = t
+            t = member_typing.get((cur, chain[-1]))
+            if t is None:
+                t = member_typing.get((first, chain[-1]))
+            return t
+
+        def _sub(a, b):
+            """True when a is b or a (transitively) specializes b."""
+            if a == b:
+                return True
+            seen = set()
+            stack = [a]
+            while stack:
+                cur = stack.pop()
+                if cur == b:
+                    return True
+                if cur in seen:
+                    continue
+                seen.add(cur)
+                stack.extend(supertypes.get(cur, ()))
+            return False
+
         for cname, cstack, chains in connections:
             d1, r1 = end_resolve(chains[0], cstack)
             d2, r2 = end_resolve(chains[1], cstack)
@@ -4019,6 +4079,22 @@ class SemanticAnalyzer:
                     message=(
                         f"Connection '{cname}' end "
                         f"'{'.'.join(chains[1])}' does not resolve"),
+                    reference=cname,
+                ))
+            # Goal 10: end-type compatibility (port defs, local only)
+            t1 = end_typing(chains[0], cstack)
+            t2 = end_typing(chains[1], cstack)
+            if (t1 and t2 and t1 in port_defs and t2 in port_defs
+                    and not _sub(t1, t2) and not _sub(t2, t1)):
+                issues.append(SemanticIssue(
+                    severity="warning",
+                    code="CONNECTOR_END_TYPE_MISMATCH",
+                    message=(
+                        f"Connection '{cname}' binds "
+                        f"'{'.'.join(chains[0])}' (typed '{t1}') to "
+                        f"'{'.'.join(chains[1])}' (typed '{t2}'); "
+                        "connected port definitions are unrelated"
+                    ),
                     reference=cname,
                 ))
             if not d1 or not d2:

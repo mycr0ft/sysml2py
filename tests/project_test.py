@@ -269,6 +269,52 @@ package Main {
         assert _extract_imports("private import 'Port Example'::SomePort;") == ["'Port Example'::SomePort"]
         assert _extract_imports("private import A::'B Name'::*;") == ["A::'B Name'"]
 
+    def test_import_extraction_bare_import(self):
+        """Goal 10: a bare import (no visibility keyword) is extracted."""
+        from sysmlpy.project import _extract_imports
+
+        assert _extract_imports("import ScalarValues::*;") == ["ScalarValues"]
+        assert _extract_imports("import A::B::C;") == ["A::B::C"]
+
+    def test_import_extraction_skips_comments(self):
+        """Goal 10: commented-out imports are not false positives."""
+        from sysmlpy.project import _extract_imports
+
+        src = """
+        package P {
+            // private import Comment::Gone::*;
+            /* import Also::Gone::*; */
+            import Real::Import::*;
+        }
+        """
+        assert _extract_imports(src) == ["Real::Import"]
+
+    def test_import_extraction_skips_string_literals(self):
+        """Goal 10: imports inside string literals are not matched."""
+        from sysmlpy.project import _extract_imports
+
+        src = """
+        package P {
+            doc about "private import Fake::Str::*;";
+            import Real::Import::*;
+        }
+        """
+        assert _extract_imports(src) == ["Real::Import"]
+
+    def test_import_extraction_survives_stray_tokens(self):
+        """Goal 10: dependency scanning tolerates broken sources."""
+        from sysmlpy.project import _extract_imports
+
+        src = """
+        package P {
+            part broken {
+                import Stray::Tokens @@@ ;
+            }
+            import OK::After::Broken::*;
+        }
+        """
+        assert _extract_imports(src) == ["OK::After::Broken"]
+
     def test_import_extraction_all_keyword(self):
         """Import extraction should handle the 'all' keyword."""
         from sysmlpy.project import _extract_imports

@@ -1037,3 +1037,122 @@ class TestSatisfySubjectType:
         }
         """)
         assert self._issues(model) == []
+
+
+class TestConnectorEndTypeCompatibility:
+    """Goal 10: connector-end type compatibility (CONNECTOR_END_TYPE_MISMATCH).
+
+    Both ends must resolve to local ``port def`` names that are related
+    (equal or specialization either way); library/external typings and
+    part-to-part ends are skipped.
+    """
+
+    def _issues(self, model):
+        return [i for i in analyze(model)
+                if i.code == "CONNECTOR_END_TYPE_MISMATCH"]
+
+    def test_unrelated_port_defs_flagged(self):
+        model = sysmlpy_loads("""
+        package M {
+            port def PowerPort;
+            port def SignalPort;
+            part def Box {
+                port p1 : PowerPort;
+                port p2 : SignalPort;
+                connection c connect p1 to p2;
+            }
+        }
+        """)
+        issues = self._issues(model)
+        assert len(issues) == 1
+        assert issues[0].severity == "warning"
+        assert "PowerPort" in issues[0].message
+        assert "SignalPort" in issues[0].message
+
+    def test_same_port_def_clean(self):
+        model = sysmlpy_loads("""
+        package M {
+            port def PowerPort;
+            part def Box {
+                port p1 : PowerPort;
+                port p2 : PowerPort;
+                connection c connect p1 to p2;
+            }
+        }
+        """)
+        assert self._issues(model) == []
+
+    def test_specialization_clean(self):
+        model = sysmlpy_loads("""
+        package M {
+            port def BasePort;
+            port def SubPort :> BasePort;
+            part def Box {
+                port p1 : BasePort;
+                port p2 : SubPort;
+                connection c connect p1 to p2;
+            }
+        }
+        """)
+        assert self._issues(model) == []
+
+    def test_reverse_specialization_clean(self):
+        model = sysmlpy_loads("""
+        package M {
+            port def BasePort;
+            port def SubPort :> BasePort;
+            part def Box {
+                port p1 : SubPort;
+                port p2 : BasePort;
+                connection c connect p1 to p2;
+            }
+        }
+        """)
+        assert self._issues(model) == []
+
+    def test_chained_ends_flagged(self):
+        model = sysmlpy_loads("""
+        package M {
+            port def PowerPort;
+            port def DataPort;
+            part def Engine {
+                port drive : PowerPort;
+            }
+            part def Wheel {
+                port hub : DataPort;
+            }
+            part def Car {
+                part e : Engine;
+                part w : Wheel;
+                connection c connect e.drive to w.hub;
+            }
+        }
+        """)
+        issues = self._issues(model)
+        assert len(issues) == 1
+        assert "e.drive" in issues[0].message
+        assert "w.hub" in issues[0].message
+
+    def test_library_typed_ends_skipped(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def Box {
+                port p1 : PowerPort;
+                port p2 : SignalPort;
+                connection c connect p1 to p2;
+            }
+        }
+        """)
+        assert self._issues(model) == []
+
+    def test_part_to_part_ends_skipped(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def Vehicle;
+            part def Wheels;
+            part v : Vehicle;
+            part w : Wheels;
+            connection c connect v to w;
+        }
+        """)
+        assert self._issues(model) == []

@@ -145,7 +145,11 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   Markdown / JSON rendering and a CI-friendly `sysmlpy diff` CLI.
   Goal 10 opens at v0.75.0: `*`/`/` unit-dimension derivation
   (`UNIT_DIMENSION_DERIVATION_MISMATCH`, 30 rule codes) and SLL
-  error parity (`sll_only` stays in SLL prediction).
+  error parity (`sll_only` stays in SLL prediction).  v0.76.0 adds
+  connector-end type compatibility (`CONNECTOR_END_TYPE_MISMATCH`,
+  31 rule codes) and lexer-based import extraction for dependency
+  scanning (bare imports fixed, comment/string false positives
+  gone).
 - **Relationship legends opt-in** — `include_legend=False` by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome `bw` remains the default style
