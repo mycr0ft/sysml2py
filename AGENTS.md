@@ -137,6 +137,7 @@ else:
 | `class_test.py` | 77 | Programmatic API: `Part()`, `Action()`, `dump()`, etc. |
 | `main_test.py` | 7 | `load()` / `loads()` / `load_grammar()` public API |
 | `partial_test.py` | 7 | Partial-parse recovery (`loads_partial` / `load_partial`) |
+| `resolve_test.py` | 12 | `Model.resolve_types()` typedby resolution |
 | `plantuml_test.py` | 108 | All `as_*_view()` functions |
 | `semantic_test.py` | 116 | `analyze()`, OCL checks, symbol resolution, imports |
 | `navigate_test.py` | 33 | `Searchable` mixin, model traversal |
@@ -199,10 +200,13 @@ flags since v0.59.0. The old "specialization=None" note was stale. Note:
 
 Since v0.57.0, `load_from_grammar()` preserves the declared type *name* on
 all usage kinds — use `obj.typed_by_name` (e.g. `"Engine"`,
-`"ScalarValues::Real"`). What is still **not** preserved is the resolved
-definition *object* in `obj.typedby`; that is only set when wired
-programmatically via `set_typed_by()`. A model-wide resolution pass is a
-tracked follow-up (see TODO.md).
+`"ScalarValues::Real"`). The resolved definition *object* in `obj.typedby`
+is set by programmatic `set_typed_by()` and, since v0.79.0, by the opt-in
+`model.resolve_types()` pass (idempotent, dump-stable; library typings
+stay name-only). Note: setting `typedby` is serialization-safe only
+through the `_typedby_serialized_elsewhere` guard in
+`Usage._get_definition` — a def already in the tree must not be inserted
+again as a package member.
 
 ### 7. Bare `import` without a visibility keyword is non-conformant — RESOLVED
 

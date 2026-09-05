@@ -148,6 +148,37 @@ are complete.  Follow-up work is organized under the
     (client-side fnmatch); label-namespaced subjects so multiple
     stores can share a server.  **Goal 10 complete.**
 
+- [~] **Goal 11 — Polish & follow-through** (the assorted-fixes umbrella;
+  batched from the follow-ups scattered across this file)
+  - [x] **Batch 1 (v0.79.0): model semantics** — `Model.resolve_types()`
+    links `typed_by_name` to definition objects (`typedby`/`ref_type`)
+    model-wide (simple, `::`-qualified and relative-qualified names;
+    library/unresolved skipped; package-scoped ambiguity rule);
+    serialization-safe typedby insertion (`_typedby_serialized_elsewhere`
+    guard — parsed/resolved models dump byte-identically, standalone
+    programmatic wiring still hoists); `Model.load` sets package
+    parents.  CayleyStore query extensions: `all_paths`,
+    `in_degree_centrality`, `out_degree_centrality`,
+    `descendants_depth_limited`, `neighborhood`, `impact_analysis`,
+    `siblings`, `hub_elements`, `shortest_path_between_named`
+    (client-side gizmo; NetworkX/Kuzu shape parity).
+  - [ ] **Batch 2 — sim**: executing assignment effects via `set_value`
+    (the `x := 5` text is available — parse and apply),
+    history/deep-history pseudostates; parallel regions (raise, by
+    design, for now).
+  - [ ] **Batch 3 — diff batch 2**: rename detection (heuristic match on
+    kind+signature), grammar-level fields (values, multiplicities,
+    directions, doc strings), state-machine diff via sim's
+    `MachineDescriptor`, requirement trace edges, `--threshold` gate.
+  - [ ] **Batch 4 — LSP**: incremental sync, position-tracked semantic
+    diagnostics, workspace/symbol, `.`-completion.
+  - [ ] **Batch 5 — performance**: visitor profiling (`parse_to_dict`
+    dominates end-to-end time), persistent DFA cache serialization to
+    eliminate cold-start parse cost.
+  - [ ] **Batch 6 — interchange/evaluator**: spec-normative JSON-LD
+    context mapping (OMG property IRIs); conditional expressions and
+    calc `in` parameters in the evaluator.
+
 Legacy candidate follow-up work:
 
 - [x] `*`/`/` unit-dimension derivation (`mass * speed` vs `ForceValue`) *(→ Goal 10, v0.75.0)*

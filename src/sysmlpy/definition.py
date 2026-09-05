@@ -117,6 +117,7 @@ class Model(Searchable):
                     p = Package().load_from_grammar(
                         PackageGrammar(de["ownedRelatedElement"])
                     )
+                    p.parent = self
                     self.children.append(p)
                     member_grammar.append(p._get_definition(child="PackageBody"))
                 elif found_package:
@@ -164,6 +165,7 @@ class Model(Searchable):
                 p = Package().load_from_grammar(
                     PackageGrammar(synthetic_definition)
                 )
+                p.parent = self
                 self.children.append(p)
                 member_grammar.append(p._get_definition(child="PackageBody"))
             else:
@@ -428,6 +430,130 @@ class Model(Searchable):
                 if path is not None:
                     return path
         return None
+
+    def resolve_types(self) -> int:
+        """Resolve every usage's declared type name to its definition object.
+
+        ``loads()`` preserves the *declared type name* on usages
+        (``usage.typed_by_name``), but the resolved definition *object*
+        (``usage.typedby``) is only set when the model is wired
+        programmatically via ``set_type()`` / ``set_typed_by()``.  This
+        pass closes that gap: it indexes every definition in the model
+        (by simple name and by ``::``-qualified namespace path) and
+        links each usage's typing to the matching definition object.
+
+        Returns
+        -------
+        int
+            The number of usages resolved by this call.
+
+        Notes
+        -----
+        - Library typings (e.g. ``ScalarValues::Real``) match no
+          definition in the model and are left untouched —
+          :func:`~sysmlpy.analyze` already reports those as unresolved.
+        - Names that resolve to no definition are left untouched.
+        - An ambiguous simple name (same definition name in several
+          packages) resolves to the definition in the usage's own
+          package when one exists, otherwise to the first definition
+          in document order.
+        - Resolution is idempotent: already-linked elements are
+          skipped, and a second call returns ``0``.
+        - ``Reference``-kind elements store the link in ``ref_type``
+          (mirroring ``set_type``); other usages store it in
+          ``typedby``.  Serialization is unaffected either way —
+          ``dump()`` output is identical before and after resolution.
+        """
+        # ---- index definitions -------------------------------------
+        by_qualified = {}   # "Pkg::Engine" -> definition
+        by_simple = {}      # "Engine" -> [definitions in doc order]
+        pkg_paths = {}      # id(package) -> qualified name parts
+
+        def _index(elem, path):
+            for child in getattr(elem, "children", []) or []:
+                name = getattr(child, "name", None)
+                is_package = getattr(child, "sysml_type", None) == "package"
+                is_definition = getattr(child, "is_definition", False)
+                if not (is_package or is_definition):
+                    continue
+                if not name:
+                    _index(child, path)
+                    continue
+                child_path = path + [name]
+                by_qualified.setdefault("::".join(child_path), child)
+                by_simple.setdefault(name, []).append(child)
+                if is_package:
+                    pkg_paths[id(child)] = child_path
+                _index(child, child_path)
+
+        _index(self, [])
+
+        def _lookup(type_name, packages):
+            """Resolve a declared type name to a definition.
+
+            Tries the name as an absolute qualified path first, then as
+            a path relative to each enclosing package (nearest first) —
+            ``Types::Wheel`` declared inside package ``Vehicle`` matches
+            ``Vehicle::Types::Wheel``.
+            """
+            if "::" in type_name:
+                hit = by_qualified.get(type_name)
+                if hit is not None:
+                    return hit
+                parts = type_name.split("::")
+                for pkg in reversed(packages):
+                    prefix = pkg_paths.get(id(pkg), [])
+                    hit = by_qualified.get("::".join(prefix + parts))
+                    if hit is not None:
+                        return hit
+                return None
+            if "." in type_name:
+                # Feature-chain (dotted) names are not type paths.
+                return None
+            candidates = by_simple.get(type_name, [])
+            if len(candidates) == 1:
+                return candidates[0]
+            if len(candidates) > 1:
+                # Prefer the definition in the usage's own package
+                # (nearest enclosing scope), else first in doc order.
+                for pkg in reversed(packages):
+                    for cand in candidates:
+                        if getattr(cand, "parent", None) is pkg:
+                            return cand
+                return candidates[0]
+            return None
+
+        # ---- link usages --------------------------------------------
+        resolved = 0
+
+        def _walk(elem, packages):
+            nonlocal resolved
+            for child in getattr(elem, "children", []) or []:
+                type_name = getattr(child, "_typed_by_name", None)
+                if type_name and not isinstance(type_name, str):
+                    type_name = None
+                if type_name:
+                    has_typedby = hasattr(child, "typedby")
+                    has_ref = hasattr(child, "ref_type")
+                    already = (
+                        (has_typedby and child.typedby is not None)
+                        or (has_ref and child.ref_type is not None)
+                    )
+                    if not already:
+                        target = _lookup(type_name, packages)
+                        if target is not None:
+                            if has_ref:
+                                child.ref_type = target
+                            if has_typedby:
+                                child.typedby = target
+                            resolved += 1
+                child_packages = packages
+                if getattr(child, "sysml_type", None) == "package":
+                    child_packages = packages + [child]
+                _walk(child, child_packages)
+
+        _walk(self, [])
+        return resolved
 
 
 class Package(Searchable):

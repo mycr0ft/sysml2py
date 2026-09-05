@@ -1,5 +1,38 @@
 # CHANGELOG
 
+## v0.79.0 (2026-09-05)
+
+**Goal 11 batch 1 — model semantics (typedby resolution + Cayley
+query extensions).**
+
+- **`Model.resolve_types()`** — model-wide pass linking each usage's
+  declared type name (`typed_by_name`, preserved since v0.57.0) to
+  its definition *object* (`typedby`), closing the long-tracked gap
+  where the object link only existed for programmatic wiring.
+  Resolves simple names, `::`-qualified paths and relative qualified
+  paths (`Types::Wheel` declared inside `Vehicle`); library typings
+  and unresolved names are left untouched; ambiguous simple names
+  resolve to the usage's own package first.  Idempotent; returns the
+  resolve count.
+- **Serialization-safe typedby** — `Usage._get_definition` no longer
+  inserts the typed-by definition when it is already part of the
+  model tree (`_typedby_serialized_elsewhere`): parsed models whose
+  `typedby` was filled in by `resolve_types()` (and programmatic
+  models whose definition is an explicit package member) dump
+  byte-identically, while standalone programmatic wiring still
+  hoists the definition into the package output.  `Model.load` now
+  sets `parent` on loaded packages so the guard can see the whole
+  tree.
+- **CayleyStore query extensions** — `all_paths`,
+  `in_degree_centrality`, `out_degree_centrality`,
+  `descendants_depth_limited`, `neighborhood`, `impact_analysis`,
+  `siblings`, `hub_elements`, `shortest_path_between_named` —
+  closing the API gap with NetworkX/Kuzu (client-side over the
+  gizmo primitives; shapes match the NetworkX/Kuzu tests).  17 new
+  live-server tests incl. a centrality parity check.
+- 29 new tests (12 `tests/resolve_test.py`, 17 Cayley live).  Fast
+  suite 1356, conformance 123/123.
+
 ## v0.78.0 (2026-09-05)
 
 - **Documentation consolidation** — README refreshed: new

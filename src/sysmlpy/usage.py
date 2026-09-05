@@ -398,6 +398,44 @@ class Usage(Searchable):
         """
         return getattr(self, '_typed_by_name', None)
 
+    def _typedby_serialized_elsewhere(self):
+        """True when ``self.typedby`` is already a member of the model tree.
+
+        The ``_get_definition`` output inserts the typed-by definition
+        as a sibling member so that a *standalone* programmatic usage
+        (one wired via ``set_typed_by`` whose definition was never
+        added to a package) still serializes completely.  When the
+        definition is already part of the enclosing tree — the case
+        for every parsed model, where ``resolve_types()`` fills in
+        ``typedby`` — the insertion would duplicate it (the definition
+        is serialized by its own package), so it must be skipped.
+
+        Walks up ``parent`` to the tree root, then searches the tree
+        excluding this element's own subtree.  O(model size) per typed
+        usage; ``dump()`` is not a hot path.
+        """
+        target = self.typedby
+        if target is None:
+            return False
+        root = self
+        depth = 0
+        while getattr(root, "parent", None) is not None and depth < 1000:
+            root = root.parent
+            depth += 1
+        stack = [root]
+        while stack:
+            node = stack.pop()
+            for child in getattr(node, "children", []) or []:
+                if child is self:
+                    # Don't descend into our own subtree: the question
+                    # is whether the definition is serialized anywhere
+                    # *else*.
+                    continue
+                if child is target:
+                    return True
+                stack.append(child)
+        return False
+
     def _get_definition(self, child=None):
         """Build the grammar tree dict for this element.
 
@@ -429,8 +467,12 @@ class Usage(Searchable):
                 "prefix": None,
             }
 
-        # Add the typed by definition to the package output
-        if self.typedby is not None:
+        # Add the typed by definition to the package output — but only
+        # when it is not already part of the tree (a parsed model whose
+        # ``typedby`` was filled in by ``Model.resolve_types()`` already
+        # serializes the definition from its own package; inserting it
+        # again would duplicate it).
+        if self.typedby is not None and not self._typedby_serialized_elsewhere():
             if child is None:
                 package["ownedRelationship"].insert(
                     0, self.typedby._get_definition(child="PackageBody")
@@ -4552,8 +4594,12 @@ class DefaultReference(Usage):
                 "prefix": None,
             }
 
-        # Add the typed by definition to the package output
-        if self.typedby is not None:
+        # Add the typed by definition to the package output — but only
+        # when it is not already part of the tree (a parsed model whose
+        # ``typedby`` was filled in by ``Model.resolve_types()`` already
+        # serializes the definition from its own package; inserting it
+        # again would duplicate it).
+        if self.typedby is not None and not self._typedby_serialized_elsewhere():
             if child is None:
                 package["ownedRelationship"].insert(
                     0, self.typedby._get_definition(child="PackageBody")
