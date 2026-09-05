@@ -728,11 +728,14 @@ are complete.  Follow-up work is organized under the
 <li>[x] <strong>Batch 5 (v0.72.0)</strong> — nested-satisfy coverage bug fix
     (false REQUIREMENT_UNCOVERED), <code>UNRESOLVED_SATISFY_PART</code> (error),
     deep feature-chain ends (&gt;=3 segments) in direction checks.</li>
-<li>[ ] <strong>Batch 6 candidates</strong> — abstract-typing warnings (needs spec
-    research first: typing by abstract defs inside abstract
-    definitions is legitimate via redefinition), <code>satisfy</code> subject
-    <em>type</em> compatibility (subject type vs by-part type needs an
-    inheritance walk), port-owned parts in chains (a.p1.bus).</li>
+<li>[x] <strong>Batch 6 (v0.73.0)</strong> — <code>UNRESOLVED_CONNECTOR_END</code> (error;
+    conservative resolution with library/subclass skips), chains
+    through port typings (<code>a.p1.bus.pb</code>), <code>SATISFY_SUBJECT_TYPE_MISMATCH</code>
+    (warning; subject vs by-part inheritance walk).  Abstract-typing
+    warnings <strong>dropped by design</strong>: typing by abstract defs is valid
+    SysML v2 — flagging would be a false positive by construction.</li>
+<li>[x] <strong>Goal 9 — Validator depth</strong> complete after 6 batches (v0.69.0 –
+  v0.73.0): 29 rule codes total.</li>
 <li>[ ] <strong>Goal 10 — Technical stubs</strong> (connector-end compatibility, <code>*</code>/<code>/</code> unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)</li>
 </ul>
 <p>Legacy candidate follow-up work:</p>
