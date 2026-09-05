@@ -6,7 +6,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "sysmlpy"
-version = "0.76.0"
+version = "0.77.0"
 description = ""
 authors = [{ name = "Jon R. Fox (mycr0ft)", email = "jon.fox@drfox.com" }]
 readme = "README.md"
@@ -22,12 +22,14 @@ kuzu = { version = ">=0.7,<0.12", optional = true }
 openpyxl = { version = ">=3.1", optional = true }
 arrow = "^1.4.0"
 transitions = {version = "^0.9", optional = true}
+requests = { version = ">=2.31", optional = true }
 
 [tool.poetry.extras]
 graph = ["networkx"]
 kuzu = ["kuzu"]
 xlsx = ["openpyxl"]
 sim = ["transitions"]
+cayley = ["requests"]
 
 [tool.poetry.scripts]
 sysmlpy = "sysmlpy.__main__:main"

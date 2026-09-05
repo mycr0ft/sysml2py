@@ -149,7 +149,10 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   connector-end type compatibility (`CONNECTOR_END_TYPE_MISMATCH`,
   31 rule codes) and lexer-based import extraction for dependency
   scanning (bare imports fixed, comment/string false positives
-  gone).
+  gone).  v0.77.0 closes Goal 10 with CayleyStore hardening +
+  query parity, verified against a live podman Cayley v0.7 server
+  (delete/clear/get/put/len/query fixes, label-namespaced
+  subjects, NetworkX-identical glob query results).
 - **Relationship legends opt-in** — `include_legend=False` by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome `bw` remains the default style

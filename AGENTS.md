@@ -143,7 +143,8 @@ else:
 | `validator_test.py` | 84 | Validator rules (+ state-machine/trigger/requirement/trace/direction/satisfy/connector checks) |
 | `diff_test.py` | 16 | Semantic model diff (`diff_models`/`diff_files`, rendering, CLI paths) |
 | `project_test.py` | 21 | `load_files()`, `load_project()` |
-| `store_test.py` | 46 | Storage backends (networkx/kuzu are skipped if not installed) |
+| `store_test.py` | 118 | Storage backends (networkx/kuzu skipped if not installed; Cayley tests skipped without a live server: `podman run -d --name cayley -p 64210:64210 docker.io/cayleygraph/cayley`) |
+| `cayley_store_test.py` | 22 | CayleyStore against a live server at localhost:64210 (skipped when the server is down) |
 | `conformance_test.py` | 123 | OMG 2026-03 XPect parse conformance (slow) |
 | `sim_test.py` | 38 | State-machine simulation (`sim` extra) |
 

@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## v0.77.0 (2026-09-05)
+
+- **Goal 10 batch 3: CayleyStore hardening + query parity (Goal 10
+  complete)** — verified against a live Cayley v0.7 server
+  (`podman run -d --name cayley -p 64210:64210
+  docker.io/cayleygraph/cayley`).  Fixes, all found by probing the
+  real server:
+  - `clear()` called a nonexistent `_query_label` (AttributeError);
+    now label-scoped via the `_store_label` marker
+  - `_delete_quads()` posted to `/api/v1/write` (which *adds* quads —
+    a silent no-op for existing ones) instead of `/api/v1/delete`;
+    nothing was ever actually deleted
+  - `delete()` built its quad list but never sent it; now performs
+    true deletion including incoming relationship edges (no ghost
+    links in `parents()`/`children()`)
+  - `get()` leaked `_is_element`/`_store_label` markers and folded
+    relationship edges into the data dict; now returns exactly the
+    `put()` data (parity with InMemory/NetworkX)
+  - `put()` overwrite semantics: replaces property quads, keeps
+    relationship edges (was non-deterministic on re-put)
+  - `__len__` counted the whole database (`g.V().count()`) instead
+    of this store's elements
+  - `query()` glob parity: `name="p*"` etc. now use the client-side
+    `fnmatch` path (Cayley `has()` matches literally); verified
+    identical results to NetworkXStore across 9 filter shapes
+  - `query()` with no filters returned raw dicts instead of IDs
+  - `subgraph()` created bogus self-edges and wiped properties with
+    a second empty `put()`
+- **Label namespacing**: Cayley gizmo queries are quad-label-blind —
+  two stores sharing a server with the same subject IDs see each
+  other's quads.  Stored subjects now carry the store label
+  (`<label>:<element_id>`); the public API keeps unprefixed IDs.
+  Discovered when the previously-unrunnable
+  `tests/cayley_store_test.py` (22 tests, requires a live server)
+  collided with the new `TestCayleyStore` class.
+- `requests` added as the optional `cayley` extra
+  (`poetry install --extras cayley`).
+- 21 new tests (`tests/store_test.py::TestCayleyStore`, skipped when
+  no server at localhost:64210).
+
 ## v0.76.0 (2026-09-05)
 
 - **Goal 10 batch 2: connector-end type compatibility** —

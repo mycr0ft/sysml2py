@@ -1678,7 +1678,18 @@ class CayleyStore(Store):
     This backend communicates with a running Cayley server over HTTP,
     supporting both in-memory and persistent backends (BoltDB, LevelDB, etc.).
 
-    Requires: A running Cayley server (Docker or binary).
+    Requires: A running Cayley server (Docker or binary):
+
+        podman run -d --name cayley -p 64210:64210 \
+            docker.io/cayleygraph/cayley
+
+    (BoltDB backend persisted inside the container; stop with
+    ``podman stop cayley``, restart with ``podman start cayley``.)
+
+    Since v0.77.0 stored subjects are label-namespaced
+    (``<label>:<element_id>``), so multiple stores can share one
+    server without query bleed (Cayley gizmo queries are otherwise
+    quad-label-blind).
 
     Usage:
         # Default connection
@@ -1780,13 +1791,37 @@ class CayleyStore(Store):
         ----------
         quads : list[dict]
             List of quad dicts to delete.
+
+        Note
+        ----
+        Cayley's delete endpoint is ``/api/v1/delete``.  Posting quads
+        to ``/api/v1/write`` *adds* them (a no-op for quads that
+        already exist — which is how this bug hid: nothing was ever
+        removed and nothing visibly changed).
         """
         session = self._get_session()
         resp = session.post(
-            f"{self._base_url}/api/v1/write",
+            f"{self._base_url}/api/v1/delete",
             json=quads
         )
         resp.raise_for_status()
+
+    def _k(self, element_id: str) -> str:
+        """Internal (label-namespaced) subject key for *element_id*.
+
+        Cayley's gizmo queries (``g.V(id)`` and traversals) are
+        quad-label-blind: two stores using different labels but the
+        same subject IDs would see each other's quads.  Prefixing the
+        stored subject with the store label namespaces the graph
+        (``<label>:<element_id>``) so every query is naturally
+        scoped; the public API keeps unprefixed IDs.
+        """
+        return f"{self._label}:{element_id}"
+
+    @staticmethod
+    def _u(key: str) -> str:
+        """Strip the label namespace from an internal subject key."""
+        return key.split(":", 1)[1] if ":" in key else key
 
     def _escape(self, value: str) -> str:
         """Escape a value for use in a Gizmo query string."""
@@ -1811,27 +1846,57 @@ class CayleyStore(Store):
         import json
         quads = []
 
+        # Overwrite semantics (parity with InMemoryStore / NetworkXStore,
+        # where put() replaces the data dict): first remove this
+        # element's existing marker and property quads.  Relationship
+        # edges are kept — re-adding an identical edge quad is a no-op,
+        # and edges must survive re-put of an element.
+        key = self._k(element_id)
+        try:
+            old_preds = self._query(
+                f'g.V("{key}").outPredicates().all()'
+            )
+            stale = []
+            for pr in old_preds:
+                pred_name = pr.get("id", "")
+                if pred_name in (REL_PARENT_CHILD, REL_TYPED_BY,
+                                 REL_SPECIALIZES):
+                    continue  # keep relationship edges
+                for obj in self._query(
+                    f'g.V("{key}").out("{pred_name}").all()'
+                ):
+                    stale.append({
+                        "subject": key,
+                        "predicate": pred_name,
+                        "object": obj.get("id", ""),
+                        "label": self._label
+                    })
+            if stale:
+                self._delete_quads(stale)
+        except RuntimeError:
+            pass
+
         # Mark this as an element node with store label
         quads.append({
-            "subject": element_id,
+            "subject": key,
             "predicate": "_is_element",
             "object": "true",
             "label": self._label
         })
         quads.append({
-            "subject": element_id,
+            "subject": key,
             "predicate": "_store_label",
             "object": self._label,
             "label": self._label
         })
 
         # Store element properties as quads
-        for key, value in data.items():
+        for pname, value in data.items():
             if isinstance(value, (dict, list)):
                 value = json.dumps(value)
             quads.append({
-                "subject": element_id,
-                "predicate": key,
+                "subject": key,
+                "predicate": pname,
                 "object": str(value),
                 "label": self._label
             })
@@ -1841,9 +1906,9 @@ class CayleyStore(Store):
         # Add relationship edge
         if parent_id is not None:
             self._write([{
-                "subject": parent_id,
+                "subject": self._k(parent_id),
                 "predicate": rel_type,
-                "object": element_id,
+                "object": key,
                 "label": self._label
             }])
 
@@ -1861,33 +1926,24 @@ class CayleyStore(Store):
             Element attributes dict, or None if not found.
         """
         import json
-        results = self._query(f'g.V("{element_id}").out().all()')
-        if not results:
+        key = self._k(element_id)
+        if not self.has(element_id):
             return None
+        pred_obj = self._query(f'g.V("{key}").outPredicates().all()')
 
         data = {}
-        for result in results:
-            # Results are like {"id": "name"}, {"id": "Wheel"}, etc.
-            # We need to get the predicate too
-            pass
-
-        # Better approach: get all predicates and objects
-        results = self._query(f'g.V("{element_id}").tag("subj").out().save("pred", "key").all()')
-        # Actually, let's use a simpler approach
-        results = self._query(f'g.V("{element_id}").out().all()')
-
-        # Get predicate-object pairs
-        pred_obj = self._query(
-            f'g.V("{element_id}").outPredicates().all()'
-        )
-
-        # Reconstruct data from individual queries
         for pred_result in pred_obj:
             pred = pred_result.get("id", "")
-            if pred in ("id",):
+            if pred in ("id", "_is_element", "_store_label",
+                        REL_PARENT_CHILD, REL_TYPED_BY, REL_SPECIALIZES):
+                # Internal markers and relationship edges are not
+                # element data — edges are exposed via children() /
+                # parents() / relationships() instead (parity with
+                # InMemoryStore / NetworkXStore, where get() returns
+                # exactly the put() data dict).
                 continue
             obj_results = self._query(
-                f'g.V("{element_id}").out("{pred}").all()'
+                f'g.V("{key}").out("{pred}").all()'
             )
             if obj_results:
                 val = obj_results[0].get("id", "")
@@ -1903,10 +1959,9 @@ class CayleyStore(Store):
     def delete(self, element_id: str) -> bool:
         """Remove an element and all its incident quads.
 
-        Note: Cayley's HTTP API has limited delete support. This method
-        marks the element as deleted by removing its _is_element quad.
-        The element will no longer appear in ids() or has() results,
-        but orphaned property quads may remain.
+        Deletes the element's marker quads, property quads and
+        outgoing relationship edges, plus any incoming relationship
+        edges, via Cayley's ``/api/v1/delete`` endpoint.
 
         Parameters
         ----------
@@ -1921,26 +1976,20 @@ class CayleyStore(Store):
         if not self.has(element_id):
             return False
 
-        # Delete the _is_element quad to mark as deleted
-        # Cayley HTTP API doesn't support true deletion, so we use soft delete
-        quads_to_delete = [{
-            "subject": element_id,
-            "predicate": "_is_element",
-            "object": "true",
-            "label": self._label
-        }]
+        key = self._k(element_id)
+        quads_to_delete = []
 
-        # Try to delete outgoing property quads
+        # Outgoing quads: markers, properties, outbound rel edges
         try:
-            preds = self._query(f'g.V("{element_id}").outPredicates().all()')
+            preds = self._query(f'g.V("{key}").outPredicates().all()')
             for pred in preds:
                 p = pred.get("id", "")
-                if p == "_is_element":
-                    continue
-                objs = self._query(f'g.V("{element_id}").out("{p}").all()')
+                objs = self._query(
+                    f'g.V("{key}").out("{p}").all()'
+                )
                 for obj in objs:
                     quads_to_delete.append({
-                        "subject": element_id,
+                        "subject": key,
                         "predicate": p,
                         "object": obj.get("id", ""),
                         "label": self._label
@@ -1948,9 +1997,29 @@ class CayleyStore(Store):
         except RuntimeError:
             pass
 
-        # Note: Cayley HTTP API doesn't actually delete quads via /api/v1/write
-        # We rely on the _is_element marker for logical deletion
-        # The quads remain in the database but the element is hidden from queries
+        # Incoming relationship edges (parent -> element): without this
+        # parents()/children() would keep returning ghost links.
+        try:
+            in_preds = self._query(
+                f'g.V("{key}").inPredicates().all()'
+            )
+            for pred in in_preds:
+                p = pred.get("id", "")
+                parents = self._query(
+                    f'g.V("{key}").in("{p}").all()'
+                )
+                for parent in parents:
+                    quads_to_delete.append({
+                        "subject": parent.get("id", ""),
+                        "predicate": p,
+                        "object": key,
+                        "label": self._label
+                    })
+        except RuntimeError:
+            pass
+
+        if quads_to_delete:
+            self._delete_quads(quads_to_delete)
         return True
 
     def children(self, parent_id: str, rel_type: str = REL_PARENT_CHILD) -> list[str]:
@@ -1968,10 +2037,11 @@ class CayleyStore(Store):
         list[str]
             List of child element IDs.
         """
+        key = self._k(parent_id)
         results = self._query(
-            f'g.V("{parent_id}").out("{rel_type}").has("_store_label", "{self._label}").all()'
+            f'g.V("{key}").out("{rel_type}").has("_store_label", "{self._label}").all()'
         )
-        return [r.get("id", "") for r in results]
+        return [self._u(r.get("id", "")) for r in results]
 
     def parents(self, child_id: str, rel_type: Optional[str] = None) -> list[str]:
         """Get parent element IDs connected by incoming edges.
@@ -1988,15 +2058,16 @@ class CayleyStore(Store):
         list[str]
             List of parent element IDs.
         """
+        key = self._k(child_id)
         if rel_type:
             results = self._query(
-                f'g.V().out("{rel_type}").is("{child_id}").has("_store_label", "{self._label}").all()'
+                f'g.V().out("{rel_type}").is("{key}").has("_store_label", "{self._label}").all()'
             )
         else:
             results = self._query(
-                f'g.V("{child_id}").in().has("_store_label", "{self._label}").all()'
+                f'g.V("{key}").in().has("_store_label", "{self._label}").all()'
             )
-        return [r.get("id", "") for r in results]
+        return [self._u(r.get("id", "")) for r in results]
 
     def relationships(self, element_id: str,
                       rel_type: Optional[str] = None,
@@ -2027,49 +2098,55 @@ class CayleyStore(Store):
 
         edges = []
 
+        key = self._k(element_id)
+
         if direction in ("out", "both"):
             if rel_type:
                 results = self._query(
-                    f'g.V("{element_id}").out("{rel_type}").all()'
+                    f'g.V("{key}").out("{rel_type}").all()'
                 )
                 for r in results:
-                    edges.append((r.get("id", ""), rel_type, {"rel_type": rel_type}))
+                    edges.append((self._u(r.get("id", "")), rel_type,
+                                  {"rel_type": rel_type}))
             else:
                 # Get all outgoing edges, filter to known relationship types
                 results = self._query(
-                    f'g.V("{element_id}").outPredicates().all()'
+                    f'g.V("{key}").outPredicates().all()'
                 )
                 for pred in results:
                     p = pred.get("id", "")
                     if p not in known_rel_types:
                         continue
                     targets = self._query(
-                        f'g.V("{element_id}").out("{p}").all()'
+                        f'g.V("{key}").out("{p}").all()'
                     )
                     for t in targets:
-                        edges.append((t.get("id", ""), p, {"rel_type": p}))
+                        edges.append((self._u(t.get("id", "")), p,
+                                      {"rel_type": p}))
 
         if direction in ("in", "both"):
             if rel_type:
                 results = self._query(
-                    f'g.V().out("{rel_type}").is("{element_id}").all()'
+                    f'g.V().out("{rel_type}").is("{key}").all()'
                 )
                 for r in results:
-                    edges.append((r.get("id", ""), rel_type, {"rel_type": rel_type}))
+                    edges.append((self._u(r.get("id", "")), rel_type,
+                                  {"rel_type": rel_type}))
             else:
                 # Get all incoming edges, filter to known relationship types
                 results = self._query(
-                    f'g.V("{element_id}").inPredicates().all()'
+                    f'g.V("{key}").inPredicates().all()'
                 )
                 for pred in results:
                     p = pred.get("id", "")
                     if p not in known_rel_types:
                         continue
                     sources = self._query(
-                        f'g.V("{element_id}").in("{p}").all()'
+                        f'g.V("{key}").in("{p}").all()'
                     )
-                    for s in sources:
-                        edges.append((s.get("id", ""), p, {"rel_type": p}))
+                    for src in sources:
+                        edges.append((self._u(src.get("id", "")), p,
+                                      {"rel_type": p}))
 
         return edges
 
@@ -2087,18 +2164,49 @@ class CayleyStore(Store):
             List of matching element IDs.
         """
         if not filters:
-            return self._query(
+            results = self._query(
                 f'g.V().has("_store_label", "{self._label}").all()'
             )
+            return [self._u(r.get("id", "")) for r in results]
+
+        # Glob filters ('*' in the 'name' value) cannot be expressed as
+        # has() constraints (Cayley matches literally), so take the
+        # client-side fnmatch path for parity with NetworkXStore,
+        # KuzuStore and InMemoryStore (Goal 10 batch 3).
+        has_glob = any(k == "name" and "*" in str(v)
+                       for k, v in filters.items())
+
+        if has_glob:
+            results = []
+            import fnmatch
+            for r in self._query(
+                f'g.V().has("_store_label", "{self._label}").all()'
+            ):
+                eid = self._u(r.get("id", ""))
+                data = self.get(eid) or {}
+                match = True
+                for key, value in filters.items():
+                    if key == "name" and "*" in str(value):
+                        if not fnmatch.fnmatch(
+                            data.get("name", ""), str(value)
+                        ):
+                            match = False
+                            break
+                    elif data.get(key) != value:
+                        match = False
+                        break
+                if match:
+                    results.append(eid)
+            return results
 
         # Build query with has() constraints, including store label filter
         conditions = [f'.has("_store_label", "{self._label}")']
-        for key, value in filters.items():
-            conditions.append(f'.has("{key}", "{value}")')
+        for fkey, value in filters.items():
+            conditions.append(f'.has("{fkey}", "{value}")')
 
         query = "g.V()" + "".join(conditions) + ".all()"
         results = self._query(query)
-        return [r.get("id", "") for r in results]
+        return [self._u(r.get("id", "")) for r in results]
 
     def has(self, element_id: str) -> bool:
         """Check if an element exists in the graph.
@@ -2115,7 +2223,7 @@ class CayleyStore(Store):
         """
         try:
             results = self._query(
-                f'g.V("{element_id}").has("_store_label", "{self._label}").all()'
+                f'g.V("{self._k(element_id)}").has("_store_label", "{self._label}").all()'
             )
             return len(results) > 0 if results else False
         except RuntimeError:
@@ -2129,12 +2237,9 @@ class CayleyStore(Store):
         int
             Number of elements.
         """
-        results = self._query("g.V().count()")
-        if results and results[0]:
-            val = results[0].get("id", 0)
-            if val is not None:
-                return int(val)
-        # Fallback: count manually
+        # g.V().count() would count the whole database (all stores'
+        # labels plus literal object nodes); count this store's
+        # elements only.
         return len(list(self.ids()))
 
     def ids(self) -> Iterator[str]:
@@ -2149,22 +2254,27 @@ class CayleyStore(Store):
             f'g.V().has("_store_label", "{self._label}").all()'
         )
         for r in results:
-            yield r.get("id", "")
+            yield self._u(r.get("id", ""))
 
     def clear(self) -> None:
         """Remove all quads with the store's label."""
-        # Delete all quads with our label by iterating and deleting
-        results = self._query_label("g.V().all()")
+        # Iterate this store's elements (label-scoped via the
+        # _store_label marker quad; subjects carry the "<label>:"
+        # namespace) and delete their out-quads.  g.V().all() would
+        # also match other stores' quads.
+        results = self._query(
+            f'g.V().has("_store_label", "{self._label}").all()'
+        )
         quads_to_delete = []
         for r in results:
-            eid = r.get("id", "")
-            preds = self._query(f'g.V("{eid}").outPredicates().all()')
+            key = r.get("id", "")   # already label-namespaced
+            preds = self._query(f'g.V("{key}").outPredicates().all()')
             for pred in preds:
                 p = pred.get("id", "")
-                objs = self._query(f'g.V("{eid}").out("{p}").all()')
+                objs = self._query(f'g.V("{key}").out("{p}").all()')
                 for obj in objs:
                     quads_to_delete.append({
-                        "subject": eid,
+                        "subject": key,
                         "predicate": p,
                         "object": obj.get("id", ""),
                         "label": self._label
@@ -2177,17 +2287,19 @@ class CayleyStore(Store):
 
     def descendants(self, root_id: str, rel_type: str = REL_PARENT_CHILD) -> list[str]:
         """Return all descendants via recursive traversal."""
+        key = self._k(root_id)
         results = self._query(
-            f'g.V("{root_id}").followRecursive(g.Morphism().out("{rel_type}")).all()'
+            f'g.V("{key}").followRecursive(g.Morphism().out("{rel_type}")).all()'
         )
-        return [r.get("id", "") for r in results]
+        return [self._u(r.get("id", "")) for r in results]
 
     def ancestors(self, leaf_id: str, rel_type: str = REL_PARENT_CHILD) -> list[str]:
         """Return all ancestors via reverse recursive traversal."""
+        key = self._k(leaf_id)
         results = self._query(
-            f'g.V("{leaf_id}").followRecursive(g.Morphism().in("{rel_type}")).all()'
+            f'g.V("{key}").followRecursive(g.Morphism().in("{rel_type}")).all()'
         )
-        return [r.get("id", "") for r in results]
+        return [self._u(r.get("id", "")) for r in results]
 
     def path(self, source_id: str, target_id: str,
              rel_type: str = REL_PARENT_CHILD) -> Optional[list[str]]:
@@ -2294,12 +2406,19 @@ class CayleyStore(Store):
             if data is not None:
                 new_store.put(eid, data)
 
+        # Re-create the edges that stay inside the subgraph.  Written
+        # directly as quads: a second put(eid, {}, ...) would erase the
+        # properties just stored (put() replaces the data dict), and
+        # the old parent_id=eid created bogus self-edges.
         for eid in element_ids:
             for target, rt, _ in self.relationships(eid, direction="out"):
                 if target in element_ids:
-                    new_store.put(eid, {}, parent_id=eid, rel_type=rt)
-                    # Fix: add the edge separately
-                    pass
+                    new_store._write([{
+                        "subject": new_store._k(eid),
+                        "predicate": rt,
+                        "object": new_store._k(target),
+                        "label": new_store._label,
+                    }])
 
         return new_store
 

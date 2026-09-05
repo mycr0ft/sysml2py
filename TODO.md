@@ -139,7 +139,14 @@ are complete.  Follow-up work is organized under the
     `_extract_imports` scans the lexer token stream: bare imports
     extracted (missed by the regex), comment/string false positives
     gone, syntax-error tolerant.
-  - [ ] CayleyStore query extensions (parity with NetworkX/Kùzu)
+  - [x] **Batch 3 (v0.77.0): CayleyStore hardening + query parity**
+    — verified against a live podman Cayley v0.7 server: fixed
+    `clear()` stub, `_delete_quads` posting to /write instead of
+    /delete, `delete()` no-op, `get()` marker/edge leaks, `put()`
+    overwrite, `__len__` whole-DB count, no-filter query shape,
+    `subgraph()` self-edges; glob query parity with NetworkX
+    (client-side fnmatch); label-namespaced subjects so multiple
+    stores can share a server.  **Goal 10 complete.**
 
 Legacy candidate follow-up work:
 

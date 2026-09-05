@@ -4,7 +4,7 @@
 
 import pytest
 from sysmlpy.store import (
-    Store, InMemoryStore, NetworkXStore,
+    Store, InMemoryStore, NetworkXStore, CayleyStore,
     create_store, new_id,
     REL_PARENT_CHILD, REL_TYPED_BY, REL_SPECIALIZES,
 )
@@ -544,3 +544,188 @@ class TestKuzuQueryExtensions:
         st.put("x1", {"name": "X1"})
         st.put("x2", {"name": "X2"})
         assert st.shortest_path_between_named("X1", "X2") is None
+
+
+# ── Cayley (requires a running Cayley server) ──────────────────────────────
+
+def _cayley_server_available() -> bool:
+    """Probe for a Cayley server at localhost:64210 (podman default)."""
+    try:
+        import requests
+        r = requests.post(
+            "http://localhost:64210/api/v1/query/gizmo",
+            data="g.V().limit(1).all()",
+            timeout=1,
+        )
+        return r.status_code == 200
+    except Exception:
+        return False
+
+
+_CAYLEY_UP = _cayley_server_available()
+
+
+@pytest.mark.skipif(
+    not _CAYLEY_UP,
+    reason=(
+        "Cayley server not reachable at localhost:64210 "
+        "(start it: podman run -d --name cayley -p 64210:64210 "
+        "docker.io/cayleygraph/cayley)"
+    ),
+)
+class TestCayleyStore:
+    """Goal 10 batch 3: CayleyStore hardening + query parity.
+
+    Verified against a live Cayley v0.7 server.  Fixes covered here:
+    clear() stub (missing _query_label), _delete_quads posting to
+    /write instead of /delete, delete() discarding its quad list,
+    get() leaking marker/edge keys, put() overwrite semantics, and
+    query() glob parity with the other backends.
+    """
+
+    def _store(self) -> CayleyStore:
+        st = CayleyStore(label="test_cayley")
+        st.clear()
+        return st
+
+    def _populated(self) -> CayleyStore:
+        st = self._store()
+        st.put("m", {"name": "M", "kind": "model"})
+        st.put("p1", {"name": "Engine", "kind": "part"}, parent_id="m")
+        st.put("p2", {"name": "Wheel", "kind": "part"}, parent_id="m")
+        st.put("a1", {"name": "power", "kind": "attribute"}, parent_id="p1")
+        return st
+
+    def test_put_and_get_roundtrip(self):
+        st = self._store()
+        st.put("e1", {"name": "Engine", "sysml_type": "part"})
+        assert st.get("e1") == {"name": "Engine", "sysml_type": "part"}
+
+    def test_get_missing(self):
+        assert self._store().get("nonexistent") is None
+
+    def test_put_overwrites(self):
+        st = self._store()
+        st.put("e1", {"name": "v1"})
+        st.put("e1", {"name": "v2"})
+        assert st.get("e1") == {"name": "v2"}
+
+    def test_put_overwrite_keeps_parent_edge(self):
+        st = self._store()
+        st.put("parent", {"name": "P"})
+        st.put("child", {"name": "v1"}, parent_id="parent")
+        st.put("child", {"name": "v2"})
+        assert st.get("child") == {"name": "v2"}
+        assert st.parents("child") == ["parent"]
+
+    def test_put_with_parent(self):
+        st = self._store()
+        st.put("pid", {"name": "parent"})
+        st.put("cid", {"name": "child"}, parent_id="pid")
+        assert st.get("cid") is not None
+        assert st.children("pid") == ["cid"]
+        assert st.parents("cid") == ["pid"]
+
+    def test_delete_removes_everything(self):
+        st = self._populated()
+        assert st.delete("p2") is True
+        assert st.has("p2") is False
+        assert st.get("p2") is None
+        assert st.children("m") == ["p1"]  # no ghost edge
+
+    def test_delete_missing(self):
+        assert self._populated().delete("ghost") is False
+
+    def test_children_parents(self):
+        st = self._populated()
+        assert st.children("m") == ["p1", "p2"]
+        assert st.children("p1") == ["a1"]
+        assert st.parents("a1") == ["p1"]
+
+    def test_relationships(self):
+        st = self._populated()
+        rels = st.relationships("p1")
+        pairs = {(r[0], r[1]) for r in rels}
+        assert ("a1", REL_PARENT_CHILD) in pairs
+        assert ("m", REL_PARENT_CHILD) in pairs
+
+    def test_query_by_type(self):
+        st = self._populated()
+        results = st.query(kind="part")
+        assert sorted(results) == ["p1", "p2"]
+
+    def test_query_by_name(self):
+        st = self._populated()
+        assert st.query(name="Engine") == ["p1"]
+
+    def test_query_wildcard(self):
+        st = self._populated()
+        results = st.query(name="Eng*")
+        assert results == ["p1"]
+
+    def test_query_wildcard_parity_with_networkx(self):
+        st = self._populated()
+        nx = NetworkXStore()
+        nx.clear()
+        nx.put("m", {"name": "M", "kind": "model"})
+        nx.put("p1", {"name": "Engine", "kind": "part"})
+        nx.put("p2", {"name": "Wheel", "kind": "part"})
+        nx.put("a1", {"name": "power", "kind": "attribute"})
+        for case in (
+            {"name": "Eng*"}, {"name": "*e*"}, {"name": "*"},
+            {"name": "*", "kind": "part"}, {"kind": "part"},
+            {"name": "Engine"}, {"kind": "missing"},
+        ):
+            assert sorted(st.query(**case)) == sorted(nx.query(**case)), case
+        nx.clear()
+
+    def test_query_no_filters(self):
+        st = self._populated()
+        assert sorted(st.query()) == ["a1", "m", "p1", "p2"]
+
+    def test_query_empty_result(self):
+        assert self._populated().query(kind="nonexistent") == []
+
+    def test_descendants_ancestors(self):
+        st = self._populated()
+        assert sorted(st.descendants("m")) == ["a1", "p1", "p2"]
+        assert st.ancestors("a1") == ["p1", "m"]
+
+    def test_path(self):
+        st = self._populated()
+        assert st.path("m", "a1") == ["m", "p1", "a1"]
+
+    def test_components_cycles_centrality(self):
+        st = self._populated()
+        comps = st.connected_components()
+        assert comps == [{"m", "p1", "p2", "a1"}]
+        assert st.cycles() == []
+        cent = st.centrality()
+        assert cent["m"] > cent["a1"]
+
+    def test_len_ids_has(self):
+        st = self._populated()
+        assert len(st) == 4
+        assert sorted(st.ids()) == ["a1", "m", "p1", "p2"]
+        assert st.has("p1") is True
+        assert st.has("nope") is False
+
+    def test_clear_empties(self):
+        st = self._populated()
+        st.clear()
+        assert len(st) == 0
+        assert list(st.ids()) == []
+
+    def test_label_isolation(self):
+        a = CayleyStore(label="iso_a")
+        a.clear()
+        b = CayleyStore(label="iso_b")
+        b.clear()
+        a.put("x", {"name": "InA"})
+        b.put("y", {"name": "InB"})
+        assert sorted(a.ids()) == ["x"]
+        assert sorted(b.ids()) == ["y"]
+        assert a.query(name="InB") == []
+        assert b.query(name="InA") == []
+        a.clear()
+        b.clear()
