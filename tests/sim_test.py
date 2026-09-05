@@ -3,9 +3,10 @@
 """State-machine simulation tests (Cameo-style MVP, sysmlpy.sim).
 
 Covers: machine extraction (states/initial/transitions incl. shorthand
-guards), guarded firing against evaluated model values, run-to-completion,
-effect *logging* (the visitor currently drops ``do <ref>`` on
-transitions — see TODO), TUI drive, and value overrides.
+guards and effects), guarded firing against evaluated model values,
+run-to-completion, effect logging + executing assignment effects
+(``do x := 5`` flows through ``set_value``), history pseudostates
+(shallow and deep), TUI drive, and value overrides.
 """
 
 import sys
@@ -529,3 +530,213 @@ class TestParseValue:
         assert _parse_value("5") == 5
         assert _parse_value("70.5") == 70.5
         assert _parse_value(" engaged ") == "engaged"
+
+
+# ---------------------------------------------------------------------------
+# v0.81.0 — Batch 2: executing assignment effects + history pseudostates
+# ---------------------------------------------------------------------------
+
+ASSIGN = """
+package Sim {
+    state def M {
+        attribute x : ScalarValues::Integer := 0;
+        state s1;
+        state s2;
+        transition go first s1 accept Go do x := 5 then s2;
+        transition back first s2 accept Back when x == 5 then s1;
+    }
+}
+"""
+
+COUNTER = """
+package Sim {
+    state def M {
+        attribute n : ScalarValues::Integer := 0;
+        state a;
+        state b;
+        transition inc first a accept Tick do n := n + 1 then b;
+        transition ret first b accept Tock then a;
+    }
+}
+"""
+
+BADASSIGN = """
+package Sim {
+    state def M {
+        attribute x : ScalarValues::Integer := 0;
+        state a;
+        state b;
+        transition bad first a accept Go do x := nope + 1 then b;
+    }
+}
+"""
+
+HISTORY = """
+package Sim {
+    state def M {
+        entry; then C;
+        state C {
+            entry; then C1;
+            state C1;
+            state C2;
+            state h : HistoryUsage;
+            transition deeper first C1 accept Deeper then C2;
+        }
+        state Outside;
+        transition leave first C accept Leave then Outside;
+        transition back first Outside accept Return then h;
+    }
+}
+"""
+
+HISTORY_BARE = """
+package Sim {
+    state def M {
+        entry; then C;
+        state C {
+            entry; then C1;
+            state C1;
+            state C2;
+            h;
+            transition deeper first C1 accept Deeper then C2;
+        }
+        state Outside;
+        transition leave first C accept Leave then Outside;
+        transition back first Outside accept Return then h;
+    }
+}
+"""
+
+DEEP = """
+package Sim {
+    state def M {
+        entry; then C;
+        state C {
+            entry; then Inner;
+            state Inner {
+                entry; then Deep1;
+                state Deep1;
+                state Deep2;
+                transition dive first Deep1 accept Dive then Deep2;
+            }
+            state h : HistoryUsage;
+        }
+        state Outside;
+        transition leave first Deep2 accept Leave then Outside;
+        transition back first Outside accept Return then h;
+    }
+}
+"""
+
+
+class TestAssignmentEffects:
+    def test_assignment_applied_to_values(self):
+        sim = StateSimulator(sysmlpy.loads(ASSIGN))
+        assert sim.send("Go") is True
+        assert sim.values["x"] == 5
+        assert sim.log[-1].assignments == (("x", 5),)
+        assert "x := 5" in sim.log[-1].effects
+
+    def test_later_guard_sees_assigned_value(self):
+        sim = StateSimulator(sysmlpy.loads(ASSIGN))
+        sim.send("Go")
+        # back has guard x == 5 — only passes because the effect ran
+        assert sim.send("Back") is True
+
+    def test_expression_assignment_accumulates(self):
+        sim = StateSimulator(sysmlpy.loads(COUNTER))
+        sim.send("Tick")
+        sim.send("Tock")
+        sim.send("Tick")
+        assert sim.values["n"] == 2
+        assert sim.log[-1].assignments == (("n", 2),)
+
+    def test_failed_assignment_not_applied(self):
+        sim = StateSimulator(sysmlpy.loads(BADASSIGN))
+        assert sim.send("Go") is True  # fires, effect fails
+        assert sim.values["x"] == 0
+        rec = sim.log[-1]
+        assert rec.assignments == ()
+        assert any("not evaluated" in e for e in rec.effects)
+
+    def test_non_assignment_effect_unchanged(self):
+        sim = _sim()
+        sim.send("Engage")
+        rec = sim.log[-1]
+        assert rec.effects == ["logState"]
+        assert rec.assignments == ()
+
+    def test_reset_clears_nothing_but_state(self):
+        sim = StateSimulator(sysmlpy.loads(ASSIGN))
+        sim.send("Go")
+        sim.reset()
+        assert sim.values["x"] == 5  # values survive reset; state does not
+
+
+class TestHistoryPseudostates:
+    def test_marker_not_a_state(self):
+        md = build_state_machine(sysmlpy.loads(HISTORY))
+        assert "C.h" not in md.states
+        assert md.history_markers == {"C.h": "C"}
+        assert md.region_defaults["C"] == "C.C1"
+
+    def test_history_resumes_last_substate(self):
+        sim = StateSimulator(sysmlpy.loads(HISTORY))
+        assert sim.state == "C.C1"
+        assert sim.send("Deeper") is True   # -> C.C2
+        assert sim.send("Leave") is True    # -> Outside
+        assert sim.send("Return") is True   # -> C.C2 via history
+        assert sim.state == "C.C2"
+        assert sim.log[-1].to_state == "C.C2"
+        assert "resumed" in sim.log[-1].note
+
+    def test_history_defaults_without_visit(self):
+        sim = StateSimulator(sysmlpy.loads(HISTORY))
+        # no Deeper fired: C's last active substate stays its initial
+        assert sim.send("Leave") is True
+        assert sim.send("Return") is True
+        assert sim.state == "C.C1"
+
+    def test_bare_h_form_same_semantics(self):
+        sim = StateSimulator(sysmlpy.loads(HISTORY_BARE))
+        assert sim.send("Deeper") is True
+        assert sim.send("Leave") is True
+        assert sim.send("Return") is True
+        assert sim.state == "C.C2"
+
+    def test_shallow_vs_deep_history(self):
+        shallow = StateSimulator(sysmlpy.loads(DEEP))
+        shallow.send("Dive")   # -> C.Inner.Deep2
+        shallow.send("Leave")  # -> Outside
+        assert shallow.send("Return") is True
+        assert shallow.state == "C.Inner.Deep1"  # Inner's initial
+
+        deep = StateSimulator(sysmlpy.loads(DEEP), deep_history=True)
+        deep.send("Dive")
+        deep.send("Leave")
+        assert deep.send("Return") is True
+        assert deep.state == "C.Inner.Deep2"  # deepest visited
+
+    def test_reset_clears_history(self):
+        sim = StateSimulator(sysmlpy.loads(HISTORY))
+        sim.send("Deeper")
+        sim.send("Leave")
+        sim.reset()
+        assert sim.state == "C.C1"
+        assert sim._history["C"] == "C.C1"
+
+    def test_untyped_state_named_h_is_a_state(self):
+        # ``state h;`` (no HistoryUsage typing) is a real state — the
+        # name convention applies to bare *references* only
+        text = ("package P { state def M { state h; state S; "
+                "transition t first h accept R then S; } }")
+        md = build_state_machine(sysmlpy.loads(text))
+        assert "h" in md.states
+        assert md.history_markers == {}
+
+    def test_boxes_collector_reports_pseudostates(self):
+        visit = sysmlpy.load_grammar(sysmlpy.loads(HISTORY).dump())
+        machines = boxes_view._collect_state_machine(visit)
+        comp = [s for s in machines[0]["states"] if isinstance(s, dict)]
+        assert comp[0]["pseudostates"] == [{"name": "h", "kind": "history"}]
+        assert "h" not in [x.get("name") for x in comp[0]["states"]]

@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.68.0** (2026-09-03)
+Current version: **v0.81.0** (2026-09-05)
 
 ---
 
@@ -339,6 +339,18 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 ---
 
 ## Completed Since v0.27.0
+
+### State-Machine Simulation: Assignment Effects & History (v0.81.0)
+
+- `do x := <expr>` effects are evaluated (`evaluate_expression`) and
+  applied via `StateSimulator.set_value`, so later guards see the new
+  value; applied pairs surface on `StepRecord.assignments`.
+- History pseudostates (`state h : HistoryUsage;`, `h : HistoryUsage;`,
+  or bare `h;`/`history;` references) are recognized by
+  `boxes_view._collect_state_machine` (new per-region `pseudostates`),
+  excluded from the state list, and transitions targeting them resume
+  the region's last active substate (default entry when unvisited).
+  Deep history via `deep_history=True` / `sysmlpy sim --deep-history`.
 
 ### Action Control-Flow Node Classes (v0.28.0–v0.29.0)
 

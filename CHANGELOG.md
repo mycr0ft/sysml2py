@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## v0.81.0 (2026-09-05)
+
+**Goal 11 Batch 2 — sim: assignment effects + history pseudostates.**
+
+1. *Assignment effects execute*: `do x := 5` (general
+   `do <name> := <expr>`) is evaluated via `evaluate_expression` and
+   applied through `StateSimulator.set_value`, so guards evaluated
+   later see the new value.  Applied pairs surface on
+   `StepRecord.assignments` (and the log repr).  Failed evaluations
+   (unknown name, type errors) never abort the simulation — the
+   effect is logged with a `(not evaluated: ...)` annotation.
+2. *History pseudostates*: `state h : HistoryUsage;` /
+   `h : HistoryUsage;` (typed) and bare `h;`/`history;` (name
+   convention, untyped references only) are recognized as history
+   markers — `boxes_view._collect_state_machine` reports them in a
+   new per-region `pseudostates` list, they are excluded from the
+   state list, and transitions targeting them re-enter the region's
+   last active substate (falling back to the region's default entry
+   when nothing was recorded yet).  Deep history (restore the deepest
+   visited state) via `StateSimulator(..., deep_history=True)` and
+   `sysmlpy sim --deep-history` — the language has no deep-history
+   form, so it is a simulator option.
+
+Sim tests 38 → 52 (`tests/sim_test.py`).  Fast suite 1394,
+conformance 123/123.
+
 ## v0.80.0 (2026-09-05)
 
 **Constraint textual bodies** — natural-language constraint capture.

@@ -567,10 +567,12 @@ def cmd_sim(args) -> int:
         name, _, raw = spec.partition("=")
         values[name.strip()] = _parse_eval_value(raw)
 
+    deep = bool(getattr(args, "deep_history", False))
     script = [t.strip() for t in (args.run or "").split(";") if t.strip()]
     try:
         from sysmlpy.sim import StateSimulator, SimulationError
-        sim = StateSimulator(model, focus=args.focus, values=values)
+        sim = StateSimulator(model, focus=args.focus, values=values,
+                             deep_history=deep)
     except (ImportError, SimulationError) as e:
         print(f"Simulation error: {e}", file=sys.stderr)
         return 2
@@ -582,7 +584,7 @@ def cmd_sim(args) -> int:
             print(f"{trigger}: {'fired' if fired else 'blocked'} "
                   f"-> {sim.state!r}")
         return 0
-    run_tui(model, focus=args.focus, values=values)
+    run_tui(model, focus=args.focus, values=values, deep_history=deep)
     return 0
 
 
@@ -966,6 +968,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_sim.add_argument(
         "-l", "--library",
         help="Path to SysML v2 library files to use for parsing",
+    )
+    p_sim.add_argument(
+        "--deep-history", action="store_true",
+        help="History pseudostates restore the deepest visited state "
+             "(default: one level, shallow)",
     )
     p_sim.set_defaults(func=cmd_sim)
 

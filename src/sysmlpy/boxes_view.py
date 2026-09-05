@@ -380,6 +380,44 @@ def _top_member(item, target):
     return None
 
 
+def _pseudostate_kind(usage: dict) -> Optional[str]:
+    """Classify a usage inside a state body as a pseudostate marker.
+
+    Recognizes history pseudostates: ``state h : HistoryUsage;`` /
+    ``h : HistoryUsage;`` (typed) and — for bare *reference* usages
+    only, as a name convention — ``h;``/``history;`` (untyped).
+    Returns ``"history"`` or ``None``.
+    """
+    if not isinstance(usage, dict):
+        return None
+    decl = usage.get("declaration") or {}
+    is_state = usage.get("name") == "StateUsage"
+
+    def _hunt(x):
+        if isinstance(x, dict):
+            if x.get("name") == "QualifiedName" and \
+                    isinstance(x.get("names"), list) and x["names"]:
+                qns.append(x["names"])
+            for v in x.values():
+                _hunt(v)
+        elif isinstance(x, list):
+            for v in x:
+                _hunt(v)
+
+    qns: list = []
+    _hunt(decl)
+    typed_history = any(ns and ns[-1] == "HistoryUsage" for ns in qns)
+    if typed_history:
+        return "history"
+    if is_state:
+        return None  # a real state named h is a state, not a marker
+    fd = decl.get("declaration") or {}
+    name = (fd.get("identification") or {}).get("declaredName")
+    if name in ("history", "h"):
+        return "history"
+    return None
+
+
 def _state_declared_name(state_usage: dict) -> Optional[str]:
     """Extract the declaredName from a StateUsage dict."""
     decl = state_usage.get("declaration", {})
@@ -405,6 +443,7 @@ def _collect_state_body(items: list, prefix: str = "",
           "initial": <state name:str>|None,
           "transitions": [ {name, source, target, trigger, guard}, ... ],
           "composites": [ {name, items, ...}, ... ],
+          "pseudostates": [ {name, kind}, ... ],
           "entry": <action label str|None>,
           "do": <action label str|None>,
           "exit": <action label str|None>,
@@ -416,6 +455,7 @@ def _collect_state_body(items: list, prefix: str = "",
         "initial": None,
         "transitions": [],
         "composites": [],
+        "pseudostates": [],
         "entry": None, "do": None, "exit": None,
     }
 
@@ -483,6 +523,12 @@ def _collect_state_body(items: list, prefix: str = "",
             if isinstance(orel, dict) and orel.get("name") == "BehaviorUsageElement":
                 su = orel.get("ownedRelationship", {})
                 if isinstance(su, dict) and su.get("name") == "StateUsage":
+                    if _pseudostate_kind(su):
+                        sname = _state_declared_name(su)
+                        if sname:
+                            result["pseudostates"].append(
+                                {"name": sname, "kind": "history"})
+                        continue
                     sname = _state_declared_name(su)
                     if sname:
                         sub_body = su.get("body", {})
@@ -506,8 +552,38 @@ def _collect_state_body(items: list, prefix: str = "",
                                 "entry": None, "do": None, "exit": None,
                                 "states": [], "initial": None,
                                 "transitions": [], "composites": [],
+                                "pseudostates": [],
                             })
                         continue
+
+        # History / pseudostate markers as bare references in a state
+        # body (``h;``, ``history;``, ``h : HistoryUsage;``).  They are
+        # not states; sim treats transitions targeting them as history
+        # re-entries.
+        ps_name, ps_kind = None, None
+        for member_name in ("NonOccurrenceUsageMember",
+                            "OccurrenceUsageMember"):
+            pm = _top_member(item, member_name)
+            if pm is None:
+                continue
+            orel = pm.get("ownedRelatedElement")
+            orel_list = orel if isinstance(orel, list) else (
+                [orel] if isinstance(orel, dict) else [])
+            for oe in orel_list:
+                usage = (oe.get("ownedRelatedElement")
+                         if isinstance(oe, dict) else None)
+                if isinstance(usage, dict):
+                    kind = _pseudostate_kind(usage)
+                    if kind:
+                        ps_name, ps_kind = usage, kind
+        if ps_name is not None:
+            fd = ((ps_name.get("declaration") or {}).get("declaration")
+                  or {})
+            nm = (fd.get("identification") or {}).get("declaredName")
+            if nm:
+                result["pseudostates"].append(
+                    {"name": nm, "kind": ps_kind})
+            continue
 
         # If this item was a pure entry/do/exit member, we already
         # handled it above and there's nothing else to register.

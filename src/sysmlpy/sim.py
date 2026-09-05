@@ -44,9 +44,16 @@ Scope of this MVP (deliberate cuts, tracked in TODO.md):
   still flattened implicitly
 - one machine per simulator (``focus`` picks which); parallel regions
   — top-level or inside a composite — raise :class:`SimulationError`
-- effects are logged, not executed; assignment effects surface as
-  ``target := value`` text — executing them would flow through
-  :meth:`StateSimulator.set_value` and is a follow-up
+- assignment effects (``do x := 5``) execute against the simulator's
+  values (:meth:`StateSimulator.set_value`), so guards evaluated later
+  see the new value; other effects (``do <action>``, ``send``) are
+  logged only
+- history pseudostates (``state h : HistoryUsage;``/``h :
+  HistoryUsage;``, or ``h;``/``history;`` by name convention) are
+  honored: a transition targeting one re-enters the region's last
+  active substate.  Deep history restores the deepest visited state
+  when ``deep_history=True`` is passed to :class:`StateSimulator` —
+  the language has no deep-history form, so it is a simulator option
 - completion transitions (no ``accept`` trigger) fire automatically on
   entering a state (run-to-completion), and manually via
   :meth:`StateSimulator.step`
@@ -189,6 +196,15 @@ class TransitionSpec(NamedTuple):
     guard: Optional[str]
     #: Effect action name (``do <action>``), or None.
     effect: Optional[str]
+    #: For transitions targeting a history pseudostate: the flat name
+    #: of the region whose history the target remembers (``""`` =
+    #: machine root).  None for ordinary transitions.
+    history_region: Optional[str] = None
+
+
+#: Assignment-effect shape: ``name := expression`` (SysML assignment
+#: operator; the effect text from the collector renders exactly this).
+_ASSIGNMENT_RE = re.compile(r"^\s*([\w.]+)\s*:=\s*(.+?)\s*$", re.S)
 
 
 def _mangle(name: str) -> str:
@@ -209,6 +225,14 @@ class MachineDescriptor(NamedTuple):
     #: excluded from simulation but surfaced for diagnostics (the
     #: validator turns these into UNRESOLVED_TRANSITION_ENDPOINT).
     skipped: Tuple[TransitionSpec, ...] = ()
+    #: History pseudostate markers: flat marker name -> flat name of
+    #: the region whose last active substate it remembers (``""`` =
+    #: machine root).
+    history_markers: Dict[str, str] = {}
+    #: Region flat name -> default entry (initial substate leaf);
+    #: includes ``""`` -> machine initial.  Fallback when no history
+    #: has been recorded yet.
+    region_defaults: Dict[str, str] = {}
 
 
 def build_state_machine(model, focus: Optional[str] = None,
@@ -261,6 +285,11 @@ def build_state_machine(model, focus: Optional[str] = None,
     #   - a region declaring parallel raises (MVP cut).
     states: List[str] = []
     raw: List[dict] = []
+    # history pseudostate markers: flat marker name -> region flat name
+    markers_flat: Dict[str, str] = {}
+    # region flat name -> default entry (filled during expansion; the
+    # machine root is filled after the initial-state resolution below)
+    region_defaults_flat: Dict[str, str] = {}
 
     def _expand_region(level, prefix, all_names):
         local_flat: Dict[str, str] = {}
@@ -298,6 +327,7 @@ def build_state_machine(model, focus: Optional[str] = None,
                     substates_of[nm] = [flat]
                     continue
                 entry_of[nm] = entry
+                region_defaults_flat[prefix + nm] = entry
                 substates_of[nm] = (list(inner_flat.values()) +
                                     list(inner_entry.values()))
             else:
@@ -307,6 +337,20 @@ def build_state_machine(model, focus: Optional[str] = None,
                 substates_of[nm] = [flat]
             all_names.setdefault(nm, local_flat.get(nm)
                                  or entry_of.get(nm) or flat)
+
+        for ps in level.get("pseudostates", []) or []:
+            nm = ps.get("name") if isinstance(ps, dict) else ps
+            if not nm:
+                continue
+            flat = prefix + nm
+            region_flat = prefix[:-1] if prefix else ""
+            if nm in local_flat or nm in entry_of:
+                notes.append(
+                    f"pseudostate {flat!r} shadows a state of the same "
+                    "name; treating it as a state")
+                continue
+            markers_flat[flat] = region_flat
+            all_names.setdefault(nm, flat)
 
         for t in level.get("transitions", []):
             src, tgt = t.get("source"), t.get("target")
@@ -357,6 +401,28 @@ def build_state_machine(model, focus: Optional[str] = None,
         # substate) resolve to the qualified flat name
         source = all_names.get(source, source)
         target = all_names.get(target, target)
+        if target in markers_flat:
+            # history target: the transition re-enters the region's
+            # last active substate at fire time; the static dest is
+            # the region's default entry (used before any history)
+            region_flat = markers_flat[target]
+            dest = region_defaults_flat.get(region_flat)
+            if dest is None or dest not in states:
+                notes.append(
+                    f"transition {t.get('name')!r} skipped: history "
+                    f"region {region_flat or '(machine)'!r} has no "
+                    "default entry to fall back to")
+                skipped.append(TransitionSpec(
+                    name=t.get("name"), source=source, target=target,
+                    trigger=t.get("trigger"), guard=t.get("guard"),
+                    effect=t.get("effect"),
+                    history_region=region_flat))
+                continue
+            transitions.append(TransitionSpec(
+                name=t.get("name"), source=source, target=dest,
+                trigger=t.get("trigger"), guard=t.get("guard"),
+                effect=t.get("effect"), history_region=region_flat))
+            continue
         if source not in states or target not in states:
             notes.append(
                 f"transition {t.get('name')!r} skipped: endpoint(s) "
@@ -389,9 +455,12 @@ def build_state_machine(model, focus: Optional[str] = None,
             f"no entry transition in the model; starting in "
             f"{fallback!r} (the first declared state)")
         initial = fallback
+    region_defaults_flat[""] = initial
     return MachineDescriptor(name=sm.get("name"), states=states,
                              initial=initial, transitions=transitions,
-                             notes=notes, skipped=tuple(skipped))
+                             notes=notes, skipped=tuple(skipped),
+                             history_markers=markers_flat,
+                             region_defaults=region_defaults_flat)
 
 
 def load_model_grammar(model) -> dict:
@@ -422,7 +491,8 @@ class StepRecord:
     def __init__(self, from_state: str, trigger: Optional[str],
                  guard: Optional[str], guard_ok: Optional[bool],
                  to_state: Optional[str], effects: List[str],
-                 fired: bool, note: str = ""):
+                 fired: bool, note: str = "",
+                 assignments: Tuple[Tuple[str, Any], ...] = ()):
         self.from_state = from_state
         self.trigger = trigger
         self.guard = guard
@@ -431,13 +501,19 @@ class StepRecord:
         self.effects = effects
         self.fired = fired
         self.note = note
+        #: (name, value) pairs applied by ``do x := <expr>`` effects.
+        self.assignments = tuple(assignments)
         self.timestamp = time.time()
 
     def __repr__(self):
         arrow = "->" if self.fired else "-x"
         trig = self.trigger or "(completion)"
-        return (f"<{arrow} {self.from_state!r} --{trig}"
-                f"[{self.guard}]--> {self.to_state!r}>")
+        out = (f"<{arrow} {self.from_state!r} --{trig}"
+               f"[{self.guard}]--> {self.to_state!r}>")
+        if self.assignments:
+            assign = ", ".join(f"{n} := {v!r}" for n, v in self.assignments)
+            out += f" {assign}"
+        return out
 
 
 def _make_host(sim: "StateSimulator", n_guards: int, n_effects: int):
@@ -480,10 +556,14 @@ class StateSimulator:
     """
 
     def __init__(self, model, focus: Optional[str] = None,
-                 values: Optional[Dict[str, Any]] = None):
+                 values: Optional[Dict[str, Any]] = None,
+                 deep_history: bool = False):
         self.model = model
         self.descriptor = build_state_machine(model, focus=focus)
         self.notes = list(self.descriptor.notes)
+        #: When True, history pseudostates restore the deepest visited
+        #: state; by default (False) they restore one level (shallow).
+        self.deep_history = bool(deep_history)
         #: name -> value; guards evaluate against these (overrides on
         #: top of the model's collected attribute values).
         self.values: Dict[str, Any] = dict(values or {})
@@ -494,10 +574,66 @@ class StateSimulator:
                 pass
         self.log: List[StepRecord] = []
         self._pending_effects: List[str] = []
+        self._pending_assignments: List[Tuple[str, Any]] = []
+        #: region flat name -> last active direct substate of that
+        #: region ("" = machine root)
+        self._history: Dict[str, str] = {}
         self._host = _make_host(
             self, len(self.descriptor.transitions),
             len(self.descriptor.transitions))
         self._build()
+        self._record_history(self.state)
+
+    # -- history ------------------------------------------------------------
+
+    def _record_history(self, state: str):
+        """Remember the active direct substate of every enclosing region.
+
+        For state ``C.Inner.Deep.S`` this records ``"" -> C``,
+        ``C -> C.Inner``, ``C.Inner -> C.Inner.Deep`` and
+        ``C.Inner.Deep -> C.Inner.Deep.S`` — i.e. each region maps to
+        its direct active child, which is what shallow history resumes;
+        deep history follows the chain down.
+        """
+        if not state:
+            return
+        parts = state.split(".")
+        for i in range(len(parts)):
+            self._history[".".join(parts[:i])] = ".".join(parts[:i + 1])
+
+    def _resolve_history(self, region_flat: str) -> Optional[str]:
+        """State to resume when re-entering *region_flat* via history."""
+        rd = self.descriptor.region_defaults
+        default = rd.get(region_flat) or self.descriptor.initial
+        s = self._history.get(region_flat)
+        if s is None:
+            return default
+        if not self.deep_history:
+            # shallow: the recorded direct child; if it is a composite,
+            # enter at its initial substate
+            if s in self.descriptor.states:
+                return s
+            return rd.get(s) or default
+        seen = set()
+        while (s is not None and s not in self.descriptor.states
+               and s not in seen):
+            seen.add(s)
+            s = self._history.get(s) or rd.get(s)
+        return s or default
+
+    def _apply_history(self, t: TransitionSpec) -> str:
+        """Post-fire state adjustment for history-targeting transitions.
+
+        pytransitions needs a concrete ``dest`` per transition, so
+        history transitions are defined to the region's default entry
+        and the actual (recorded) state is applied right after firing.
+        """
+        if t.history_region is None:
+            return t.target
+        resolved = self._resolve_history(t.history_region)
+        if resolved and resolved != self.state:
+            self._host.state = resolved
+        return resolved or t.target
 
     # -- construction -------------------------------------------------------
 
@@ -591,16 +727,27 @@ class StateSimulator:
             self, len(self.descriptor.transitions),
             len(self.descriptor.transitions))
         self._build()
+        self._history.clear()
+        self._record_history(self.state)
 
     def _fire(self, index: int) -> bool:
         t = self.descriptor.transitions[index]
         self._pending_effects.clear()
+        self._pending_assignments.clear()
         fired = bool(getattr(self._host, f"fire_{index}")())
         if fired:
+            to_state = self._apply_history(t)
+            self._record_history(self.state)
+            note = ""
+            if t.history_region is not None and to_state != t.target:
+                note = (f"history: resumed {to_state!r} in region "
+                        f"{t.history_region or '(machine)'!r}")
             self.log.append(StepRecord(
-                t.source, t.trigger, t.guard, True, t.target,
-                list(self._pending_effects), True))
+                t.source, t.trigger, t.guard, True, to_state,
+                list(self._pending_effects), True, note,
+                assignments=tuple(self._pending_assignments)))
             self._pending_effects.clear()
+            self._pending_assignments.clear()
             self._run_completion()
             return True
         self.log.append(StepRecord(
@@ -617,11 +764,22 @@ class StateSimulator:
                 if t.source == current and t.trigger is None:
                     if self._eval_guard(i):
                         self._pending_effects.clear()
+                        self._pending_assignments.clear()
                         getattr(self._host, f"fire_{i}")()
+                        to_state = self._apply_history(t)
+                        self._record_history(self.state)
+                        note = ""
+                        if t.history_region is not None \
+                                and to_state != t.target:
+                            note = (f"history: resumed {to_state!r} "
+                                    f"in region "
+                                    f"{t.history_region or '(machine)'!r}")
                         self.log.append(StepRecord(
-                            t.source, None, t.guard, True, t.target,
-                            list(self._pending_effects), True))
+                            t.source, None, t.guard, True, to_state,
+                            list(self._pending_effects), True, note,
+                            assignments=tuple(self._pending_assignments)))
                         self._pending_effects.clear()
+                        self._pending_assignments.clear()
                         fired_any = True
                         break
             if not fired_any:
@@ -672,8 +830,25 @@ class StateSimulator:
 
     def _do_effect(self, index: int):
         effect = self.descriptor.transitions[index].effect
-        if effect:
+        if not effect:
+            return
+        m = _ASSIGNMENT_RE.match(effect)
+        if m:
+            # Assignment effect (``do x := <expr>``): evaluate and
+            # apply through set_value so later guards see the result.
+            name, expr = m.group(1), m.group(2)
+            try:
+                value = evaluate_expression(
+                    expr, model=self.model, bindings=self.values)
+            except EvaluationError as e:
+                self._pending_effects.append(
+                    f"{effect} (not evaluated: {e})")
+                return
+            self.set_value(name, value)
+            self._pending_assignments.append((name, value))
             self._pending_effects.append(effect)
+            return
+        self._pending_effects.append(effect)
 
 
 # ---------------------------------------------------------------------------
@@ -704,6 +879,7 @@ def _render(sim: StateSimulator) -> str:
 
 def run_tui(model, focus: Optional[str] = None,
             values: Optional[Dict[str, Any]] = None,
+            deep_history: bool = False,
             input_func=input, output=print) -> Optional[StateSimulator]:
     """Interactive simulate-test loop; returns the simulator on exit.
 
@@ -712,7 +888,8 @@ def run_tui(model, focus: Optional[str] = None,
     prints one snapshot and returns instead of looping.
     """
     try:
-        sim = StateSimulator(model, focus=focus, values=values)
+        sim = StateSimulator(model, focus=focus, values=values,
+                             deep_history=deep_history)
     except SimulationError as e:
         output(f"simulation: {e}")
         return None

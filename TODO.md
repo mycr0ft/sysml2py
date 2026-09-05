@@ -175,10 +175,14 @@ are complete.  Follow-up work is organized under the
     dispatch) were silently dropped; new `Reference.load_from_grammar`
     (+ `usage_dump`) preserves name/typing/redefinition, byte-identical
     round-trips; `Reference.__init__` now initializes base-Usage state.
-  - [ ] **Batch 2 — sim**: executing assignment effects via `set_value`
-    (the `x := 5` text is available — parse and apply),
-    history/deep-history pseudostates; parallel regions (raise, by
-    design, for now).
+  - [x] **Batch 2 — sim (v0.81.0)**: executing assignment effects via
+    `set_value` (`do x := <expr>` evaluated + applied, recorded on
+    `StepRecord.assignments`; failures logged, never fatal);
+    history/deep-history pseudostates (`HistoryUsage` typing or
+    `h;`/`history;` name convention; shallow default,
+    `deep_history=True` option + `sysmlpy sim --deep-history`; region
+    default entry as the no-history fallback).  Parallel regions
+    still raise (by design, for now).
   - [ ] **Batch 3 — diff batch 2**: rename detection (heuristic match on
     kind+signature), grammar-level fields (values, multiplicities,
     directions, doc strings), state-machine diff via sim's
