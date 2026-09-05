@@ -791,6 +791,11 @@ are complete.  Follow-up work is organized under the
     <code>descendants_depth_limited</code>, <code>neighborhood</code>, <code>impact_analysis</code>,
     <code>siblings</code>, <code>hub_elements</code>, <code>shortest_path_between_named</code>
     (client-side gizmo; NetworkX/Kuzu shape parity).</li>
+<li>[x] <strong>Follow-up fix (v0.79.1): <code>ref</code> usages in the object tree</strong> —
+    package-level refs (visitor dispatch) and nested refs (class
+    dispatch) were silently dropped; new <code>Reference.load_from_grammar</code>
+    (+ <code>usage_dump</code>) preserves name/typing/redefinition, byte-identical
+    round-trips; <code>Reference.__init__</code> now initializes base-Usage state.</li>
 <li>[ ] <strong>Batch 2 — sim</strong>: executing assignment effects via <code>set_value</code>
     (the <code>x := 5</code> text is available — parse and apply),
     history/deep-history pseudostates; parallel regions (raise, by

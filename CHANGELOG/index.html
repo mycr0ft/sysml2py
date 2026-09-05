@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0791-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.79.1 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0790-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3130,6 +3141,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0791-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.79.1 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0790-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5734,6 +5756,32 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0791-2026-09-05">v0.79.1 (2026-09-05)<a class="headerlink" href="#v0791-2026-09-05" title="Permanent link">&para;</a></h2>
+<p><strong><code>ref</code> usages now appear in the object tree</strong> — they were silently
+dropped at two levels:</p>
+<ul>
+<li><em>Package-level</em> <code>ref r : Engine;</code> — the visitor's package-member
+  dispatch (<code>_visit_usage_element_dict</code>) had no <code>referenceUsage</code>
+  branch, so the member never reached the grammar dict (the nested
+  body path already had one).  Package-level refs round-trip through
+  <code>dump()</code> before this fix only because the raw grammar text was
+  re-serialized; the object tree never saw them.</li>
+<li><em>Nested</em> <code>ref driver : Person;</code> inside part bodies — the grammar
+  kept them, but the public-API class dispatch (base
+  <code>Usage.load_from_grammar</code> and <code>Package.load_from_grammar</code>) had no
+  <code>ReferenceUsage</code> branch.</li>
+</ul>
+<p>New <code>Reference.load_from_grammar</code> extracts name / typing /
+redefinition from the grammar node (the bare redefinition form
+<code>ref :&gt;&gt; payload : Fuel;</code> has null <code>declaredName</code> — the name comes
+from the Redefinitions chain) and <code>usage_dump</code> re-serializes from the
+grammar so round-trips stay byte-identical.  <code>resolve_types()</code> now
+also links parsed refs (<code>ref_type</code>/<code>typedby</code>).</p>
+<p>Also fixed: <code>Reference.__init__</code> did not initialize the base-Usage
+state, so freshly built objects crashed <code>repr()</code> / <code>is_definition</code>
+with <code>AttributeError</code> on <code>_is_definition</code>.</p>
+<p>12 new tests (<code>tests/reference_parse_test.py</code>).  Fast suite 1368,
+conformance 123/123.</p>
 <h2 id="v0790-2026-09-05">v0.79.0 (2026-09-05)<a class="headerlink" href="#v0790-2026-09-05" title="Permanent link">&para;</a></h2>
 <p><strong>Goal 11 batch 1 — model semantics (typedby resolution + Cayley
 query extensions).</strong></p>
