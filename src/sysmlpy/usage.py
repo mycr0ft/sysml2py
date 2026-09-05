@@ -1051,6 +1051,12 @@ class Usage(Searchable):
                 c = Attribute().load_from_grammar(sc)
                 c.parent = self
                 self.children.append(c)
+            elif class_name == "ReferenceUsage":
+                # v0.79.1: nested `ref driver : Person;` inside part/item
+                # bodies was dropped from the object tree.
+                c = Reference().load_from_grammar(sc)
+                c.parent = self
+                self.children.append(c)
             elif class_name == "AttributeDefinition":
                 c = Attribute(definition=True).load_from_grammar(sc)
                 c.parent = self
@@ -4487,11 +4493,13 @@ class Reference(Usage):
     """
     sysml_type = 'reference'
     def __init__(self, name=None, shortname=None, redefines=None):
-        self.name = name if name else str(uuidlib.uuid4())
-        self.children = []
-        self.typedby = None
-        self.grammar = None
-        self.parent = None
+        # Initialize the full base-Usage state (_is_definition,
+        # _typed_by_name, _specializes_names, ...).  Reference used to
+        # set only a handful of attributes here, so is_definition/repr
+        # crashed with AttributeError on freshly built objects.
+        Usage.__init__(self)
+        if name is not None:
+            self.name = name
         self.shortname = shortname
         self.redefines = redefines  # for redefinition like ref :>> name :
         self.ref_type = None  # type reference
@@ -4510,6 +4518,106 @@ class Reference(Usage):
         return self.set_type(type_obj)
 
     set_typed_by = _set_typed_by
+
+    def load_from_grammar(self, grammar):
+        """Populate from a parsed grammar ``ReferenceUsage`` object.
+
+        The grammar node (``grammar_classes.ReferenceUsage``) keeps the
+        full parse (prefix, usage declaration, specialization); the
+        public object extracts name / shortname / typing / redefinition
+        for navigation, while ``usage_dump`` re-serializes from the
+        grammar so ``dump()`` round-trips byte-identically.
+
+        Parameters
+        ----------
+        grammar : sysmlpy.grammar.classes.ReferenceUsage
+            Parsed grammar object for this reference.
+
+        Returns
+        -------
+        Reference
+            Self for chaining.
+        """
+        self.__init__()
+        self.grammar = grammar
+        usage = getattr(grammar, "child", None)  # grammar classes.Usage
+        if usage is None:
+            return self
+        decl = getattr(usage, "declaration", None)
+        decl_decl = getattr(decl, "declaration", None)
+        ident = getattr(decl_decl, "identification", None) if decl_decl else None
+        if ident is not None:
+            name = getattr(ident, "declaredName", None)
+            short = getattr(ident, "declaredShortName", None)
+            if short:
+                self._set_name(short, short=True)
+            if name:
+                self.name = name
+        # Typing / subsetting / redefinition names from the specialization
+        # (sets _typed_by_name, _redefined_refs, ...).
+        self._extract_specialization_info(usage)
+        if getattr(self, "_redefined_refs", None):
+            # `ref :>> payload : Fuel;` — dump() renders the :>> form
+            self.redefines = True
+            if not name:
+                # For the bare redefinition form declaredName is null in
+                # the grammar; the usage's name is the redefined feature.
+                self.name = self._redefined_refs[0]
+        return self
+
+    def usage_dump(self, child):
+        """Serialize as a NonOccurrenceUsageElement (mirrors Attribute).
+
+        Re-serializes from the stored grammar ``ReferenceUsage`` so the
+        round-trip preserves prefix, specialization and value parts.
+        """
+        if self.grammar is None:
+            # Programmatic object without grammar: minimal member dict
+            inner = {
+                "name": "NonOccurrenceUsageElement",
+                "ownedRelatedElement": {
+                    "name": "ReferenceUsage",
+                    "prefix": None,
+                    "usage": {
+                        "name": "Usage",
+                        "declaration": {
+                            "name": "UsageDeclaration",
+                            "declaration": {
+                                "name": "FeatureDeclaration",
+                                "identification": {
+                                    "name": "Identification",
+                                    "declaredShortName": self.shortname,
+                                    "declaredName": self.name,
+                                },
+                                "specialization": None,
+                            },
+                        },
+                        "completion": None,
+                    },
+                },
+            }
+        else:
+            inner = {
+                "name": "NonOccurrenceUsageElement",
+                "ownedRelatedElement": self.grammar.get_definition(),
+            }
+
+        if child == "DefinitionBody":
+            package = {
+                "name": "NonOccurrenceUsageMember",
+                "prefix": None,
+                "ownedRelatedElement": [inner],
+            }
+            package = {"name": "DefinitionBodyItem", "ownedRelationship": [package]}
+        else:
+            # "PackageBody" and standalone: package-member wrapping
+            package = {"name": "UsageElement", "ownedRelatedElement": inner}
+            package = {
+                "name": "PackageMember",
+                "ownedRelatedElement": package,
+                "prefix": None,
+            }
+        return package
 
     def dump(self):
         name_str = getattr(self, 'name', "") or ""

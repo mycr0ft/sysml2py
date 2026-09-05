@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## v0.79.1 (2026-09-05)
+
+**`ref` usages now appear in the object tree** — they were silently
+dropped at two levels:
+
+- *Package-level* `ref r : Engine;` — the visitor's package-member
+  dispatch (`_visit_usage_element_dict`) had no `referenceUsage`
+  branch, so the member never reached the grammar dict (the nested
+  body path already had one).  Package-level refs round-trip through
+  `dump()` before this fix only because the raw grammar text was
+  re-serialized; the object tree never saw them.
+- *Nested* `ref driver : Person;` inside part bodies — the grammar
+  kept them, but the public-API class dispatch (base
+  `Usage.load_from_grammar` and `Package.load_from_grammar`) had no
+  `ReferenceUsage` branch.
+
+New `Reference.load_from_grammar` extracts name / typing /
+redefinition from the grammar node (the bare redefinition form
+`ref :>> payload : Fuel;` has null `declaredName` — the name comes
+from the Redefinitions chain) and `usage_dump` re-serializes from the
+grammar so round-trips stay byte-identical.  `resolve_types()` now
+also links parsed refs (`ref_type`/`typedby`).
+
+Also fixed: `Reference.__init__` did not initialize the base-Usage
+state, so freshly built objects crashed `repr()` / `is_definition`
+with `AttributeError` on `_is_definition`.
+
+12 new tests (`tests/reference_parse_test.py`).  Fast suite 1368,
+conformance 123/123.
+
 ## v0.79.0 (2026-09-05)
 
 **Goal 11 batch 1 — model semantics (typedby resolution + Cayley

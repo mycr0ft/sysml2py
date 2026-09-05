@@ -13407,6 +13407,23 @@ def _visit_usage_element_dict(usage_elem_ctx, prefix=None):
     if hasattr(usage_elem_ctx, 'nonOccurrenceUsageElement') and usage_elem_ctx.nonOccurrenceUsageElement():
         non_occ = usage_elem_ctx.nonOccurrenceUsageElement()
 
+        # Handle referenceUsage (package-level `ref r : Engine;`).
+        # Nested-body refs go through _visit_nested_non_occurrence_usage;
+        # without this branch the package-level form was silently
+        # dropped from the grammar dict.
+        if hasattr(non_occ, 'referenceUsage') and non_occ.referenceUsage():
+            ctx = non_occ.referenceUsage()
+            inner = _make_reference_usage_dict(ctx)
+            if inner:
+                return {
+                    "name": "PackageMember",
+                    "prefix": prefix,
+                    "ownedRelatedElement": {
+                        "name": "UsageElement",
+                        "ownedRelatedElement": inner,
+                    },
+                }
+
         if hasattr(non_occ, 'attributeUsage') and non_occ.attributeUsage():
             ctx = non_occ.attributeUsage()
             name, shortname = _get_usage_identification(ctx)

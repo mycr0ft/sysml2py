@@ -24,7 +24,7 @@ from sysmlpy import Part, Item, Port, Requirement, UseCase, Attribute, Action, C
 from sysmlpy.usage import (
     State, Constraint, Connection, Flow, Calculation, Enumeration,
     Allocation, Metadata, Rendering, Individual, FlowDef,
-    View, Viewpoint, Concern,
+    View, Viewpoint, Concern, Reference,
 )
 
 ModelType = TypeVar("Model", bound="Model")
@@ -1110,6 +1110,12 @@ class Package(Searchable):
                 self.children.append(child)
             elif inner_class == "AttributeUsage":
                 child = Attribute().load_from_grammar(inner_element)
+                child.parent = self
+                self.children.append(child)
+            elif inner_class == "ReferenceUsage":
+                # v0.79.1: package-level `ref r : Engine;` was dropped
+                # from the object tree (visitor had no dispatch either).
+                child = Reference().load_from_grammar(inner_element)
                 child.parent = self
                 self.children.append(child)
             elif inner_class == "ActionDefinition":

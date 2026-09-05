@@ -138,6 +138,7 @@ else:
 | `main_test.py` | 7 | `load()` / `loads()` / `load_grammar()` public API |
 | `partial_test.py` | 7 | Partial-parse recovery (`loads_partial` / `load_partial`) |
 | `resolve_test.py` | 12 | `Model.resolve_types()` typedby resolution |
+| `reference_parse_test.py` | 12 | `ref` usages in the object tree (all forms) |
 | `plantuml_test.py` | 108 | All `as_*_view()` functions |
 | `semantic_test.py` | 116 | `analyze()`, OCL checks, symbol resolution, imports |
 | `navigate_test.py` | 33 | `Searchable` mixin, model traversal |
