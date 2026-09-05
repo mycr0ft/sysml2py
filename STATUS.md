@@ -143,6 +143,9 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   completes Goal 9 at 29 rule codes.  Goal 8 (semantic model diff)
   starts at v0.74.0: `sysmlpy.diff` element-level diff with text /
   Markdown / JSON rendering and a CI-friendly `sysmlpy diff` CLI.
+  Goal 10 opens at v0.75.0: `*`/`/` unit-dimension derivation
+  (`UNIT_DIMENSION_DERIVATION_MISMATCH`, 30 rule codes) and SLL
+  error parity (`sll_only` stays in SLL prediction).
 - **Relationship legends opt-in** — `include_legend=False` by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome `bw` remains the default style

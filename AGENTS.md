@@ -137,7 +137,7 @@ else:
 | `class_test.py` | 54 | Programmatic API: `Part()`, `Action()`, `dump()`, etc. |
 | `main_test.py` | 7 | `load()` / `loads()` / `load_grammar()` public API |
 | `plantuml_test.py` | 108 | All `as_*_view()` functions |
-| `semantic_test.py` | 107 | `analyze()`, OCL checks, symbol resolution, imports |
+| `semantic_test.py` | 116 | `analyze()`, OCL checks, symbol resolution, imports |
 | `navigate_test.py` | 33 | `Searchable` mixin, model traversal |
 | `import_test.py` | 31 | Import visibility/round-trip, `add_import()`, `.imports`, source-order preservation |
 | `validator_test.py` | 77 | Validator rules (+ state-machine/trigger/requirement/trace/direction/satisfy/connector checks) |

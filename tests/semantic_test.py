@@ -2325,3 +2325,154 @@ class TestConstantFolding:
         assert S._fold_text("__import__('os')") is None
         assert S._fold_text("lambda: 1") is None
         assert S._fold_text("2 + 2") == 4
+
+
+class TestUnitDimensionDerivation:
+    """Goal 10: ``*`` / ``/`` dimension algebra vs declared typing.
+
+    The initializer's dimension is derived algebraically (multiplication
+    adds exponents, division subtracts, literal-integer exponents
+    multiply) and compared against the declared quantity type.
+    """
+
+    def test_mass_times_speed_vs_force_is_error(self):
+        model = loads("""
+            package P {
+                public import ISQ::*;
+                part def V {
+                    attribute mass : MassValue;
+                    attribute speed : SpeedValue;
+                    attribute f : ForceValue = mass * speed;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(
+            i.code == "UNIT_DIMENSION_DERIVATION_MISMATCH"
+            and i.severity == "error"
+            for i in issues
+        )
+
+    def test_force_over_area_vs_pressure_ok(self):
+        model = loads("""
+            package P {
+                public import ISQ::*;
+                part def V {
+                    attribute force : ForceValue;
+                    attribute area : AreaValue;
+                    attribute p : PressureValue = force / area;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues
+                    if i.code == "UNIT_DIMENSION_DERIVATION_MISMATCH"]
+
+    def test_mass_over_area_vs_force_is_error(self):
+        model = loads("""
+            package P {
+                public import ISQ::*;
+                part def V {
+                    attribute mass : MassValue;
+                    attribute area : AreaValue;
+                    attribute f : ForceValue = mass / area;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(i.code == "UNIT_DIMENSION_DERIVATION_MISMATCH"
+                   for i in issues)
+
+    def test_mass_squared_vs_force_is_error(self):
+        model = loads("""
+            package P {
+                public import ISQ::*;
+                part def V {
+                    attribute mass : MassValue;
+                    attribute f : ForceValue = mass ** 2;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert any(
+            i.code == "UNIT_DIMENSION_DERIVATION_MISMATCH"
+            and "M^2" in i.message
+            for i in issues
+        )
+
+    def test_bare_literal_is_silent(self):
+        model = loads("""
+            package P {
+                public import ISQ::*;
+                part def V {
+                    attribute f : ForceValue = 70;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues
+                    if i.code == "UNIT_DIMENSION_DERIVATION_MISMATCH"]
+
+    def test_unknown_operand_is_silent(self):
+        model = loads("""
+            package P {
+                public import ISQ::*;
+                part def V {
+                    attribute mass : MassValue;
+                    attribute x;
+                    attribute f : ForceValue = mass * x;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues
+                    if i.code == "UNIT_DIMENSION_DERIVATION_MISMATCH"]
+
+    def test_same_dimension_multiplication_ok(self):
+        model = loads("""
+            package P {
+                public import ISQ::*;
+                part def V {
+                    attribute mass : MassValue;
+                    attribute m2 : MassValue = mass * 2;
+                    attribute m3 : MassValue = mass / 2;
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues
+                    if i.code == "UNIT_DIMENSION_DERIVATION_MISMATCH"]
+
+    def test_constraint_bodies_are_not_flagged(self):
+        model = loads("""
+            package P {
+                public import ISQ::*;
+                part def V {
+                    attribute mass : MassValue;
+                    attribute speed : SpeedValue;
+                    constraint c { mass * speed > 0 }
+                }
+            }
+        """)
+        issues = analyze(model)
+        assert not [i for i in issues
+                    if i.code == "UNIT_DIMENSION_DERIVATION_MISMATCH"]
+
+    def test_message_names_both_dimensions(self):
+        model = loads("""
+            package P {
+                public import ISQ::*;
+                part def V {
+                    attribute mass : MassValue;
+                    attribute speed : SpeedValue;
+                    attribute f : ForceValue = mass * speed;
+                }
+            }
+        """)
+        issues = analyze(model)
+        deriv = [i for i in issues
+                 if i.code == "UNIT_DIMENSION_DERIVATION_MISMATCH"]
+        assert len(deriv) == 1
+        assert "L^1*M^1*T^-1" in deriv[0].message
+        assert "L^1*M^1*T^-2" in deriv[0].message
+        assert "ForceValue" in deriv[0].message

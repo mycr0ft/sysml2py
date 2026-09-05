@@ -1,5 +1,34 @@
 # CHANGELOG
 
+## v0.75.0 (2026-09-05)
+
+- **Goal 10 batch 1: `*`/`/` unit-dimension derivation** — the
+  analyzer now derives the dimension of an initializer algebraically
+  and compares it with the declared quantity type:
+  - `attribute f : ForceValue = mass * speed;` errors
+    (`UNIT_DIMENSION_DERIVATION_MISMATCH`, rule code 30): mass*speed
+    derives `L^1*M^1*T^-1` but ForceValue is `L^1*M^1*T^-2`.
+  - Algebra: `*` adds exponents, `/` subtracts, `**`/`^` with a
+    literal-integer exponent multiplies; dimensionless literals are
+    the multiplicative identity. `+`/`-` chains must keep equal
+    operand dimensions (unequal ones stay with the existing pair
+    check, so no double reporting).
+  - Conservative skips (no false positives): unknown-dimension
+    operands, non-literal exponents, `%`, boolean/string/relational
+    levels, constraint bodies (owners without quantity typing), and
+    initializers with no quantity-typed operand at all (a bare
+    `= 70` cannot reveal its intended unit).
+  - Wired as Step 4c: `SemanticAnalyzer._check_expression_derivations`
+    -> `ExpressionTypeChecker.check_derivations`; visitor expression
+    shapes mirror `const_fold`'s layer walk (operator-less wrapper
+    levels, parallel operator/operand list form for exponentiation).
+- **SLL error parity** — `parse(prediction_mode="sll_only")` now
+  keeps the fallback pass in SLL prediction too: its diagnostics
+  match the fast-path behaviour (previously stage 2 silently ran
+  LL). Forced `ll` mode is unchanged.
+- 14 new tests (9 derivation in `tests/semantic_test.py`, 5 SLL in
+  `tests/two_stage_parse_test.py`).
+
 ## v0.74.0 (2026-09-05)
 
 - **Goal 8 batch 1: semantic model diff** (`sysmlpy.diff`) —

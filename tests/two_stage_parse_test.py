@@ -124,3 +124,34 @@ class TestParseBenchmark:
         ll = time.perf_counter() - t0
         # SLL should not be a regression (allow 20% slack for CI noise)
         assert sll <= ll * 1.2, f"SLL {sll:.2f}s vs LL {ll:.2f}s"
+
+class TestSLLOnlyMode:
+    """Goal 10: SLL error parity — ``sll_only`` stays in SLL prediction
+    for every pass, so diagnostics reflect the fast-path behaviour."""
+
+    def test_sll_only_valid_input_parses(self):
+        tree = parse(SAMPLE_VALID, prediction_mode="sll_only")
+        assert type(tree).__name__ == "RootNamespaceContext"
+
+    def test_sll_only_tree_matches_ll(self):
+        sll = parse(SAMPLE_VALID, prediction_mode="sll_only").toStringTree()
+        ll = parse(SAMPLE_VALID, prediction_mode="ll").toStringTree()
+        assert sll == ll
+
+    def test_sll_only_invalid_reports_real_errors(self):
+        tree, errors = parse("package P { part def X; @@@ }",
+                             prediction_mode="sll_only", recover=True)
+        assert tree is not None
+        assert errors, "sll_only must report the collected errors"
+        assert errors[0] != "<sll>"
+        assert errors[0].startswith("Syntax error at")
+
+    def test_sll_only_invalid_all_modes_report_errors(self):
+        for mode in ("sll", "sll_only", "ll"):
+            _, errors = parse("package P { part def X; @@@ }",
+                              prediction_mode=mode, recover=True)
+            assert errors, f"mode {mode} reported no errors"
+
+    def test_forced_ll_unaffected(self):
+        tree = parse(SAMPLE_VALID, prediction_mode="ll")
+        assert type(tree).__name__ == "RootNamespaceContext"

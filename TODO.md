@@ -121,12 +121,23 @@ are complete.  Follow-up work is organized under the
     SysML v2 — flagging would be a false positive by construction.
 - [x] **Goal 9 — Validator depth** complete after 6 batches (v0.69.0 –
   v0.73.0): 29 rule codes total.
-- [ ] **Goal 10 — Technical stubs** (connector-end compatibility, `*`/`/` unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)
+- [~] **Goal 10 — Technical stubs** (connector-end compatibility, `*`/`/` unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)
+  - [x] **Batch 1 (v0.75.0): `*`/`/` unit-dimension derivation** —
+    `UNIT_DIMENSION_DERIVATION_MISMATCH` (error, rule code 30):
+    initializer dimension derived algebraically (`*` adds, `/`
+    subtracts, literal `**` multiplies exponents) and compared with
+    the declared quantity type; conservative skips for unknown
+    operands / bare literals / `%` / boolean levels.  Plus SLL error
+    parity: `prediction_mode="sll_only"` keeps the fallback pass in
+    SLL prediction (previously stage 2 silently ran LL).
+  - [ ] Connector-end compatibility depth
+  - [ ] regex→parser library extraction
+  - [ ] CayleyStore query extensions (parity with NetworkX/Kùzu)
 
 Legacy candidate follow-up work:
 
-- [ ] `*`/`/` unit-dimension derivation (e.g. `mass * speed` vs `ForceValue` inference) *(→ Goal 10)*
-- [ ] SLL error-message parity (align ANTLR wording between prediction modes) *(→ Goal 10)*
+- [x] `*`/`/` unit-dimension derivation (`mass * speed` vs `ForceValue`) *(→ Goal 10, v0.75.0)*
+- [x] SLL error-message parity (align ANTLR wording between prediction modes) *(→ Goal 10, v0.75.0)*
 - [ ] Persistent DFA cache serialization to eliminate cold-start parse cost
 - [ ] Visitor performance profiling (`parse_to_dict` dominates end-to-end time)
 - [ ] CayleyStore query extensions (parity with NetworkX/Kùzu) *(→ Goal 10)*

@@ -74,8 +74,9 @@ def parse(source, library=None, recover=False, prediction_mode="sll"):
     prediction_mode : {"sll", "ll"}, default "sll"
         ``"sll"`` (default) runs the fast SLL pass with LL fallback.
         ``"ll"`` forces the full-context pass directly (slower; useful
-        for debugging).  ``"sll"`` without fallback can be forced with
-        ``prediction_mode="sll_only"``.
+        for debugging).  ``"sll_only"`` keeps every pass in SLL
+        prediction — including the fallback pass — so diagnostics
+        reflect SLL behaviour (error parity with the fast path).
 
     Returns
     -------
@@ -127,14 +128,20 @@ def parse(source, library=None, recover=False, prediction_mode="sll"):
             # errors but re-run without bail to build the partial tree.
             pass
 
-    # ── Stage 2: full LL parse (fallback) ─────────────────────────────
+    # ── Stage 2: full parse (fallback / forced mode) ──────────────────
     lexer, token_stream, parser = _make_parser(content)
     error_listener = ANTLRErrorListener()
     lexer.addErrorListener(error_listener)
     parser.addErrorListener(error_listener)
     from antlr4.error.ErrorStrategy import DefaultErrorStrategy
     parser._errHandler = DefaultErrorStrategy()
-    parser._interp.predictionMode = PredictionMode.LL
+    # SLL error parity (Goal 10): an explicit "sll_only" request stays
+    # in SLL prediction so its diagnostics match the fast pass; every
+    # other fallback (sll -> ll, forced ll) uses full LL prediction.
+    if prediction_mode == "sll_only":
+        parser._interp.predictionMode = PredictionMode.SLL
+    else:
+        parser._interp.predictionMode = PredictionMode.LL
     tree = parser.rootNamespace()
 
     # Check for errors

@@ -1533,6 +1533,22 @@ def _parse_dimension(dim: Optional[str]) -> Optional[dict[str, int]]:
     return dims
 
 
+def _dims_mul(a: dict[str, int], b: dict[str, int]) -> dict[str, int]:
+    """Multiply two dimension dicts (add exponents, drop zeros)."""
+    out = dict(a)
+    for k, v in b.items():
+        out[k] = out.get(k, 0) + v
+    return {k: v for k, v in out.items() if v != 0}
+
+
+def _dims_div(a: dict[str, int], b: dict[str, int]) -> dict[str, int]:
+    """Divide two dimension dicts (subtract exponents, drop zeros)."""
+    out = dict(a)
+    for k, v in b.items():
+        out[k] = out.get(k, 0) - v
+    return {k: v for k, v in out.items() if v != 0}
+
+
 def _dimension_to_pint(dims: Optional[dict[str, int]]) -> Optional[Any]:
     """Map a SysML dimension dict to a pint dimensionality.
 
@@ -2107,6 +2123,263 @@ class ExpressionTypeChecker:
         if lhs_cat in ("boolean", "string") or rhs_cat in ("boolean", "string"):
             self._emit_mismatch(op, lhs_cat, rhs_cat, element, issues)
 
+    # -- unit-dimension derivation (Goal 10) ---------------------------------
+
+    def check_derivations(self, model: Any) -> list[SemanticIssue]:
+        """Derive ``*`` / ``/`` dimension algebra and compare with typing.
+
+        For every expression owner whose declared type carries a known
+        quantity dimension (library ``*Value`` / ``*Unit`` definitions),
+        the initializer's dimension is derived algebraically:
+
+        - ``a * b`` adds exponents, ``a / b`` subtracts them
+        - ``a ** n`` (literal integer ``n``) multiplies them
+        - ``+`` / ``-`` chains require equal operand dimensions
+        - dimensionless literals are the multiplicative identity
+
+        A mismatch between the derived dimension and the declared
+        typing is reported as ``UNIT_DIMENSION_DERIVATION_MISMATCH``.
+        Conservative skips: any operand with unknown dimension, non-
+        literal exponents, ``%``, boolean/string/relational levels,
+        and initializers with no quantity-typed operand at all (a bare
+        literal like ``= 70`` cannot reveal its intended unit).
+        """
+        issues: list[SemanticIssue] = []
+        self._walk_derivation_owners(model, issues, [])
+        return issues
+
+    def _walk_derivation_owners(
+        self,
+        element: Any,
+        issues: list[SemanticIssue],
+        scope_path: list[str],
+    ) -> None:
+        if element is None:
+            return
+        name = getattr(element, "name", None)
+        elem_type = type(element).__name__
+        is_container = getattr(element, "is_definition", False) or elem_type == "Package"
+        child_scope = scope_path
+        if is_container and name is not None and elem_type != "Model":
+            child_scope = scope_path + [name]
+
+        if elem_type in _EXPRESSION_OWNER_TYPES:
+            grammar = getattr(element, "grammar", None)
+            if grammar is not None:
+                typed = getattr(element, "typed_by_name", None)
+                if typed:
+                    declared = self._declared_dimension(str(typed))
+                    if declared is not None:
+                        try:
+                            grammar_def = grammar.get_definition()
+                        except Exception:
+                            grammar_def = None
+                        if grammar_def is not None:
+                            for expr in _find_owned_expressions(grammar_def):
+                                self._check_derivation(
+                                    expr, element, str(typed), declared,
+                                    scope_path, issues)
+
+        for child in getattr(element, "children", []):
+            self._walk_derivation_owners(child, issues, child_scope)
+
+    def _declared_dimension(self, type_name: str) -> Optional[dict[str, int]]:
+        """Dimension dict for a declared type name, or None when unknown."""
+        dim_str = self._dimensions.get(type_name)
+        if not dim_str:
+            simple = type_name.rsplit("::", 1)[-1]
+            dim_str = self._dimensions.get(simple)
+        if not dim_str:
+            return None
+        return _parse_dimension(dim_str)
+
+    def _check_derivation(
+        self,
+        expr_dict: dict,
+        element: Any,
+        type_name: str,
+        declared: dict[str, int],
+        scope_path: list[str],
+        issues: list[SemanticIssue],
+    ) -> None:
+        node = expr_dict.get("expression")
+        if not isinstance(node, dict):
+            return
+        derived, contributed = self._derive_dimension(node, scope_path)
+        if derived is None or not contributed:
+            return
+        if derived != declared:
+            issues.append(SemanticIssue(
+                severity="error",
+                code="UNIT_DIMENSION_DERIVATION_MISMATCH",
+                message=(
+                    f"Initializer of '{getattr(element, 'name', '?')}' derives "
+                    f"dimension '{_format_dimension(derived)}' but declared type "
+                    f"'{type_name}' has dimension '{_format_dimension(declared)}'"
+                ),
+                element=element,
+                reference=_format_dimension(declared),
+            ))
+
+    def _derive_dimension(
+        self,
+        node: Any,
+        scope_path: list[str],
+    ) -> tuple:
+        """Algebraically derive the dimension of an expression dict.
+
+        Returns ``(dims, contributed)`` where ``dims`` is ``None`` when
+        the expression is not statically derivable and ``contributed``
+        is True when at least one quantity-typed operand was seen
+        (bare-literal initializers stay silent).
+        """
+        if not isinstance(node, dict):
+            return (None, False)
+        name = node.get("name")
+
+        if name == "OwnedExpression":
+            return self._derive_dimension(node.get("expression"), scope_path)
+        if name == "ConditionalExpression":
+            operands = node.get("operand", []) or []
+            if len(operands) != 1:
+                return (None, False)
+            return self._derive_dimension(operands[0], scope_path)
+
+        # Operator-less levels are pure wrappers (the visitor always
+        # emits the full NullCoalescing → Implies → … chain); with an
+        # operator present the level is boolean-valued — not derivable.
+        if name == "NullCoalescingExpression":
+            if node.get("operator"):
+                return (None, False)
+            return self._derive_dimension(node.get("implies"), scope_path)
+        if name in ("ImpliesExpression", "OrExpression", "XorExpression",
+                    "AndExpression"):
+            if node.get("operator") or node.get("operand") \
+                    or node.get("operation"):
+                return (None, False)
+            child_key = {"ImpliesExpression": "or",
+                         "OrExpression": "xor",
+                         "XorExpression": "and",
+                         "AndExpression": "equality"}[name]
+            return self._derive_dimension(node.get(child_key), scope_path)
+        if name == "EqualityExpression":
+            if node.get("operation"):
+                return (None, False)
+            return self._derive_dimension(
+                node.get("classification"), scope_path)
+        if name == "ClassificationExpression":
+            if node.get("operator"):
+                return (None, False)
+            return self._derive_dimension(
+                node.get("relational"), scope_path)
+        if name == "RelationalExpression":
+            if node.get("operation"):
+                return (None, False)
+            return self._derive_dimension(node.get("range"), scope_path)
+
+        if name == "RangeExpression":
+            if node.get("operator"):
+                return (None, False)  # a .. b — bounds may differ
+            return self._derive_dimension(node.get("additive"), scope_path)
+
+        if name == "AdditiveExpression":
+            dims, contributed = self._derive_dimension(
+                node.get("multiplicitive"), scope_path)
+            for op_dict in node.get("operation", []) or []:
+                if not isinstance(op_dict, dict):
+                    continue
+                op = op_dict.get("operator")
+                rhs, c = self._derive_dimension(
+                    op_dict.get("operand"), scope_path)
+                if op not in ("+", "-") or dims is None or rhs is None \
+                        or dims != rhs:
+                    return (None, False)
+                contributed = contributed or c
+            return (dims, contributed)
+
+        if name == "MultiplicativeExpression":
+            dims, contributed = self._derive_dimension(
+                node.get("exponential"), scope_path)
+            for op_dict in node.get("operation", []) or []:
+                if not isinstance(op_dict, dict):
+                    continue
+                op = op_dict.get("operator")
+                rhs, c = self._derive_dimension(
+                    op_dict.get("operand"), scope_path)
+                if dims is None or rhs is None:
+                    return (None, False)
+                contributed = contributed or c
+                if op == "*":
+                    dims = _dims_mul(dims, rhs)
+                elif op == "/":
+                    dims = _dims_div(dims, rhs)
+                else:  # '%' and anything else — not derivable
+                    return (None, False)
+            return (dims, contributed)
+
+        if name == "ExponentiationExpression":
+            dims, contributed = self._derive_dimension(
+                node.get("unary"), scope_path)
+            if dims is None:
+                return (None, False)
+            # Two shapes: parallel operator/operand lists (visitor form)
+            # or operation entries with nested operator/operand dicts.
+            operator_list = node.get("operator")
+            if isinstance(operator_list, list) and operator_list:
+                operand_list = node.get("operand", []) or []
+                for op, rhs_node in zip(operator_list, operand_list):
+                    if op not in ("**", "^"):
+                        return (None, False)
+                    exponent = const_fold(rhs_node)
+                    if not isinstance(exponent, int) \
+                            or isinstance(exponent, bool):
+                        return (None, False)
+                    dims = {k: v * exponent for k, v in dims.items()}
+                return (dims, contributed)
+            for op_dict in node.get("operation", []) or []:
+                if not isinstance(op_dict, dict):
+                    continue
+                op = op_dict.get("operator")
+                rhs_node = op_dict.get("operand")
+                if op not in ("**", "^"):
+                    return (None, False)
+                exponent = const_fold(rhs_node)
+                if not isinstance(exponent, int) or isinstance(exponent, bool):
+                    return (None, False)
+                dims = {k: v * exponent for k, v in dims.items()}
+            return (dims, contributed)
+
+        if name == "UnaryExpression":
+            op = node.get("operator")
+            if op and op not in ("-", "+"):
+                return (None, False)  # 'not' etc. — boolean
+            return self._derive_leaf(node.get("extent"), scope_path)
+
+        if name in ("ExtentExpression", "PrimaryExpression", "BaseExpression"):
+            return self._derive_leaf(node, scope_path)
+
+        # Leaf nodes (FeatureReferenceExpression etc.)
+        return self._derive_leaf(node, scope_path)
+
+    def _derive_leaf(self, node: Any, scope_path: list[str]) -> tuple:
+        """Dimension of a leaf operand: literal, typed reference or unwrap."""
+        if not isinstance(node, dict):
+            return (None, False)
+        if node.get("name") in ("LiteralInteger", "LiteralReal",
+                                "LiteralInfinity"):
+            return ({}, False)
+        dims = self._dimension_of_operand(node, scope_path)
+        if dims is not None:
+            return (dims, True)
+        # Parenthesized / wrapped operands: descend through wrapper keys
+        for key in ("primary", "base", "expression", "ownedRelationship"):
+            child = node.get(key)
+            if isinstance(child, dict):
+                result = self._derive_dimension(child, scope_path)
+                if result[0] is not None:
+                    return result
+        return (None, False)
+
     # -- unit dimension safety ---------------------------------------------
 
     def _check_unit_dimensions(self, op, lhs, rhs, element, scope_path, issues) -> None:
@@ -2500,6 +2773,8 @@ class SemanticAnalyzer:
         # Step 4c: Expression type checking & unit-dimension safety
         # (v0.55.0 Phase C).
         issues.extend(self._check_expression_types(model, symtab, lib_roots))
+        issues.extend(
+            self._check_expression_derivations(model, symtab, lib_roots))
 
         # Step 5: OCL well-formedness constraints
         issues.extend(self._check_duplicate_names(symtab))
@@ -3099,6 +3374,16 @@ class SemanticAnalyzer:
         """Unit-dimension compatibility inside expressions (pint-backed)."""
         checker = ExpressionTypeChecker(self, symtab, lib_roots)
         return checker.check_units(model)
+
+    def _check_expression_derivations(
+        self,
+        model: Any,
+        symtab: SymbolTable,
+        lib_roots: list[Path] | None = None,
+    ) -> list[SemanticIssue]:
+        """Derive ``*``/``/`` dimension algebra vs declared typing."""
+        checker = ExpressionTypeChecker(self, symtab, lib_roots)
+        return checker.check_derivations(model)
 
     # -- OCL well-formedness constraints ------------------------------------
 
