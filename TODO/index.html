@@ -747,12 +747,23 @@ are complete.  Follow-up work is organized under the
     SysML v2 — flagging would be a false positive by construction.</li>
 <li>[x] <strong>Goal 9 — Validator depth</strong> complete after 6 batches (v0.69.0 –
   v0.73.0): 29 rule codes total.</li>
-<li>[ ] <strong>Goal 10 — Technical stubs</strong> (connector-end compatibility, <code>*</code>/<code>/</code> unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)</li>
+<li>[~] <strong>Goal 10 — Technical stubs</strong> (connector-end compatibility, <code>*</code>/<code>/</code> unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)</li>
+<li>[x] <strong>Batch 1 (v0.75.0): <code>*</code>/<code>/</code> unit-dimension derivation</strong> —
+    <code>UNIT_DIMENSION_DERIVATION_MISMATCH</code> (error, rule code 30):
+    initializer dimension derived algebraically (<code>*</code> adds, <code>/</code>
+    subtracts, literal <code>**</code> multiplies exponents) and compared with
+    the declared quantity type; conservative skips for unknown
+    operands / bare literals / <code>%</code> / boolean levels.  Plus SLL error
+    parity: <code>prediction_mode="sll_only"</code> keeps the fallback pass in
+    SLL prediction (previously stage 2 silently ran LL).</li>
+<li>[ ] Connector-end compatibility depth</li>
+<li>[ ] regex→parser library extraction</li>
+<li>[ ] CayleyStore query extensions (parity with NetworkX/Kùzu)</li>
 </ul>
 <p>Legacy candidate follow-up work:</p>
 <ul>
-<li>[ ] <code>*</code>/<code>/</code> unit-dimension derivation (e.g. <code>mass * speed</code> vs <code>ForceValue</code> inference) <em>(→ Goal 10)</em></li>
-<li>[ ] SLL error-message parity (align ANTLR wording between prediction modes) <em>(→ Goal 10)</em></li>
+<li>[x] <code>*</code>/<code>/</code> unit-dimension derivation (<code>mass * speed</code> vs <code>ForceValue</code>) <em>(→ Goal 10, v0.75.0)</em></li>
+<li>[x] SLL error-message parity (align ANTLR wording between prediction modes) <em>(→ Goal 10, v0.75.0)</em></li>
 <li>[ ] Persistent DFA cache serialization to eliminate cold-start parse cost</li>
 <li>[ ] Visitor performance profiling (<code>parse_to_dict</code> dominates end-to-end time)</li>
 <li>[ ] CayleyStore query extensions (parity with NetworkX/Kùzu) <em>(→ Goal 10)</em></li>
