@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.83.0** (2026-09-05)
+Current version: **v0.84.0** (2026-09-05)
 
 ---
 
@@ -339,6 +339,16 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 ---
 
 ## Completed Since v0.27.0
+
+### Performance: Persistent DFA Cache + Profiling Harness (v0.84.0)
+
+- `sysmlpy.dfa_cache` — warmed parser/lexer ATN+DFA graphs pickled to
+  `~/.cache/sysmlpy/`, reinstated on cold start (3.7x faster first
+  parse on the benchmark model); `SYSSMLPY_DFA_CACHE` env +
+  `set_dfa_cache()` control; cache failures never break parsing.
+- `benchmarks/bench_parse.py` (cold/cached/warm timing) and
+  `benchmarks/profile_parse.py` (cProfile harness; parse dominates
+  ~80 %, no visitor hotspot).
 
 ### LSP: Incremental Sync, Position Tracking, Workspace Symbols, `.`-Completion (v0.83.0)
 

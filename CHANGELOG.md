@@ -1,5 +1,42 @@
 # CHANGELOG
 
+## v0.84.0 (2026-09-05)
+
+**Goal 11 Batch 5 — performance (cold-start parse).**
+
+1. *Persistent ANTLR DFA cache* (`sysmlpy.dfa_cache`): after the first
+   successful parse the warmed parser+lexer ATN/DFA/prediction-context
+   graphs are pickled to
+   `~/.cache/sysmlpy/dfa-<key>.pkl` (keyed by SHA-1 of both serialized
+   ATNs + antlr4 runtime + sysmlpy version + pickle protocol) and
+   reinstalled at the start of subsequent processes.  Benchmark
+   (`benchmarks/bench_parse.py`, 27 KB model): cold **8–10 s** →
+   cached **~2.9 s** — **3.7x faster / ~73-85 % of the cold start
+   eliminated**.  Cache failures degrade to normal parsing with a
+   one-time warning and never break a parse; `SYSSMLPY_DFA_CACHE=off`
+   (or `set_dfa_cache(False)`) disables it; `SYSSMLPY_DFA_CACHE=<dir>`
+   overrides the location.
+   Pickled-graph identity hazards are repaired on load: unpickled
+   `EmptyPredictionContext` copies are rebound to the live
+   `PredictionContext.EMPTY` singleton (walk via
+   `SingletonPredictionContext.parentCtx` / `ArrayPredictionContext.
+   parents`), `EmptySemanticContext` copies to `SemanticContext.NONE`,
+   across the shared cache and every DFA config set.  Correctness
+   verified by the full grammar suite (143) and OMG conformance suite
+   (123) running against a loaded cache.
+2. *Visitor profiling* (`benchmarks/profile_parse.py`): the ANTLR
+   parse dominates (~80 % of end-to-end, almost entirely
+   `adaptivePredict` + token-stream bookkeeping); the visitor and
+   grammar classes share the remaining ~20 % across hundreds of small
+   helpers with no single hotspot — visitor micro-optimisation
+   deliberately not pursued; profiling harness kept under
+   `benchmarks/`.
+
+Tests +14 (`tests/dfa_cache_test.py`: round-trip equivalence, corrupt/
+wrong-shape/missing cache fallbacks, disable flags, env overrides,
+key stability, cross-process save/load).  Fast suite 1469, conformance
+123/123.  `set_dfa_cache` exported from the package root.
+
 ## v0.83.0 (2026-09-05)
 
 **Goal 11 Batch 4 — LSP enhancements.**

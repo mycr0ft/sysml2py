@@ -34,7 +34,7 @@ __all__ = [
     "render_state_transition_view_svg", "boxes_view",
 ]
 __author__ = "Jon Fox"
-__version__ = "0.83.0"
+__version__ = "0.84.0"
 
 from sysmlpy.usage import (
     Item, Attribute, Part, Port, Action, Reference, UseCase, Requirement, Interface, Message,
@@ -452,6 +452,11 @@ def __getattr__(name):
                 "diff_models", "diff_files", "diff_state_machines"):
         from sysmlpy import diff as _diff
         fn = getattr(_diff, name)
+        globals()[name] = fn
+        return fn
+    if name == "set_dfa_cache":
+        from sysmlpy import dfa_cache as _dc
+        fn = _dc.set_dfa_cache
         globals()[name] = fn
         return fn
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

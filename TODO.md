@@ -201,9 +201,15 @@ are complete.  Follow-up work is organized under the
     scan, cached); `.`-member completion via type names, falling
     back to the last good parse while the text is transiently
     broken.  Parser-side token positions remain future work.
-  - [ ] **Batch 5 — performance**: visitor profiling (`parse_to_dict`
-    dominates end-to-end time), persistent DFA cache serialization to
-    eliminate cold-start parse cost.
+  - [x] **Batch 5 — performance (v0.84.0)**: persistent DFA cache
+    (`sysmlpy.dfa_cache`) — warmed parser/lexer ATN+DFA+prediction-
+    context graphs pickled after the first parse, reinstated on cold
+    start (cold 8–10 s → ~2.9 s on the 27 KB benchmark model, 3.7x;
+    identity rebinds for `PredictionContext.EMPTY` /
+    `SemanticContext.NONE` copies on load; cache failures fall back to
+    normal parsing).  Visitor profiling harness (`benchmarks/
+    profile_parse.py`) shows the ANTLR parse dominates ~80 % with no
+    single visitor hotspot — micro-optimisation not pursued.
   - [ ] **Batch 6 — interchange/evaluator**: spec-normative JSON-LD
     context mapping (OMG property IRIs); conditional expressions and
     calc `in` parameters in the evaluator.
@@ -212,8 +218,8 @@ Legacy candidate follow-up work:
 
 - [x] `*`/`/` unit-dimension derivation (`mass * speed` vs `ForceValue`) *(→ Goal 10, v0.75.0)*
 - [x] SLL error-message parity (align ANTLR wording between prediction modes) *(→ Goal 10, v0.75.0)*
-- [ ] Persistent DFA cache serialization to eliminate cold-start parse cost
-- [ ] Visitor performance profiling (`parse_to_dict` dominates end-to-end time)
+- [x] Persistent DFA cache serialization to eliminate cold-start parse cost *(→ Batch 5, v0.84.0)*
+- [x] Visitor performance profiling (`parse_to_dict` dominates end-to-end time) *(→ Batch 5, v0.84.0 — no visitor hotspot found; parse dominates)*
 - [ ] CayleyStore query extensions (parity with NetworkX/Kùzu) *(→ Goal 10)*
 
 ---

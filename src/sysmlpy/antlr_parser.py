@@ -138,6 +138,11 @@ def _parse_tree(content, recover=False, prediction_mode="sll"):
     """Two-stage ANTLR parse (no rescue); the body of historical parse()."""
     force_ll = prediction_mode == "ll"
     sll_only = prediction_mode == "sll_only" or force_ll
+
+    # Persistent DFA cache (v0.84.0): reinstate the prediction caches
+    # warmed by previous processes before the first parse of this one.
+    from sysmlpy import dfa_cache as _dfa_cache
+    _dfa_cache.maybe_load()
     
     if not force_ll:
         # ── Stage 1: SLL fast-path ────────────────────────────────────
@@ -159,6 +164,7 @@ def _parse_tree(content, recover=False, prediction_mode="sll"):
             sll_errors = ["<sll>"]
         if tree is not None and not error_listener.errors:
             # ── fast path succeeded ──────────────────────────────────
+            _maybe_save_dfa_cache()
             if recover:
                 return tree, []
             return tree
@@ -186,13 +192,24 @@ def _parse_tree(content, recover=False, prediction_mode="sll"):
     # Check for errors
     if error_listener.errors:
         if recover:
+            _maybe_save_dfa_cache()
             return tree, error_listener.errors
         raise SysMLSyntaxError("\n".join(error_listener.errors))
 
+    _maybe_save_dfa_cache()
     if recover:
         return tree, []
 
     return tree
+
+
+def _maybe_save_dfa_cache():
+    """Persist the warmed DFA cache once per process (never fatal)."""
+    try:
+        from sysmlpy import dfa_cache
+        dfa_cache.maybe_save()
+    except Exception:
+        pass
 
 
 def _rescue_constraint_bodies(content, language="English"):
