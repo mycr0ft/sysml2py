@@ -34,7 +34,7 @@ __all__ = [
     "render_state_transition_view_svg", "boxes_view",
 ]
 __author__ = "Jon Fox"
-__version__ = "0.79.1"
+__version__ = "0.80.0"
 
 from sysmlpy.usage import (
     Item, Attribute, Part, Port, Action, Reference, UseCase, Requirement, Interface, Message,
@@ -282,7 +282,7 @@ def load(fp) -> Model:
     return loads(fp.read())
 
 
-def loads(s: str, library=None) -> Model:
+def loads(s: str, library=None, rescue_language="English") -> Model:
     """Loads a model from string.
 
     This shortcut function allows a user to build a model from a string by
@@ -303,7 +303,8 @@ def loads(s: str, library=None) -> Model:
     Model
         Model instance built from the SysML source.
     """
-    return Model().load(s, library=library)
+    return Model().load(s, library=library,
+                        rescue_language=rescue_language)
 
 
 def parse(s: str, library=None):
@@ -327,7 +328,8 @@ def parse(s: str, library=None):
         return None, str(e).splitlines()
 
 
-def load_grammar_antlr(fp, debug=False, library=None):
+def load_grammar_antlr(fp, debug=False, library=None,
+                  rescue_language="English"):
     """SysML load from file pointer using ANTLR4 parser.
 
     Deserialize ``fp`` (a ``.read()``-supporting file-like object containing
@@ -370,7 +372,8 @@ def load_grammar_antlr(fp, debug=False, library=None):
         )
 
     try:
-        return antlr_visitor.parse_to_dict(s, library=library)
+        return antlr_visitor.parse_to_dict(s, library=library,
+                                  rescue_language=rescue_language)
     except antlr_parser.SysMLSyntaxError as e:
         raise
 

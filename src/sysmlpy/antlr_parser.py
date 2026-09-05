@@ -7,6 +7,7 @@ generated from the OMG SysML v2 specification (2026-05 release).
 """
 import sys
 import os
+import warnings
 
 from antlr4 import InputStream, CommonTokenStream
 from antlr4.atn.PredictionMode import PredictionMode
@@ -51,7 +52,8 @@ def _make_parser(content):
     return lexer, token_stream, parser
 
 
-def parse(source, library=None, recover=False, prediction_mode="sll"):
+def parse(source, library=None, recover=False, prediction_mode="sll",
+          rescue_language="English"):
     """Parse SysML v2.0 source and return a parse tree.
 
     Uses two-stage parsing by default (v0.56.0): a fast SLL prediction
@@ -77,6 +79,11 @@ def parse(source, library=None, recover=False, prediction_mode="sll"):
         for debugging).  ``"sll_only"`` keeps every pass in SLL
         prediction — including the fallback pass — so diagnostics
         reflect SLL behaviour (error parity with the fast path).
+    rescue_language : str, default "English"
+        Language tag used when a constraint body that does not parse as
+        SysML/KerML is salvaged as a textual representation
+        (``rep language "..." /* body */``) instead of failing the whole
+        model load (v0.80.0).
 
     Returns
     -------
@@ -90,13 +97,45 @@ def parse(source, library=None, recover=False, prediction_mode="sll"):
         (after both parse stages).
     """
     from pathlib import Path
-    
+
     # Handle string or file input
     if hasattr(source, 'read'):
         content = source.read()
     else:
         content = source
 
+    try:
+        return _parse_tree(content, recover=recover,
+                           prediction_mode=prediction_mode)
+    except SysMLSyntaxError as original_error:
+        if recover or not rescue_language:
+            raise
+        # Constraint-body rescue (v0.80.0): a constraint whose body does
+        # not parse as SysML/KerML (e.g. natural-language text) fails the
+        # whole model.  Salvage such bodies as language-tagged textual
+        # representations and retry once.
+        rescued = _rescue_constraint_bodies(content, rescue_language)
+        if rescued is None:
+            raise
+        new_content, rescued_names, rescued_language = rescued
+        try:
+            tree = _parse_tree(new_content, recover=False,
+                               prediction_mode=prediction_mode)
+        except SysMLSyntaxError:
+            # Rescue did not make the model parseable (e.g. other errors
+            # elsewhere) — surface the original diagnostics.
+            raise original_error
+        for cname in rescued_names:
+            warnings.warn(
+                f"constraint {cname!r} body did not parse as SysML; captured "
+                f"as textual representation (language {rescued_language!r})",
+                stacklevel=3,
+            )
+        return tree
+
+
+def _parse_tree(content, recover=False, prediction_mode="sll"):
+    """Two-stage ANTLR parse (no rescue); the body of historical parse()."""
     force_ll = prediction_mode == "ll"
     sll_only = prediction_mode == "sll_only" or force_ll
     
@@ -154,6 +193,109 @@ def parse(source, library=None, recover=False, prediction_mode="sll"):
         return tree, []
 
     return tree
+
+
+def _rescue_constraint_bodies(content, language="English"):
+    """Salvage constraint bodies that do not parse as SysML/KerML.
+
+    Scans the source for ``constraint ... { ... }`` blocks, trial-parses
+    each body, and wraps failing ones as language-tagged textual
+    representations (``rep language "..." /* body */``) so a
+    natural-language constraint no longer fails the whole model load.
+
+    Returns ``(new_content, [constraint names], language)`` when at least
+    one body was rewritten, ``None`` when nothing was salvageable.
+
+    Constraints whose body contains ``*/`` cannot be wrapped in a comment
+    and are left untouched (the original error stands).
+    """
+    import re as _re
+
+    spans = []
+    try:
+        lexer = SysMLv2Lexer(InputStream(content))
+        lexer.removeErrorListeners()
+        tokens = CommonTokenStream(lexer)
+        tokens.fill()
+    except Exception:
+        return None
+    toks = [t for t in tokens.tokens if t.channel == 0]
+    n = len(toks)
+    i = 0
+    while i < n:
+        t = toks[i]
+        if t.type != SysMLv2Parser.CONSTRAINT:
+            i += 1
+            continue
+        # Walk forward to the opening brace of the body (or bail on ';').
+        j = i + 1
+        name = None
+        lbrace = None
+        while j < n:
+            tt = toks[j]
+            if tt.type == SysMLv2Parser.LBRACE:
+                lbrace = j
+                break
+            if tt.type in (SysMLv2Parser.SEMI, SysMLv2Parser.RBRACE,
+                           SysMLv2Parser.EOF):
+                break
+            if name is None and tt.type != SysMLv2Parser.DEF:
+                name = tt.text
+            j += 1
+        if lbrace is None:
+            i += 1
+            continue
+        # Brace-match the body (token stream already excludes comments).
+        depth = 0
+        k = lbrace
+        while k < n:
+            if toks[k].type == SysMLv2Parser.LBRACE:
+                depth += 1
+            elif toks[k].type == SysMLv2Parser.RBRACE:
+                depth -= 1
+                if depth == 0:
+                    break
+            k += 1
+        if k >= n or depth != 0:
+            i += 1
+            continue
+        if k > lbrace + 1:
+            start = toks[lbrace + 1].start
+            end = toks[k - 1].stop
+            body_text = content[start:end + 1]
+        else:
+            body_text = ""
+            start = end = toks[lbrace].stop + 1
+        if body_text.strip():
+            spans.append((name or "?", start, end, body_text))
+        i = k + 1
+
+    if not spans:
+        return None
+
+    # Trial-parse every body first; rewrite only the ones that fail.
+    # Apply the replacements right-to-left so earlier offsets stay valid.
+    replacements = []
+    rescued_names = []
+    for cname, start, end, body_text in spans:
+        stripped = body_text.strip()
+        if not stripped or "*/" in stripped:
+            continue
+        probe = ("package __rescue_probe__ { constraint __c__ { "
+                 + stripped + " } }")
+        try:
+            _parse_tree(probe)
+            continue  # body is valid SysML — leave it alone
+        except SysMLSyntaxError:
+            pass
+        replacements.append((start, end, stripped))
+        rescued_names.append(cname)
+    if not rescued_names:
+        return None
+    for start, end, replacement in sorted(replacements, reverse=True):
+        wrapped = 'rep language "%s" /*%s*/' % (language, replacement)
+        content = content[:start] + wrapped + content[end + 1:]
+    return content, rescued_names, language
 
 
 def parse_file(filepath):

@@ -200,7 +200,9 @@ class _Collector:
         self.root = _Namespace("", ())
         self.types = {}        # bare type name -> _Namespace (definitions)
         self.calcs = {}        # qname string -> (expr dict, scope namespaces)
-        self.constraints = []  # (qname string, expr dict, scope namespaces)
+        # (qname string, expr dict, scope namespaces,
+        #  [(language, text), ...] textual representations)
+        self.constraints = []
         self._anon = 0
 
     # -- entry ---------------------------------------------------------
@@ -306,10 +308,12 @@ class _Collector:
 
     def _handle_constraint(self, node, qname, scope):
         expr = self._body_expression(node.get("body"))
-        if expr is None:
+        textual = self._body_textual_representations(node.get("body"))
+        if expr is None and not textual:
             return
         dn = _declared_name(node.get("declaration")) or self._anon_name()
-        self.constraints.append(("::".join(qname + (dn,)), expr, list(scope)))
+        self.constraints.append(
+            ("::".join(qname + (dn,)), expr, list(scope), textual))
 
     @staticmethod
     def _body_expression(body):
@@ -322,6 +326,40 @@ class _Collector:
             if isinstance(oe, dict) and oe.get("name") == "OwnedExpression":
                 return oe
         return _find_first(body, "OwnedExpression")
+
+    @staticmethod
+    def _body_textual_representations(body):
+        """[(language, text), ...] from `rep language "..." /* ... */` bodies.
+
+        The visitor places TextualRepresentation dicts at
+        body.part[].item[].item.ownedRelationship[] (CalculationBodyPart ->
+        CalculationBodyItem -> ActionBodyItem).
+        """
+        out = []
+        if not isinstance(body, dict):
+            return out
+        for part in body.get("part") or []:
+            if not isinstance(part, dict):
+                continue
+            for item in part.get("item") or []:
+                if not isinstance(item, dict):
+                    continue
+                abi = item.get("item")
+                if not isinstance(abi, dict) or \
+                        abi.get("name") != "ActionBodyItem":
+                    continue
+                rel = abi.get("ownedRelationship")
+                rels = rel if isinstance(rel, list) else (
+                    [rel] if isinstance(rel, dict) else [])
+                for r in rels:
+                    if isinstance(r, dict) and \
+                            r.get("name") == "TextualRepresentation":
+                        text = str(r.get("body") or "")
+                        # Strip the /* */ comment markers the lexer keeps.
+                        if text.startswith("/*") and text.endswith("*/"):
+                            text = text[2:-2].strip()
+                        out.append((r.get("language") or "", text))
+        return out
 
 
 # ---------------------------------------------------------------------------
@@ -1104,10 +1142,19 @@ def check_constraints(model, bindings=None):
     """
     collector = _collect_model(model)
     results = []
-    for qname, expr, scope in collector.constraints:
+    for qname, expr, scope, textual in collector.constraints:
         evaluator = _Evaluator(scope, bindings=bindings,
                                types=collector.types)
         result = ConstraintResult(qualified_name=qname)
+        if expr is None:
+            language, text = textual[0]
+            result.expression_text = text
+            result.error = (
+                "not machine-evaluable \u2014 textual body in language "
+                f"'{language or 'unspecified'}': {text!r}"
+            )
+            results.append(result)
+            continue
         result.expression_text = _expression_text(expr)
         try:
             value = evaluator.evaluate(expr)

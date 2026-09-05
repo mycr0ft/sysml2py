@@ -1296,15 +1296,21 @@ def _load_behavior_child(parent, inner, inner_name):
     """
     def _name_from_declaration(elem):
         """Extract a human-readable name from an element's declaration,
-        mirroring the pattern at definition.py:1269-1290."""
-        if not hasattr(elem, "declaration") or elem.declaration is None:
-            return None
-        decl = elem.declaration
+        mirroring the pattern at definition.py:1269-1290.
+
+        Declaration chains differ per kind — e.g. ``ConstraintUsage``
+        nests one level deeper than ``Usage``
+        (CalculationUsageDeclaration -> UsageDeclaration ->
+        FeatureDeclaration -> Identification) — so walk ``.declaration``
+        until an Identification is found.
+        """
         # AssertConstraintUsage has a different layout: declaration may
         # be wrapped under .usageDeclaration.
-        if hasattr(decl, "usageDeclaration") and decl.usageDeclaration():
+        decl = getattr(elem, "declaration", None)
+        if decl is not None and callable(getattr(decl, "usageDeclaration", None)) \
+                and decl.usageDeclaration():
             inner_decl = decl.usageDeclaration()
-            if hasattr(inner_decl, "identification") and inner_decl.identification:
+            if getattr(inner_decl, "identification", None):
                 ident = inner_decl.identification
                 if hasattr(ident, "declaredName"):
                     return ident.declaredName
@@ -1314,18 +1320,16 @@ def _load_behavior_child(parent, inner, inner_name):
                         if isinstance(name_obj, list):
                             return name_obj[-1].getText()
                         return name_obj.getText()
-        if hasattr(decl, "declaration") and decl.declaration:
-            feat_decl = decl.declaration
-            if hasattr(feat_decl, "identification") and feat_decl.identification:
-                ident = feat_decl.identification
-                if hasattr(ident, "declaredName"):
-                    return ident.declaredName
-                if hasattr(ident, "name"):
-                    name_obj = ident.name()
-                    if name_obj:
-                        if isinstance(name_obj, list):
-                            return name_obj[-1].getText()
-                        return name_obj.getText()
+        node = decl
+        depth = 0
+        while node is not None and depth < 4:
+            ident = getattr(node, "identification", None)
+            if ident is not None:
+                declared = getattr(ident, "declaredName", None)
+                if declared:
+                    return declared
+            node = getattr(node, "declaration", None)
+            depth += 1
         return None
 
     # Behavior usages created without load_from_grammar still capture their
@@ -3962,10 +3966,55 @@ class Constraint(_NonOccurrenceUsage):
         else:
             self.grammar = ConstraintUsage()
 
+        Usage.__init__(self)
+        if definition:
+            self.grammar = ConstraintDefinition()
+        else:
+            self.grammar = ConstraintUsage()
+
         if name is not None:
             self._set_name(name)
         if shortname is not None:
             self._set_name(shortname, short=True)
+
+    def textual_representations(self):
+        """[(language, text), ...] from `rep language "..." /* ... */` bodies.
+
+        A constraint body expressed in another language (e.g. natural
+        language) is a TextualRepresentation inside the CalculationBody.
+        The text has the /* */ comment markers stripped.
+        """
+        out = []
+        g = getattr(self, "grammar", None)
+        body = getattr(g, "body", None)
+        if body is None:
+            return out
+        for part in getattr(body, "children", []) or []:
+            for item in getattr(part, "children", []) or []:
+                for abi in getattr(item, "children", []) or []:
+                    for ch in getattr(abi, "children", []) or []:
+                        if ch.__class__.__name__ == "TextualRepresentation":
+                            text = str(ch.body or "")
+                            if text.startswith("/*") and text.endswith("*/"):
+                                text = text[2:-2].strip()
+                            out.append((ch.language or "", text))
+        return out
+
+    @property
+    def body_text(self):
+        """Raw text of the constraint's textual body, or None.
+
+        Populated for natural-language bodies (``rep language "English"
+        /* ... */`` and bodies salvaged by the parser's rescue pass).
+        """
+        reps = self.textual_representations()
+        return reps[0][1] if reps else None
+
+    @property
+    def body_language(self):
+        """Language tag of the constraint's textual body, or None."""
+        reps = self.textual_representations()
+        return reps[0][0] or None if reps else None
 
 
 class Connection(Usage):

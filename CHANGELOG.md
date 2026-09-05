@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## v0.80.0 (2026-09-05)
+
+**Constraint textual bodies** — natural-language constraint capture.
+
+1. *Tagged bodies*: `rep language "English" /* ... */` inside a
+   constraint (or calculation) body is now kept by the visitor (it was
+   silently dropped in body context) and exposed on the public API via
+   `Constraint.body_text` / `Constraint.body_language` /
+   `textual_representations()`.  `check_constraints()` reports such
+   constraints as "not machine-evaluable — textual body in language
+   'English': '...'" instead of skipping them.  Dump round-trips
+   byte-stably (canonical form drops the optional `rep` keyword —
+   grammatically identical, same precedent as `nonunique ordered`).
+2. *Rescue pass* (`sysmlpy.antlr_parser`): when a parse fails, every
+   `constraint ... { ... }` body is trial-parsed and failing bodies are
+   salvaged as textual representations (default language `"English"`,
+   configurable via the new `rescue_language` parameter threaded
+   through `loads()` / `load_grammar()` / `parse()`), then the model is
+   re-parsed.  One natural-language constraint no longer fails the
+   whole model load; a `UserWarning` names every salvaged constraint.
+   Bodies containing `*/` cannot be wrapped and keep the original
+   error; valid constraint bodies are never touched.
+
+Also fixed: parsed `constraint` / `calculation` / `state` /
+`requirement` / `allocation` usages appeared in the object tree as
+anonymous (`name is None`) — ConstraintUsage's declaration chain nests
+one level deeper than the old name extraction walked.
+
+12 new tests (`tests/constraint_text_test.py`).  Fast suite 1380,
+conformance 123/123.
+
 ## v0.79.1 (2026-09-05)
 
 **`ref` usages now appear in the object tree** — they were silently

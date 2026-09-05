@@ -62,7 +62,8 @@ class Model(Searchable):
             return f"{cls_name}(children=[{children_repr}])"
         return f"{cls_name}()"
 
-    def load(self: type[ModelType], s: str, library=None) -> ModelType:
+    def load(self: type[ModelType], s: str, library=None,
+             rescue_language="English") -> ModelType:
         """Load a SysML model from a string using ANTLR4 parser.
         
         Parameters
@@ -92,7 +93,8 @@ class Model(Searchable):
             if first_word in invalid_starts:
                 raise ValueError("Base Model must be encapsulated by a package.")
         
-        definition = load_grammar_antlr(s, library=library)["ownedRelationship"]
+        definition = load_grammar_antlr(s, library=library,
+                                        rescue_language=rescue_language)["ownedRelationship"]
         return self._load_definition(definition)
 
     def _load_definition(self: type[ModelType], definition) -> ModelType:

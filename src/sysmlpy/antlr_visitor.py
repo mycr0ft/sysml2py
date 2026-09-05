@@ -527,7 +527,7 @@ def _visit_annotating_element_dict(annot_elem_ctx):
     }
 
 
-def parse_to_dict(source, library=None):
+def parse_to_dict(source, library=None, rescue_language="English"):
     """Parse SysML source and return a dictionary.
     
     Parameters
@@ -544,7 +544,8 @@ def parse_to_dict(source, library=None):
     """
     from sysmlpy import antlr_parser
     
-    tree = antlr_parser.parse(source, library=library)
+    tree = antlr_parser.parse(source, library=library,
+                        rescue_language=rescue_language)
     return _visit_root_namespace_dict(tree)
 
 
@@ -3535,8 +3536,9 @@ def _visit_non_behavior_body_item(nbi_ctx):
                         }
         
         elif cname == 'DefinitionMemberContext':
-            # Handle comments/documentation inside bodies
-            # Structure: DefinitionMember -> DefinitionElement -> AnnotatingElement -> Comment
+            # Handle comments/documentation/textual representations inside
+            # bodies.  Structure: DefinitionMember -> DefinitionElement ->
+            # AnnotatingElement -> Comment | Documentation | TextualRepresentation
             for c2 in child.children:
                 if type(c2).__name__ == 'DefinitionElementContext':
                     for c3 in c2.children:
@@ -3549,6 +3551,15 @@ def _visit_non_behavior_body_item(nbi_ctx):
                                 doc = _visit_documentation_dict(c3.documentation())
                                 if doc:
                                     return doc
+                            elif hasattr(c3, 'textualRepresentation') and c3.textualRepresentation():
+                                # `rep language "English" /* body text */` —
+                                # a constraint/calc body expressed in another
+                                # language (v0.80.0).  Keep the raw text (with
+                                # /* */ markers) so classes.TextualRepresentation
+                                # dumps it back verbatim.
+                                tr = _visit_textual_representation_dict(c3.textualRepresentation())
+                                if tr:
+                                    return tr
         
         elif cname == 'StructureUsageMemberContext':
             # Handle occurrence usages (parts, items, ports)
