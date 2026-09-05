@@ -1045,13 +1045,18 @@ plugin (nvim-cmp/blink.cmp read LSP completions automatically).</p>
 </ul>
 <h2 id="known-limits">Known limits<a class="headerlink" href="#known-limits" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Semantic diagnostics are located by name search (the model does not
-  yet carry source positions); syntax errors are exact.</li>
+<li>Semantic diagnostics are position-tracked by source-order pairing
+  (v0.83.0) — the <em>n</em>-th element with a given <code>(kind, name)</code> maps to
+  the <em>n</em>-th declaration occurrence in the text; unlocatable elements
+  fall back to name search. Syntax errors are exact.</li>
 <li>Single-file scope: cross-file definitions resolve only if they are
   imported into the same file.</li>
-<li>FULL text sync — the server re-parses on each change; very large
-  models (&gt;10k lines) may want debouncing (editor-side delay or the
-  planned INCREMENTAL sync, see TODO Goal 10 / docs/LSP.md).</li>
+<li>INCREMENTAL text sync (v0.83.0) — the server applies ranged edits
+  and re-parses; very large models (&gt;10k lines) may still want
+  editor-side debouncing.</li>
+<li>While a document is transiently unparsable, completion keeps working
+  through the last successfully parsed model; outline/hover/definition
+  degrade to empty until the text parses again.</li>
 </ul>
 
 

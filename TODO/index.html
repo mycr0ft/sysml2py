@@ -822,8 +822,14 @@ are complete.  Follow-up work is organized under the
     change-rate gate (CLI + <code>ModelDiff.change_rate</code>).  Also fixed
     Requirement/Interface/Message base-Usage init (redefinition
     loads crashed).</li>
-<li>[ ] <strong>Batch 4 — LSP</strong>: incremental sync, position-tracked semantic
-    diagnostics, workspace/symbol, <code>.</code>-completion.</li>
+<li>[x] <strong>Batch 4 — LSP (v0.83.0)</strong>: incremental sync (ranged
+    <code>didChange</code> edits, UTF-16, full-text still accepted);
+    position-tracked semantic diagnostics via source-order pairing
+    (element ↔ <em>n</em>-th declaration occurrence, <code>def</code> preferred for
+    definitions); <code>workspace/symbol</code> (open docs + root <code>*.sysml</code>
+    scan, cached); <code>.</code>-member completion via type names, falling
+    back to the last good parse while the text is transiently
+    broken.  Parser-side token positions remain future work.</li>
 <li>[ ] <strong>Batch 5 — performance</strong>: visitor profiling (<code>parse_to_dict</code>
     dominates end-to-end time), persistent DFA cache serialization to
     eliminate cold-start parse cost.</li>

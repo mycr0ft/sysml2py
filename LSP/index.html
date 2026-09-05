@@ -810,7 +810,7 @@
 
 
 <h1 id="sysmlpy-language-server-lsp">sysmlpy Language Server (LSP)<a class="headerlink" href="#sysmlpy-language-server-lsp" title="Permanent link">&para;</a></h1>
-<p><em>(v0.65.0 — Adoption Roadmap Goal 5)</em></p>
+<p><em>(v0.65.0 — Adoption Roadmap Goal 5; batch 4 enhancements v0.83.0)</em></p>
 <p>sysmlpy ships a <a href="https://microsoft.github.io/language-server-protocol/">Language Server Protocol</a>
 server that brings parse/analyze diagnostics and model navigation into
 any LSP-capable editor — VS Code, Neovim, Emacs, Sublime, …</p>
@@ -845,11 +845,15 @@ any LSP-capable editor — VS Code, Neovim, Emacs, Sublime, …</p>
 </tr>
 <tr>
 <td><code>completion</code></td>
-<td>SysML v2 keywords + every named element in the model</td>
+<td>SysML v2 keywords + every named element; after <code>base.</code> the members of the resolved type of <em>base</em> (typed part, or a definition named directly)</td>
+</tr>
+<tr>
+<td><code>workspace/symbol</code></td>
+<td>Case-insensitive substring query across all open documents plus <code>*.sysml</code> files under the initialized workspace root (cached until the next document change)</td>
 </tr>
 <tr>
 <td>Text sync</td>
-<td>Full-document sync (<code>didOpen</code> / <code>didChange</code> / <code>didClose</code>)</td>
+<td><strong>Incremental</strong> (<code>didOpen</code> / <code>didChange</code> with LSP ranges); range-less changes are still accepted as full-document replacements</td>
 </tr>
 </tbody>
 </table>
@@ -857,13 +861,20 @@ any LSP-capable editor — VS Code, Neovim, Emacs, Sublime, …</p>
 <h3 id="diagnostic-fidelity-honest-limits">Diagnostic fidelity (honest limits)<a class="headerlink" href="#diagnostic-fidelity-honest-limits" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Syntax errors carry exact positions from the ANTLR error listener.</li>
-<li>Semantic issues carry <strong>no source positions</strong> in sysmlpy's model
-  representation, so the server locates them by searching the text for
-  the names quoted in the issue message (falling back to the owning
-  element's name, then to line 1). This is a pragmatic heuristic, not a
-  position-tracked parser; the <code>UNRESOLVED_EXPRESSION_IDENTIFIER</code> class
-  of issues resolves precisely, structural warnings resolve to their
-  nearest name occurrence.</li>
+<li>Semantic issues are <strong>position-tracked by source-order pairing</strong>
+  (v0.83.0): the symbol walk visits model elements in declaration
+  order, so the <em>n</em>-th element with a given <code>(kind, name)</code> is paired
+  with the <em>n</em>-th declaration occurrence of that pair in the text —
+  an issue about <code>Fleet::Engine</code> points at the right <code>part def Engine</code>
+  even when several share the name.  Issues whose element cannot be
+  located fall back to the quoted-<code>'name'</code>-occurrence heuristic, then
+  to line 1.  True parser-side position tracking (annotating visitor
+  dicts with ANTLR token positions) remains future work.</li>
+<li>While a document is transiently unparsable (e.g. a half-typed
+  expression), outline/hover/definition degrade to empty results, but
+  <code>completion</code> keeps working: member resolution falls back to the last
+  successfully parsed model, and the keyword/name fallback list is
+  built from that model too.</li>
 </ul>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>editor (VS Code / Neovim)                 stdio JSON-RPC (Content-Length framing)
@@ -883,7 +894,10 @@ any LSP-capable editor — VS Code, Neovim, Emacs, Sublime, …</p>
   in-process against a <code>BytesIO</code> pipe plus one subprocess smoke test.</li>
 <li>One <code>DocumentIndex</code> per document version caches the parse + analysis
   snapshot; every feature handler reads that snapshot, so outline,
-  hover and diagnostics always agree.</li>
+  hover and diagnostics always agree.  The server additionally keeps
+  each document's <em>last successfully parsed model</em> (surviving
+  re-indexing on every keystroke) so <code>completion</code> keeps resolving
+  members while the text is transiently broken.</li>
 <li><code>analyze()</code> failures are swallowed (issues become the diagnostics
   that did parse) — the analyzer must never crash the editor session.</li>
 </ul>
@@ -929,20 +943,30 @@ K hovers, <code>gd</code> jumps to definitions, <code>:Pickers -&gt; symbols</co
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>root detection: none required (single-file server)
 </code></pre></div>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>poetry<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/lsp_test.py<span class="w"> </span>-q
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>poetry<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/lsp_test.py<span class="w"> </span>tests/lsp_batch4_test.py<span class="w"> </span>-q
 </code></pre></div>
 <p>The suite covers framing round-trips (incl. non-ASCII payloads and
 malformed headers), the full lifecycle (initialize → features →
 shutdown → exit), diagnostics ranges, every feature, an in-memory
-stdio session, and a real subprocess run of <code>python -m sysmlpy.lsp</code>.</p>
+stdio session, and a real subprocess run of <code>python -m sysmlpy.lsp</code>.
+The batch-4 suite adds incremental-sync edits (UTF-16 positions,
+clamping, mixed full+range changes), source-order diagnostic pairing,
+workspace scans, and <code>.</code>-member completion over transiently broken
+documents.</p>
 <h2 id="follow-ups-tracked-in-todomd">Follow-ups (tracked in TODO.md)<a class="headerlink" href="#follow-ups-tracked-in-todomd" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Incremental text sync (<code>TextDocumentSyncKind.INCREMENTAL</code>)</li>
-<li>Position-accurate semantic diagnostics (requires parser position
-  tracking — a larger visitor change)</li>
-<li><code>workspace/symbol</code> + multi-file workspace support</li>
-<li>Completion after <code>.</code> (member completion via type resolution)</li>
+<li>~~Incremental text sync~~ <em>(shipped v0.83.0)</em></li>
+<li>~~<code>workspace/symbol</code> + multi-file workspace support~~ <em>(shipped
+  v0.83.0 — root scan, not yet cross-file symbol resolution)</em></li>
+<li>~~Completion after <code>.</code> (member completion via type resolution)~~
+  <em>(shipped v0.83.0 — direct members; inherited members and library
+  types fall back to the full list)</em></li>
+<li>True parser-side position tracking for semantic diagnostics
+  (annotating visitor dicts with ANTLR token positions — a larger
+  visitor change; the current source-order pairing covers the common
+  cases)</li>
 <li>Debounced re-parse for very large documents</li>
+<li>Cross-file go-to-definition across workspace roots</li>
 </ul>
 
 

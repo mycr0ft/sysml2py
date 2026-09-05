@@ -636,6 +636,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#lsp-incremental-sync-position-tracking-workspace-symbols-completion-v0830" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LSP: Incremental Sync, Position Tracking, Workspace Symbols, .-Completion (v0.83.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#semantic-diff-renames-grammar-fields-state-machines-trace-gate-v0820" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1095,6 +1106,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#lsp-incremental-sync-position-tracking-workspace-symbols-completion-v0830" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LSP: Incremental Sync, Position Tracking, Workspace Symbols, .-Completion (v0.83.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#semantic-diff-renames-grammar-fields-state-machines-trace-gate-v0820" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1308,7 +1330,7 @@
 
 
 <h1 id="sysmlpy-project-status">sysmlpy — Project Status<a class="headerlink" href="#sysmlpy-project-status" title="Permanent link">&para;</a></h1>
-<p>Current version: <strong>v0.82.0</strong> (2026-09-05)</p>
+<p>Current version: <strong>v0.83.0</strong> (2026-09-05)</p>
 <hr />
 <h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
 <h3 id="public-api-classes">Public API Classes<a class="headerlink" href="#public-api-classes" title="Permanent link">&para;</a></h3>
@@ -2045,8 +2067,8 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><code>tests/lsp_test.py</code></td>
-<td>37</td>
-<td>✅ All pass</td>
+<td>56</td>
+<td>✅ All pass (batch 4: 17 more in <code>tests/lsp_batch4_test.py</code>)</td>
 </tr>
 <tr>
 <td><code>tests/spreadsheet_test.py</code></td>
@@ -2143,6 +2165,17 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </ul>
 <hr />
 <h2 id="completed-since-v0270">Completed Since v0.27.0<a class="headerlink" href="#completed-since-v0270" title="Permanent link">&para;</a></h2>
+<h3 id="lsp-incremental-sync-position-tracking-workspace-symbols-completion-v0830">LSP: Incremental Sync, Position Tracking, Workspace Symbols, <code>.</code>-Completion (v0.83.0)<a class="headerlink" href="#lsp-incremental-sync-position-tracking-workspace-symbols-completion-v0830" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Incremental text sync (ranged <code>didChange</code> edits; full-text changes
+  still accepted); UTF-16 position math with clamping.</li>
+<li>Position-tracked semantic diagnostics via source-order pairing
+  (duplicate names map to their own declaration).</li>
+<li><code>workspace/symbol</code> over open documents + workspace root <code>*.sysml</code>
+  scan (cached, capped).</li>
+<li><code>.</code>-member completion resolved through type names, surviving
+  transiently unparsable documents via the last good parse.</li>
+</ul>
 <h3 id="semantic-diff-renames-grammar-fields-state-machines-trace-gate-v0820">Semantic Diff: Renames, Grammar Fields, State Machines, Trace Gate (v0.82.0)<a class="headerlink" href="#semantic-diff-renames-grammar-fields-state-machines-trace-gate-v0820" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Rename detection: removed+added pairs with equal kind and structural

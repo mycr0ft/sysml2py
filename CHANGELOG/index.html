@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0830-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.83.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0820-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3174,6 +3185,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0830-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.83.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0820-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5822,6 +5844,39 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0830-2026-09-05">v0.83.0 (2026-09-05)<a class="headerlink" href="#v0830-2026-09-05" title="Permanent link">&para;</a></h2>
+<p><strong>Goal 11 Batch 4 — LSP enhancements.</strong></p>
+<ol>
+<li><em>Incremental text sync</em>: <code>textDocumentSync.change</code> is now
+   <code>INCREMENTAL</code> (2) — ranged <code>didChange</code> edits are applied against the
+   current text (UTF-16 positions, out-of-range positions clamped);
+   range-less changes are still accepted as full-document
+   replacements.  <code>Document.apply_change()</code> + <code>_pos_to_index()</code>.</li>
+<li><em>Position-tracked semantic diagnostics</em>: the symbol walk visits
+   model elements in declaration order, so the <em>n</em>-th element with a
+   given <code>(kind, name)</code> pairs with the <em>n</em>-th declaration occurrence
+   of that pair in the text — duplicate names get their own
+   declaration's range, and definitions prefer their <code>def</code> occurrence.
+   Semantic issues now take their range from the owning element's
+   paired location (with the quoted-name heuristic and
+   <code>SemanticIssue.reference</code> as fallbacks); <code>reparse</code> builds the
+   symbol index before analyzing.</li>
+<li><em>workspace/symbol</em>: case-insensitive substring query across all
+   open documents plus <code>*.sysml</code> files under the initialized
+   <code>rootUri</code>/<code>workspaceFolders</code> root (capped at 100 files, results at
+   200; cached until the next document change; unparsable files
+   skipped; open documents are not duplicated by the root scan).</li>
+<li><em><code>.</code>-member completion</em>: completion right after <code>base.</code> returns
+   the direct members of the resolved type of <em>base</em> — a typed part's
+   definition, or a definition named directly — filtered by the typed
+   prefix.  Resolution falls back to the <strong>last successfully parsed
+   model</strong> when the document is transiently unparsable (half-typed
+   expression), and the keyword/name fallback list is built from that
+   model too; outline/hover/definition still degrade to empty.</li>
+</ol>
+<p>LSP tests 37 → 73 (<code>tests/lsp_test.py</code> + new <code>tests/lsp_batch4_test.py</code>).
+Fast suite 1455, conformance 123/123.  docs/LSP.md and
+docs/LSP_EDITORS.md updated.</p>
 <h2 id="v0820-2026-09-05">v0.82.0 (2026-09-05)<a class="headerlink" href="#v0820-2026-09-05" title="Permanent link">&para;</a></h2>
 <p><strong>Goal 11 Batch 3 — diff batch 2.</strong></p>
 <ol>
