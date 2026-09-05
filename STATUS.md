@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.82.0** (2026-09-05)
+Current version: **v0.83.0** (2026-09-05)
 
 ---
 
@@ -307,7 +307,7 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 | `tests/traceability_test.py` | 46 | ✅ All pass |
 | `tests/interchange_test.py` | 38 | ✅ All pass |
 | `tests/evaluator_test.py` | 44 | ✅ All pass |
-| `tests/lsp_test.py` | 37 | ✅ All pass |
+| `tests/lsp_test.py` | 56 | ✅ All pass (batch 4: 17 more in `tests/lsp_batch4_test.py`) |
 | `tests/spreadsheet_test.py` | 37 | ✅ 35 pass, 2 skip (no openpyxl) |
 | `tests/navigate_test.py` | 42 | ✅ All pass |
 | `tests/cli_test.py` | 39 | ✅ All pass |
@@ -339,6 +339,17 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 ---
 
 ## Completed Since v0.27.0
+
+### LSP: Incremental Sync, Position Tracking, Workspace Symbols, `.`-Completion (v0.83.0)
+
+- Incremental text sync (ranged `didChange` edits; full-text changes
+  still accepted); UTF-16 position math with clamping.
+- Position-tracked semantic diagnostics via source-order pairing
+  (duplicate names map to their own declaration).
+- `workspace/symbol` over open documents + workspace root `*.sysml`
+  scan (cached, capped).
+- `.`-member completion resolved through type names, surviving
+  transiently unparsable documents via the last good parse.
 
 ### Semantic Diff: Renames, Grammar Fields, State Machines, Trace Gate (v0.82.0)
 

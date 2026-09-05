@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## v0.83.0 (2026-09-05)
+
+**Goal 11 Batch 4 — LSP enhancements.**
+
+1. *Incremental text sync*: `textDocumentSync.change` is now
+   `INCREMENTAL` (2) — ranged `didChange` edits are applied against the
+   current text (UTF-16 positions, out-of-range positions clamped);
+   range-less changes are still accepted as full-document
+   replacements.  `Document.apply_change()` + `_pos_to_index()`.
+2. *Position-tracked semantic diagnostics*: the symbol walk visits
+   model elements in declaration order, so the *n*-th element with a
+   given `(kind, name)` pairs with the *n*-th declaration occurrence
+   of that pair in the text — duplicate names get their own
+   declaration's range, and definitions prefer their `def` occurrence.
+   Semantic issues now take their range from the owning element's
+   paired location (with the quoted-name heuristic and
+   `SemanticIssue.reference` as fallbacks); `reparse` builds the
+   symbol index before analyzing.
+3. *workspace/symbol*: case-insensitive substring query across all
+   open documents plus `*.sysml` files under the initialized
+   `rootUri`/`workspaceFolders` root (capped at 100 files, results at
+   200; cached until the next document change; unparsable files
+   skipped; open documents are not duplicated by the root scan).
+4. *`.`-member completion*: completion right after ``base.`` returns
+   the direct members of the resolved type of *base* — a typed part's
+   definition, or a definition named directly — filtered by the typed
+   prefix.  Resolution falls back to the **last successfully parsed
+   model** when the document is transiently unparsable (half-typed
+   expression), and the keyword/name fallback list is built from that
+   model too; outline/hover/definition still degrade to empty.
+
+LSP tests 37 → 73 (`tests/lsp_test.py` + new `tests/lsp_batch4_test.py`).
+Fast suite 1455, conformance 123/123.  docs/LSP.md and
+docs/LSP_EDITORS.md updated.
+
 ## v0.82.0 (2026-09-05)
 
 **Goal 11 Batch 3 — diff batch 2.**

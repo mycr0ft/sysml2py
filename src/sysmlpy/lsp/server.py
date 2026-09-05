@@ -10,22 +10,29 @@ feed dicts directly.
 Feature summary
 ---------------
 - ``initialize`` / ``initialized`` / ``shutdown`` / ``exit`` lifecycle
-- ``textDocument/didOpen|didChange|didClose`` with FULL sync, publishing
+- ``textDocument/didOpen|didChange|didClose`` with INCREMENTAL sync
+  (full-text changes without a range are still accepted), publishing
   diagnostics (syntax errors with precise ANTLR line:column ranges;
-  semantic issues located heuristically in the text)
+  semantic issues position-tracked to their owning declaration)
 - ``textDocument/hover``          — kind/type/value summary
 - ``textDocument/documentSymbol`` — hierarchical model outline
 - ``textDocument/definition``     — jump to declaration
-- ``textDocument/completion``     — SysML keywords + model member names
+- ``textDocument/completion``     — SysML keywords + model member names,
+  plus ``.``-member completion resolved through type names
+- ``workspace/symbol``            — query across open documents and the
+  workspace root (``*.sysml`` files under the initialized root)
 
 Design notes
 ------------
-* ``SemanticIssue`` carries no source positions (the parser does not
-  track line/col for model dicts), so semantic diagnostics locate their
-  range by searching the document text for the names mentioned in the
-  issue message (quoted ``'name'`` occurrences, then the owning
-  element's name).  Syntax errors use the ANTLR listener's exact
-  ``line:column``.  See docs/LSP.md for the trade-off discussion.
+* Semantic diagnostics are *position-tracked by source-order pairing*:
+  the symbol walk pairs the *n*-th model element of a given
+  ``(kind, name)`` with the *n*-th declaration occurrence of that pair
+  in the text, so an issue's range points at its owning declaration —
+  e.g. the ``part def Engine`` on line 3, not the ``engine`` usage on
+  line 12.  Issues on unlocatable elements fall back to the quoted
+  ``'name'``-occurrence heuristic, then to line 1.  True parser-side
+  position tracking (annotating visitor dicts with token positions)
+  remains future work — see docs/LSP.md for the trade-off discussion.
 * Positions are UTF-16 code-unit based (the LSP default encoding).
 * The analyzer must never crash the editor: every feature handler is
   wrapped so failures degrade to empty results, and ``reparse`` guards
@@ -153,6 +160,40 @@ class Document:
     def line_text(self, line: int) -> str:
         return self._lines[line] if 0 <= line < len(self._lines) else ""
 
+    def apply_change(self, lsp_range: Dict[str, Any], new_text: str,
+                     utf16: bool = True) -> None:
+        """Apply one incremental ``didChange`` content change.
+
+        *lsp_range* is ``{"start": {"line", "character"},
+        "end": {...}}`` in LSP (UTF-16 by default) coordinates;
+        *new_text* replaces the range.  Positions beyond the end of the
+        document are clamped.
+        """
+        raw = self.text.split("\n")
+        si = self._pos_to_index(raw, lsp_range.get("start") or {},
+                                utf16)
+        ei = self._pos_to_index(raw, lsp_range.get("end") or {}, utf16)
+        if ei < si:                       # degenerate range — swap
+            si, ei = ei, si
+        self.update(self.text[:si] + new_text + self.text[ei:])
+
+    @staticmethod
+    def _pos_to_index(raw_lines: List[str], pos: Dict[str, Any],
+                      utf16: bool) -> int:
+        """LSP ``{"line", "character"}`` → absolute index in ``"\n".join``."""
+        line = max(0, min(int(pos.get("line", 0)), len(raw_lines) - 1))
+        character = max(0, int(pos.get("character", 0)))
+        text_line = raw_lines[line]
+        idx = 0
+        if utf16:
+            units = 0
+            while idx < len(text_line) and units < character:
+                units += 2 if ord(text_line[idx]) > 0xFFFF else 1
+                idx += 1
+        else:
+            idx = min(character, len(text_line))
+        return sum(len(l) + 1 for l in raw_lines[:line]) + idx
+
 
 # ---------------------------------------------------------------------------
 # Symbol entries
@@ -164,11 +205,12 @@ class SymbolEntry:
 
     __slots__ = ("name", "kind_label", "sysml_type", "is_definition",
                  "line", "start_col", "end_col", "typed_by_name",
-                 "qualified", "children")
+                 "qualified", "children", "element")
 
     def __init__(self, name: str, kind_label: str, sysml_type: str,
                  is_definition: bool, line: int, start_col: int,
-                 end_col: int, typed_by_name: Optional[str] = None):
+                 end_col: int, typed_by_name: Optional[str] = None,
+                 element: Any = None):
         self.name = name
         self.kind_label = kind_label
         self.sysml_type = sysml_type
@@ -179,14 +221,15 @@ class SymbolEntry:
         self.typed_by_name = typed_by_name
         self.qualified = ""
         self.children: List["SymbolEntry"] = []
+        self.element = element
 
 
-def _lsp_symbol_kind(entry: SymbolEntry) -> int:
-    """Map a sysml element to an LSP SymbolKind."""
-    t = entry.sysml_type
+def _lsp_symbol_kind_for(sysml_type: str, is_definition: bool) -> int:
+    """Map ``(sysml_type, is_definition)`` to an LSP SymbolKind."""
+    t = sysml_type
     if t == "package":
         return SymbolKind.PACKAGE
-    if entry.is_definition:
+    if is_definition:
         if t == "enumeration":
             return SymbolKind.ENUM
         if t in ("port", "interface"):
@@ -199,6 +242,11 @@ def _lsp_symbol_kind(entry: SymbolEntry) -> int:
     if t in ("action", "calculation"):
         return SymbolKind.FUNCTION
     return SymbolKind.VARIABLE
+
+
+def _lsp_symbol_kind(entry: SymbolEntry) -> int:
+    """Map a sysml element to an LSP SymbolKind."""
+    return _lsp_symbol_kind_for(entry.sysml_type, entry.is_definition)
 
 
 # ---------------------------------------------------------------------------
@@ -214,13 +262,19 @@ class DocumentIndex:
     this single snapshot so every feature agrees on one parse.
     """
 
-    def __init__(self, document: Document):
+    def __init__(self, document: Document,
+                 last_good_model: Any = None):
         self.document = document
+        # seed with the previous version's model so completion keeps
+        # working across transiently broken states; reparse refreshes it
+        self._last_good_model = last_good_model
         self.model = None
         self.diagnostics: List[Dict[str, Any]] = []
         self.symbols: List[SymbolEntry] = []
         self._by_name: Dict[str, List[SymbolEntry]] = {}
         self._child_ids: set = set()
+        self._occurrence: Dict[Tuple[str, str], int] = {}
+        self._element_locations: Dict[int, Tuple[int, int, int]] = {}
         self.reparse()
 
     # -- build ---------------------------------------------------------------
@@ -233,10 +287,14 @@ class DocumentIndex:
         self.symbols = []
         self._by_name = {}
         self._child_ids = set()
+        self._occurrence = {}
+        self._element_locations = {}
         self.diagnostics = []
 
         model, errors = sysmlpy.parse(doc.text)
         self.model = model
+        if model is not None:
+            self._last_good_model = model
 
         for err in errors:
             diag = self._syntax_diagnostic(err)
@@ -244,6 +302,9 @@ class DocumentIndex:
                 self.diagnostics.append(diag)
 
         if model is not None:
+            # build the symbol index first: semantic issues are located
+            # through the element→declaration pairing it records
+            self._build_symbols()
             try:
                 issues = sysmlpy.analyze(model)
             except Exception:  # analyzer must never break the editor
@@ -252,7 +313,6 @@ class DocumentIndex:
                 diag = self._semantic_diagnostic(issue)
                 if diag is not None:
                     self.diagnostics.append(diag)
-            self._build_symbols()
 
     # -- diagnostics ---------------------------------------------------------
 
@@ -297,11 +357,32 @@ class DocumentIndex:
         import re
 
         message = issue.message or ""
+        severity = _severity_number(issue.severity)
+
+        # Position-tracked fast path: the element's paired declaration.
+        loc = self._element_locations.get(id(issue.element)) \
+            if issue.element is not None else None
+        if loc is None and getattr(issue, "reference", ""):
+            name = issue.reference.split("::")[-1]
+            loc = self._locate_word(name)
+        if loc is not None:
+            line, start_col, end_col = loc
+            return {
+                "range": {
+                    "start": {"line": line, "character": start_col},
+                    "end": {"line": line, "character": end_col},
+                },
+                "severity": severity,
+                "source": DIAGNOSTIC_SOURCE,
+                "code": issue.code,
+                "message": message,
+            }
+
+        # Heuristic fallback: names mentioned in the message text.
         candidates = re.findall(r"'([^']+)'", message)
         element_name = getattr(issue.element, "name", None)
         if element_name and element_name not in candidates:
             candidates.append(element_name)
-        severity = _severity_number(issue.severity)
         for name in candidates:
             loc = self._locate_word(name)
             if loc is not None:
@@ -333,18 +414,15 @@ class DocumentIndex:
     # -- symbols -------------------------------------------------------------
 
     def _build_symbols(self) -> None:
-        """Walk the model tree and locate each named element in the text."""
+        """Walk the model tree and locate each named element in the text.
+
+        Elements are visited in source order, so the *n*-th element with
+        a given ``(kind, name)`` is paired with the *n*-th declaration
+        occurrence of that pair in the text (position tracking without
+        parser-side line/col data).
+        """
         if self.model is None:
             return
-
-        def walk(element, parents: Tuple[str, ...]) -> None:
-            for child in getattr(element, "children", []) or []:
-                name = getattr(child, "name", None)
-                if not name:
-                    continue
-                entry = self._make_entry(child, name, parents)
-                if entry is not None:
-                    walk_children(child, entry, parents + (name,))
 
         def walk_children(element, entry, path) -> None:
             self.symbols.append(entry)
@@ -375,10 +453,14 @@ class DocumentIndex:
         sysml_type = getattr(element, "sysml_type", None) or "element"
         keyword = _KIND_KEYWORD.get(sysml_type, sysml_type)
         is_def = bool(getattr(element, "is_definition", False))
-        loc = self._locate_declaration(keyword, name, is_def)
+        key = (sysml_type, name)
+        nth = self._occurrence.get(key, 0)
+        self._occurrence[key] = nth + 1
+        loc = self._locate_declaration(keyword, name, is_def, nth)
         if loc is None:
             return None
         line, start_col, end_col = loc
+        self._element_locations[id(element)] = loc
         entry = SymbolEntry(
             name=name,
             kind_label=f"{keyword}{' def' if is_def else ''}",
@@ -388,27 +470,66 @@ class DocumentIndex:
             start_col=start_col,
             end_col=end_col,
             typed_by_name=getattr(element, "typed_by_name", None),
+            element=element,
         )
         entry.qualified = "::".join(parents + (name,))
         return entry
 
     def _locate_declaration(self, keyword: str, name: str,
-                            is_definition: bool
+                            is_definition: bool, nth: int = 0
                             ) -> Optional[Tuple[int, int, int]]:
         """Find the ``<keyword> [def] <name>`` declaration in the text.
 
         Returns ``(line, start_char, end_char)`` with *start/end* being
-        Python character indices spanning the *name* token; falls back to
-        any whole-word occurrence (usages, aliases, anonymous decls).
+        Python character indices spanning the *name* token.  All
+        candidate occurrences are collected in source order and the
+        *nth* one is selected so repeated ``(kind, name)`` pairs map to
+        their own declaration; falls back to any whole-word occurrence
+        (usages, aliases, anonymous decls).
+        """
+        candidates = self._locate_declaration_all(keyword, name,
+                                                  is_definition)
+        if not candidates:
+            candidates = self._locate_word_all(name)
+        if not candidates:
+            return None
+        return candidates[nth % len(candidates)]
+
+    def _locate_declaration_all(self, keyword: str, name: str,
+                                is_definition: bool
+                                ) -> List[Tuple[int, int, int]]:
+        """All ``<keyword> [def] <name>`` occurrences in source order.
+
+        For definitions, ``def``-prefixed occurrences are preferred when
+        any exist (a usage and a definition sharing a name would
+        otherwise collide).
         """
         pattern = re.compile(
             rf"\b{re.escape(keyword)}\s+(?:def\s+)?(?P<name>{re.escape(name)})\b"
         )
+        all_occurrences: List[Tuple[int, int, int]] = []
+        def_occurrences: List[Tuple[int, int, int]] = []
         for lineno, line_text in enumerate(self.document.lines):
-            m = pattern.search(line_text)
-            if m:
-                return (lineno, m.start("name"), m.end("name"))
-        return self._locate_word(name)
+            for m in pattern.finditer(line_text):
+                loc = (lineno, m.start("name"), m.end("name"))
+                all_occurrences.append(loc)
+                prefix = line_text[:m.start("name")]
+                if re.search(rf"\b{re.escape(keyword)}\s+def\s+$", prefix):
+                    def_occurrences.append(loc)
+        if is_definition and def_occurrences:
+            return def_occurrences
+        return all_occurrences
+
+    def _locate_word_all(self, name: str
+                         ) -> List[Tuple[int, int, int]]:
+        """All whole-word occurrences of *name* in source order."""
+        pattern = re.compile(rf"\b{re.escape(name)}\b")
+        out = []
+        for lineno, line_text in enumerate(self.document.lines):
+            for m in pattern.finditer(line_text):
+                out.append((lineno, _utf16_len(line_text[:m.start()]),
+                            _utf16_len(line_text[:m.end()])))
+        return out
 
     # -- features ------------------------------------------------------------
 
@@ -523,8 +644,18 @@ class DocumentIndex:
             "end": {"line": last, "character": 0},
         }
 
-    def completion(self) -> List[Dict[str, Any]]:
-        """Completion items: SysML keywords + every named model element."""
+    def completion(self, line: Optional[int] = None,
+                   utf16_col: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Completion items: SysML keywords + every named model element.
+
+        When *line*/*utf16_col* sit right after ``base.``, return the
+        members of the resolved type of *base* instead (falling back to
+        the full list when the base cannot be resolved).
+        """
+        if line is not None and utf16_col is not None:
+            member_items = self._member_completion(line, utf16_col)
+            if member_items is not None:
+                return member_items
         items = [
             {"label": kw, "kind": 14, "detail": "SysML keyword"}
             for kw in _COMPLETION_KEYWORDS
@@ -539,7 +670,133 @@ class DocumentIndex:
                 "kind": _lsp_symbol_kind(entry),
                 "detail": entry.kind_label,
             })
+        if not self.symbols and self._last_good_model is not None:
+            # transiently broken document: offer the last good names
+            for name, st, is_def in self._lastgood_names():
+                if name in seen:
+                    continue
+                seen.add(name)
+                items.append({
+                    "label": name,
+                    "kind": _lsp_symbol_kind_for(st, is_def),
+                    "detail": _KIND_KEYWORD.get(st, st),
+                })
         return items
+
+    def _lastgood_names(self) -> List[Tuple[str, str, bool]]:
+        """(name, sysml_type, is_definition) from the last good model."""
+        out: List[Tuple[str, str, bool]] = []
+
+        def walk(el) -> None:
+            for child in getattr(el, "children", []) or []:
+                name = getattr(child, "name", None)
+                if name:
+                    out.append((name,
+                                getattr(child, "sysml_type", None)
+                                or "element",
+                                bool(getattr(child, "is_definition",
+                                             False))))
+                walk(child)
+
+        walk(self._last_good_model)
+        return out
+
+    _DOT_CONTEXT_RE = re.compile(r"([A-Za-z_]\w*)\s*\.\s*([A-Za-z_]\w*)?$")
+
+    def _member_completion(self, line: int, utf16_col: int
+                           ) -> Optional[List[Dict[str, Any]]]:
+        """Member items for ``base.`` completion (or ``None`` to fall back)."""
+        line_text = self.document.line_text(line)
+        col = 0
+        units = 0
+        while col < len(line_text) and units < utf16_col:
+            units += 2 if ord(line_text[col]) > 0xFFFF else 1
+            col += 1
+        before = line_text[:col]
+        m = self._DOT_CONTEXT_RE.search(before)
+        if not m:
+            return None
+        base, prefix = m.group(1), m.group(2) or ""
+        target = self._resolve_member_base(base)
+        if target is None:
+            return None
+        items = []
+        seen = set()
+        for child in getattr(target, "children", []) or []:
+            name = getattr(child, "name", None)
+            if not name or name in seen or not name.startswith(prefix):
+                continue
+            seen.add(name)
+            st = getattr(child, "sysml_type", None) or "element"
+            is_def = bool(getattr(child, "is_definition", False))
+            detail = f"{_KIND_KEYWORD.get(st, st)}{' def' if is_def else ''}"
+            typed = getattr(child, "typed_by_name", None)
+            if typed:
+                detail += f" : {typed}"
+            items.append({
+                "label": name,
+                "kind": _lsp_symbol_kind_for(st, is_def),
+                "detail": detail,
+            })
+        return items
+
+    def _resolve_member_base(self, base: str):
+        """Resolve *base* to a definition element for member completion.
+
+        Prefers a usage named *base* typed by a definition known in this
+        document, then a definition named *base* itself.  When the
+        current text does not parse (half-typed expression), resolution
+        falls back to the last successfully parsed model.
+        """
+        entries = self._by_name.get(base)
+        if entries:
+            for e in entries:
+                if (not e.is_definition and e.typed_by_name
+                        and e.element is not None):
+                    short = e.typed_by_name.split("::")[-1]
+                    for de in self._by_name.get(short, []):
+                        if de.is_definition:
+                            return de.element
+            for e in entries:
+                if e.is_definition:
+                    return e.element
+        if self._last_good_model is not None:
+            return self._resolve_in_model(self._last_good_model, base)
+        return None
+
+    def _resolve_in_model(self, model, base: str):
+        """Resolve *base* to a definition element by walking *model*."""
+        named: List[Any] = []
+
+        def collect(el) -> None:
+            for child in getattr(el, "children", []) or []:
+                if getattr(child, "name", None) == base:
+                    named.append(child)
+                collect(child)
+
+        collect(model)
+        for el in named:
+            if (not getattr(el, "is_definition", False)
+                    and getattr(el, "typed_by_name", None)):
+                typed = el.typed_by_name.split("::")[-1]
+                target = self._find_definition(model, typed)
+                if target is not None:
+                    return target
+        for el in named:
+            if getattr(el, "is_definition", False):
+                return el
+        return None
+
+    def _find_definition(self, model, name: str):
+        """Depth-first search for a definition named *name*."""
+        for child in getattr(model, "children", []) or []:
+            if (getattr(child, "name", None) == name
+                    and getattr(child, "is_definition", False)):
+                return child
+            found = self._find_definition(child, name)
+            if found is not None:
+                return found
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -557,16 +814,25 @@ class SysmlLanguageServer:
     def __init__(self) -> None:
         self.docs: Dict[str, Document] = {}
         self.indexes: Dict[str, DocumentIndex] = {}
+        # per-uri last successfully parsed model (survives re-indexing
+        # on every keystroke) — backs completion in broken states
+        self.last_good: Dict[str, Any] = {}
         self.client_capabilities: Dict[str, Any] = {}
+        self.workspace_root: Optional[str] = None   # filesystem path
+        self._ws_cache: Optional[List[Dict[str, Any]]] = None
+        self._ws_dirty = True
         self.initialized = False
         self.shutdown_requested = False
         self.exited = False
         self.server_capabilities = {
             "positionEncoding": "utf-16",
-            "textDocumentSync": {"openClose": True, "change": 1},  # FULL
+            # INCREMENTAL (v0.83.0); full-text changes without a range
+            # are still accepted for clients that stay in full mode.
+            "textDocumentSync": {"openClose": True, "change": 2},
             "hoverProvider": True,
             "definitionProvider": True,
             "documentSymbolProvider": True,
+            "workspaceSymbolProvider": True,
             "completionProvider": {"triggerCharacters": [":", "."],
                                    "resolveProvider": False},
         }
@@ -618,6 +884,14 @@ class SysmlLanguageServer:
     def _handle_initialize(self, msg, msg_id):
         params = msg.get("params") or {}
         self.client_capabilities = params.get("capabilities") or {}
+        root_uri = params.get("rootUri")
+        if root_uri:
+            self.workspace_root = self._uri_to_path(root_uri)
+        folders = params.get("workspaceFolders") or []
+        if self.workspace_root is None and folders:
+            self.workspace_root = self._uri_to_path(
+                folders[0].get("uri", "") or "")
+        self._ws_dirty = True
         self.initialized = True
         return [self._ok(msg_id, {"capabilities": self.server_capabilities})]
 
@@ -635,6 +909,7 @@ class SysmlLanguageServer:
                                   td.get("version"),
                                   td.get("languageId", "sysml"))
         self.indexes.pop(uri, None)
+        self._ws_dirty = True
         return [self._publish(uri)]
 
     def _handle_did_change(self, msg, msg_id):
@@ -643,11 +918,18 @@ class SysmlLanguageServer:
         doc = self.docs.get(uri)
         if doc is None:
             return []
+        td = params.get("textDocument") or {}
         changes = params.get("contentChanges") or []
-        if changes:
-            # FULL sync: the last change carries the whole document.
-            doc.update(changes[-1].get("text", doc.text),
-                       params.get("textDocument", {}).get("version"))
+        for change in changes:
+            if change.get("range") is not None:
+                # INCREMENTAL: range-based edit against the current text
+                doc.apply_change(change["range"], change.get("text", ""))
+            else:
+                # range-less change = full-text replacement (spec)
+                doc.update(change.get("text", doc.text))
+        if td.get("version") is not None:
+            doc.version = td.get("version")
+        self._ws_dirty = True
         self.indexes.pop(uri, None)
         return [self._publish(uri)]
 
@@ -656,6 +938,8 @@ class SysmlLanguageServer:
         if uri:
             self.docs.pop(uri, None)
             self.indexes.pop(uri, None)
+            self.last_good.pop(uri, None)
+            self._ws_dirty = True
             return [self._publish(uri, diagnostics=[])]
         return []
 
@@ -677,8 +961,8 @@ class SysmlLanguageServer:
         return [self._ok(msg_id, result)]
 
     def _handle_completion(self, msg, msg_id):
-        index, _pos = self._feature_target(msg)
-        result = index.completion() if index else []
+        index, pos = self._feature_target(msg)
+        result = index.completion(*pos) if index else []
         return [self._ok(msg_id, result)]
 
     # -- helpers --------------------------------------------------------------------
@@ -700,8 +984,10 @@ class SysmlLanguageServer:
             return None
         index = self.indexes.get(uri)
         if index is None:
-            index = DocumentIndex(doc)
+            index = DocumentIndex(doc, self.last_good.get(uri))
             self.indexes[uri] = index
+            if index._last_good_model is not None:
+                self.last_good[uri] = index._last_good_model
         return index
 
     def _publish(self, uri: str, diagnostics=None) -> Dict[str, Any]:
@@ -725,6 +1011,139 @@ class SysmlLanguageServer:
         return {"jsonrpc": "2.0", "id": msg_id,
                 "error": {"code": code, "message": message}}
 
+    # -- workspace/symbol ----------------------------------------------------
+
+    def _handle_workspace_symbol(self, msg, msg_id):
+        params = msg.get("params") or {}
+        query = (params.get("query") or "").lower()
+        return [self._ok(msg_id, self._workspace_symbols(query))]
+
+    def _workspace_symbols(self, query: str) -> List[Dict[str, Any]]:
+        """Symbols matching *query* across open docs + workspace root.
+
+        Matching is case-insensitive substring (LSP leaves the exact
+        matcher to the server); results are capped at 200.  The root
+        scan caches its result until the next document change.
+        """
+        results: List[Dict[str, Any]] = []
+        seen = set()
+        for uri in list(self.docs):
+            index = self._index_for(uri)
+            for entry in (index.symbols if index else []):
+                if query and query not in entry.name.lower():
+                    continue
+                key = (uri, entry.name, entry.line)
+                if key in seen:
+                    continue
+                seen.add(key)
+                results.append({
+                    "name": entry.name,
+                    "kind": _lsp_symbol_kind(entry),
+                    "location": {
+                        "uri": uri,
+                        "range": {
+                            "start": {"line": entry.line,
+                                      "character": entry.start_col},
+                            "end": {"line": entry.line,
+                                    "character": entry.end_col},
+                        },
+                    },
+                    "containerName":
+                        entry.qualified.rsplit("::", 1)[0]
+                        if "::" in entry.qualified else "",
+                })
+        open_uris = set(self.docs)
+        for sym in self._workspace_file_symbols():
+            if sym["location"]["uri"] in open_uris:
+                continue
+            if query and query not in sym["name"].lower():
+                continue
+            results.append(sym)
+        return results[:200]
+
+    def _workspace_file_symbols(self) -> List[Dict[str, Any]]:
+        """Scan ``*.sysml`` files under the workspace root (cached)."""
+        if self._ws_cache is not None and not self._ws_dirty:
+            return self._ws_cache
+        import sysmlpy
+
+        out: List[Dict[str, Any]] = []
+        from pathlib import Path as _Path
+
+        for path, uri in self._workspace_files():
+            try:
+                model = sysmlpy.loads(
+                    _Path(path).read_text(encoding="utf-8"))
+            except Exception:
+                continue
+
+            def walk(el, container: str) -> None:
+                for child in getattr(el, "children", []) or []:
+                    name = getattr(child, "name", None)
+                    if name:
+                        st = getattr(child, "sysml_type", None) or "element"
+                        is_def = bool(getattr(child, "is_definition", False))
+                        out.append({
+                            "name": name,
+                            "kind": _lsp_symbol_kind_for(st, is_def),
+                            "location": {
+                                "uri": uri,
+                                "range": {
+                                    "start": {"line": 0, "character": 0},
+                                    "end": {"line": 0, "character": 1},
+                                },
+                            },
+                            "containerName": container,
+                        })
+                        walk(child, name)
+                    else:
+                        walk(child, container)
+
+            walk(model, "")
+        self._ws_cache = out
+        self._ws_dirty = False
+        return out
+
+    def _workspace_files(self) -> List[Tuple[str, str]]:
+        """(path, uri) for ``*.sysml`` files under the root, capped at 100."""
+        root = self.workspace_root
+        if not root:
+            return []
+        from pathlib import Path as _Path
+
+        rootp = _Path(root)
+        if not rootp.is_dir():
+            return []
+        skip = {".git", "__pycache__", "node_modules", ".venv"}
+        out: List[Tuple[str, str]] = []
+        for p in sorted(rootp.rglob("*.sysml")):
+            if skip & {part.lower() for part in p.parts}:
+                continue
+            out.append((str(p), self._path_to_uri(p)))
+            if len(out) >= 100:
+                break
+        return out
+
+    @staticmethod
+    def _uri_to_path(uri: str) -> Optional[str]:
+        """``file:///a/b.sysml`` → ``/a/b.sysml`` (``None`` otherwise)."""
+        from urllib.parse import unquote, urlparse
+
+        if not uri:
+            return None
+        parsed = urlparse(uri)
+        if parsed.scheme and parsed.scheme != "file":
+            return None
+        path = unquote(parsed.path)
+        return path or None
+
+    @staticmethod
+    def _path_to_uri(path) -> str:
+        from pathlib import Path as _Path
+        from urllib.parse import quote
+
+        return "file://" + quote(str(_Path(path).resolve()))
+
     _HANDLERS = {
         "initialize": _handle_initialize,
         "initialized": _handle_initialized,
@@ -735,4 +1154,5 @@ class SysmlLanguageServer:
         "textDocument/definition": _handle_definition,
         "textDocument/documentSymbol": _handle_document_symbol,
         "textDocument/completion": _handle_completion,
+        "workspace/symbol": _handle_workspace_symbol,
     }

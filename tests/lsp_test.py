@@ -138,7 +138,8 @@ class TestLifecycle:
         assert caps["hoverProvider"] is True
         assert caps["definitionProvider"] is True
         assert caps["documentSymbolProvider"] is True
-        assert caps["textDocumentSync"]["change"] == 1  # FULL
+        assert caps["workspaceSymbolProvider"] is True
+        assert caps["textDocumentSync"]["change"] == 2  # INCREMENTAL
 
     def test_request_before_initialize_is_rejected(self):
         client = Client()

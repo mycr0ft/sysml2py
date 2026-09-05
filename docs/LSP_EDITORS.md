@@ -171,10 +171,15 @@ you'll see:
 
 ## Known limits
 
-* Semantic diagnostics are located by name search (the model does not
-  yet carry source positions); syntax errors are exact.
+* Semantic diagnostics are position-tracked by source-order pairing
+  (v0.83.0) — the *n*-th element with a given `(kind, name)` maps to
+  the *n*-th declaration occurrence in the text; unlocatable elements
+  fall back to name search. Syntax errors are exact.
 * Single-file scope: cross-file definitions resolve only if they are
   imported into the same file.
-* FULL text sync — the server re-parses on each change; very large
-  models (>10k lines) may want debouncing (editor-side delay or the
-  planned INCREMENTAL sync, see TODO Goal 10 / docs/LSP.md).
+* INCREMENTAL text sync (v0.83.0) — the server applies ranged edits
+  and re-parses; very large models (>10k lines) may still want
+  editor-side debouncing.
+* While a document is transiently unparsable, completion keeps working
+  through the last successfully parsed model; outline/hover/definition
+  degrade to empty until the text parses again.
