@@ -765,14 +765,48 @@ are complete.  Follow-up work is organized under the
     <code>_extract_imports</code> scans the lexer token stream: bare imports
     extracted (missed by the regex), comment/string false positives
     gone, syntax-error tolerant.</li>
-<li>[x] <strong>Batch 3 (v0.77.0): CayleyStore hardening + query parity</strong>
+<li>
+<p>[x] <strong>Batch 3 (v0.77.0): CayleyStore hardening + query parity</strong>
     — verified against a live podman Cayley v0.7 server: fixed
     <code>clear()</code> stub, <code>_delete_quads</code> posting to /write instead of
     /delete, <code>delete()</code> no-op, <code>get()</code> marker/edge leaks, <code>put()</code>
     overwrite, <code>__len__</code> whole-DB count, no-filter query shape,
     <code>subgraph()</code> self-edges; glob query parity with NetworkX
     (client-side fnmatch); label-namespaced subjects so multiple
-    stores can share a server.  <strong>Goal 10 complete.</strong></li>
+    stores can share a server.  <strong>Goal 10 complete.</strong></p>
+</li>
+<li>
+<p>[~] <strong>Goal 11 — Polish &amp; follow-through</strong> (the assorted-fixes umbrella;
+  batched from the follow-ups scattered across this file)</p>
+</li>
+<li>[x] <strong>Batch 1 (v0.79.0): model semantics</strong> — <code>Model.resolve_types()</code>
+    links <code>typed_by_name</code> to definition objects (<code>typedby</code>/<code>ref_type</code>)
+    model-wide (simple, <code>::</code>-qualified and relative-qualified names;
+    library/unresolved skipped; package-scoped ambiguity rule);
+    serialization-safe typedby insertion (<code>_typedby_serialized_elsewhere</code>
+    guard — parsed/resolved models dump byte-identically, standalone
+    programmatic wiring still hoists); <code>Model.load</code> sets package
+    parents.  CayleyStore query extensions: <code>all_paths</code>,
+    <code>in_degree_centrality</code>, <code>out_degree_centrality</code>,
+    <code>descendants_depth_limited</code>, <code>neighborhood</code>, <code>impact_analysis</code>,
+    <code>siblings</code>, <code>hub_elements</code>, <code>shortest_path_between_named</code>
+    (client-side gizmo; NetworkX/Kuzu shape parity).</li>
+<li>[ ] <strong>Batch 2 — sim</strong>: executing assignment effects via <code>set_value</code>
+    (the <code>x := 5</code> text is available — parse and apply),
+    history/deep-history pseudostates; parallel regions (raise, by
+    design, for now).</li>
+<li>[ ] <strong>Batch 3 — diff batch 2</strong>: rename detection (heuristic match on
+    kind+signature), grammar-level fields (values, multiplicities,
+    directions, doc strings), state-machine diff via sim's
+    <code>MachineDescriptor</code>, requirement trace edges, <code>--threshold</code> gate.</li>
+<li>[ ] <strong>Batch 4 — LSP</strong>: incremental sync, position-tracked semantic
+    diagnostics, workspace/symbol, <code>.</code>-completion.</li>
+<li>[ ] <strong>Batch 5 — performance</strong>: visitor profiling (<code>parse_to_dict</code>
+    dominates end-to-end time), persistent DFA cache serialization to
+    eliminate cold-start parse cost.</li>
+<li>[ ] <strong>Batch 6 — interchange/evaluator</strong>: spec-normative JSON-LD
+    context mapping (OMG property IRIs); conditional expressions and
+    calc <code>in</code> parameters in the evaluator.</li>
 </ul>
 <p>Legacy candidate follow-up work:</p>
 <ul>

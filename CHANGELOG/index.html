@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0790-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.79.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0780-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3119,6 +3130,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0790-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.79.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0780-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5712,6 +5734,38 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0790-2026-09-05">v0.79.0 (2026-09-05)<a class="headerlink" href="#v0790-2026-09-05" title="Permanent link">&para;</a></h2>
+<p><strong>Goal 11 batch 1 — model semantics (typedby resolution + Cayley
+query extensions).</strong></p>
+<ul>
+<li><strong><code>Model.resolve_types()</code></strong> — model-wide pass linking each usage's
+  declared type name (<code>typed_by_name</code>, preserved since v0.57.0) to
+  its definition <em>object</em> (<code>typedby</code>), closing the long-tracked gap
+  where the object link only existed for programmatic wiring.
+  Resolves simple names, <code>::</code>-qualified paths and relative qualified
+  paths (<code>Types::Wheel</code> declared inside <code>Vehicle</code>); library typings
+  and unresolved names are left untouched; ambiguous simple names
+  resolve to the usage's own package first.  Idempotent; returns the
+  resolve count.</li>
+<li><strong>Serialization-safe typedby</strong> — <code>Usage._get_definition</code> no longer
+  inserts the typed-by definition when it is already part of the
+  model tree (<code>_typedby_serialized_elsewhere</code>): parsed models whose
+  <code>typedby</code> was filled in by <code>resolve_types()</code> (and programmatic
+  models whose definition is an explicit package member) dump
+  byte-identically, while standalone programmatic wiring still
+  hoists the definition into the package output.  <code>Model.load</code> now
+  sets <code>parent</code> on loaded packages so the guard can see the whole
+  tree.</li>
+<li><strong>CayleyStore query extensions</strong> — <code>all_paths</code>,
+  <code>in_degree_centrality</code>, <code>out_degree_centrality</code>,
+  <code>descendants_depth_limited</code>, <code>neighborhood</code>, <code>impact_analysis</code>,
+  <code>siblings</code>, <code>hub_elements</code>, <code>shortest_path_between_named</code> —
+  closing the API gap with NetworkX/Kuzu (client-side over the
+  gizmo primitives; shapes match the NetworkX/Kuzu tests).  17 new
+  live-server tests incl. a centrality parity check.</li>
+<li>29 new tests (12 <code>tests/resolve_test.py</code>, 17 Cayley live).  Fast
+  suite 1356, conformance 123/123.</li>
+</ul>
 <h2 id="v0780-2026-09-05">v0.78.0 (2026-09-05)<a class="headerlink" href="#v0780-2026-09-05" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Documentation consolidation</strong> — README refreshed: new
