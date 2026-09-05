@@ -3239,6 +3239,13 @@ class Requirement(Usage):
                     c = Requirement(definition=True).load_from_grammar(target)
                     c.parent = self
                     self.children.append(c)
+                elif target_cls in ("SatisfyRequirementUsage",
+                                    "VerifyRequirementUsage"):
+                    # satisfy members are extracted from the grammar
+                    # dicts by traceability/semantic (nested verify
+                    # members ride _extract_verification_member); no
+                    # Requirement child belongs here.
+                    pass
                 elif target_cls and "Requirement" in target_cls:
                     print(f"[Requirement] Unhandled nested requirement type: {target_cls}")
 

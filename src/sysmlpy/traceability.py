@@ -224,6 +224,59 @@ def _qualified_name(obj) -> str:
     return "::".join(reversed(segments))
 
 
+def _find_named_dicts_local(node, name: str) -> list:
+    """Locate every dict with ``dict["name"] == name`` in a tree.
+
+    Local copy of the semantic-module helper (semantic imports this
+    module, so a shared util would be circular).
+    """
+    out: list = []
+
+    def walk(n):
+        if isinstance(n, dict):
+            if n.get("name") == name:
+                out.append(n)
+            for v in n.values():
+                if isinstance(v, (dict, list)):
+                    walk(v)
+        elif isinstance(n, list):
+            for item in n:
+                if isinstance(item, (dict, list)):
+                    walk(item)
+
+    walk(node)
+    return out
+
+
+def _nested_satisfy_ref(satisfy_dict: dict):
+    """``(target, by_part)`` of a SatisfyRequirementUsage dict.
+
+    ``ors.referencedFeature.names`` carries the target requirement;
+    ``ssm`` (SatisfactionSubjectMember) nests
+    FeatureChainMember.memberElement (QualifiedName) whose last
+    segment is the satisfying feature.
+    """
+    ors = satisfy_dict.get("ors")
+    if not isinstance(ors, dict):
+        return None
+    rf = ors.get("referencedFeature") or {}
+    names = rf.get("names") if isinstance(rf, dict) else None
+    if not names:
+        return None
+    target = "::".join(str(n) for n in names)
+
+    ssm = satisfy_dict.get("ssm")
+    by_ref = None
+    if isinstance(ssm, dict):
+        for m in _find_named_dicts_local(ssm, "FeatureChainMember"):
+            me = m.get("memberElement") or {}
+            mnames = me.get("names")
+            if isinstance(mnames, list) and mnames:
+                by_ref = "::".join(str(n) for n in mnames)
+                break
+    return target, by_ref
+
+
 def _last_segment(ref: str) -> str:
     """Last segment of a dotted/qualified reference (``Pkg::r1`` → ``r1``)."""
     for sep in ("::", "."):
@@ -300,6 +353,26 @@ def extract_traceability(model) -> TraceabilityReport:
             is_definition=(gclass == "RequirementDefinition"),
         )
         traces.append(trace)
+        # Nested satisfy members (``requirement top { satisfy top by v;
+        # }``) parse as SatisfyRequirementUsage dicts inside the
+        # requirement's grammar — the visitor handles nested *verify*
+        # members but not satisfy, so they are invisible to pass 2 and
+        # the requirement would read as uncovered.  Record the edge.
+        if grammar is not None:
+            try:
+                grammar_def = grammar.get_definition()
+            except Exception:
+                grammar_def = None
+            if isinstance(grammar_def, dict):
+                for sat in _find_named_dicts_local(
+                        grammar_def, "SatisfyRequirementUsage"):
+                    ref = _nested_satisfy_ref(sat)
+                    if ref is None:
+                        continue
+                    target, by_part = ref
+                    if by_part and _last_segment(target) == name and (
+                            by_part not in trace.satisfied_by):
+                        trace.satisfied_by.append(by_part)
         # Index by both the bare name and every suffix of the qualified
         # name so `Pkg::req` / `req` / `Sub::req` references all resolve.
         traces_by_name.setdefault(name, trace)

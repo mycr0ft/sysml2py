@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## v0.72.0 (2026-09-04)
+
+- **Goal 9 batch 5: satisfy parts + nested coverage + deep chains** —
+  - **Bug fix: satisfies nested inside requirement bodies** now count
+    as coverage.  `requirement top { satisfy top by v; }` parsed fine
+    but was invisible to `extract_traceability()` (the visitor
+    handles nested *verify* members, not satisfy), so the requirement
+    read as REQUIREMENT_UNCOVERED and the trace edge was missing.
+    Nested satisfy members are now extracted from the requirement's
+    grammar dict and recorded on the trace.
+  - `UNRESOLVED_SATISFY_PART` (error): the `by <part>` reference of a
+    satisfy member resolves against the symbol table — both
+    package-level and nested members.
+  - **Deep feature-chain connection ends** (`connect bus.a.p3 to
+    b.p2`) now resolve for direction checks: segment 0 through the
+    part's typing, middle segments through member typing in the
+    resolved container, final port through the container's port
+    directions.  Batch 4 handled chains up to two segments.
+  - The stale `[Requirement] Unhandled nested requirement type`
+    print no longer fires for satisfy/verify members (both handled).
+- Defer: `satisfy` subject *type* compatibility (needs an
+  inheritance walk — subject type vs by-part type subtyping).
+- 6 new validator tests (67).
+
 ## v0.71.0 (2026-09-04)
 
 - **Goal 9 batch 4: verify targets + connector directions** —

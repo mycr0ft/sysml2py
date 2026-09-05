@@ -16,6 +16,7 @@ from sysmlpy.validator import (
     ISQ_TYPE_DIMENSIONS,
 )
 from sysmlpy import Attribute, Part
+from sysmlpy import extract_traceability as sysmlpy_extract_traceability
 
 
 class TestValidatorModule:
@@ -733,3 +734,113 @@ class TestConnectorDirections:
         }
         """)
         assert self._direction_issues(model) == []
+
+
+class TestNestedSatisfyCoverage:
+    """Goal 9 batch 5: satisfy members nested in requirement bodies."""
+
+    def test_nested_satisfy_counts_as_coverage(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def Vehicle;
+            requirement top {
+                satisfy top by v;
+            }
+            part v : Vehicle;
+        }
+        """)
+        assert [i.code for i in analyze(model)
+                if i.code == "REQUIREMENT_UNCOVERED"] == []
+        tr = sysmlpy_extract_traceability(model)
+        top = tr.by_name("top")
+        assert top is not None
+        assert "v" in top.satisfied_by
+
+
+class TestSatisfyParts:
+    """Goal 9 batch 5: ``satisfy <req> by <part>`` resolution."""
+
+    def test_unresolved_by_part_pkg_level(self):
+        model = sysmlpy_loads("""
+        package M {
+            requirement top;
+            part v;
+            satisfy top by nosuchpart;
+        }
+        """)
+        issues = [i for i in analyze(model)
+                  if i.code == "UNRESOLVED_SATISFY_PART"]
+        assert len(issues) == 1
+        assert issues[0].severity == "error"
+        assert "nosuchpart" in issues[0].message
+
+    def test_unresolved_by_part_nested(self):
+        model = sysmlpy_loads("""
+        package M {
+            requirement top {
+                satisfy top by nosuchpart;
+            }
+        }
+        """)
+        issues = [i for i in analyze(model)
+                  if i.code == "UNRESOLVED_SATISFY_PART"]
+        assert len(issues) == 1
+
+    def test_resolved_by_part_clean(self):
+        model = sysmlpy_loads("""
+        package M {
+            part v;
+            requirement top;
+            satisfy top by v;
+        }
+        """)
+        assert [i for i in analyze(model)
+                if i.code == "UNRESOLVED_SATISFY_PART"] == []
+
+
+class TestDeepChainDirections:
+    """Goal 9 batch 5: >=3-segment connection-end chains."""
+
+    def _issues(self, model):
+        return [i for i in analyze(model)
+                if i.code == "CONNECTOR_DIRECTION_MISMATCH"]
+
+    def test_deep_chain_out_out_warns(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def A {
+                out port p3;
+            }
+            part def BusDef {
+                part a : A;
+            }
+            part def B {
+                out port p2;
+            }
+            part bus : BusDef;
+            part b : B;
+            connection c1 connect bus.a.p3 to b.p2;
+        }
+        """)
+        issues = self._issues(model)
+        assert len(issues) == 1
+        assert "p3" in issues[0].message
+
+    def test_deep_chain_out_in_clean(self):
+        model = sysmlpy_loads("""
+        package M {
+            part def A {
+                out port p3;
+            }
+            part def BusDef {
+                part a : A;
+            }
+            part def B {
+                in port p2;
+            }
+            part bus : BusDef;
+            part b : B;
+            connection c1 connect bus.a.p3 to b.p2;
+        }
+        """)
+        assert self._issues(model) == []

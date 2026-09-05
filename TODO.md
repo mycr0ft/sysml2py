@@ -99,10 +99,14 @@ are complete.  Follow-up work is organized under the
     requirements) and `CONNECTOR_DIRECTION_MISMATCH` (warning;
     same-direction port wiring, scoped end resolution).  The visitor
     drops verify members' `: VC` typing (fsp empty) — noted.
-  - [ ] **Batch 5 candidates** — abstract-typing warnings (needs spec
+  - [x] **Batch 5 (v0.72.0)** — nested-satisfy coverage bug fix
+    (false REQUIREMENT_UNCOVERED), `UNRESOLVED_SATISFY_PART` (error),
+    deep feature-chain ends (>=3 segments) in direction checks.
+  - [ ] **Batch 6 candidates** — abstract-typing warnings (needs spec
     research first: typing by abstract defs inside abstract
-    definitions is legitimate via redefinition), deeper feature-chain
-    connection ends (a.bus.p3), `satisfy` subject resolution.
+    definitions is legitimate via redefinition), `satisfy` subject
+    *type* compatibility (subject type vs by-part type needs an
+    inheritance walk), port-owned parts in chains (a.p1.bus).
 - [ ] **Goal 10 — Technical stubs** (connector-end compatibility, `*`/`/` unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)
 
 Legacy candidate follow-up work:

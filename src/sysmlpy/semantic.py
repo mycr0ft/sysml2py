@@ -1236,6 +1236,26 @@ class ExpressionIdentifierCollector:
             self._walk(child, results, child_scope)
 
 
+def _satisfy_by_ref(satisfy_dict: dict):
+    """The ``by <part>`` reference of a SatisfyRequirementUsage dict.
+
+    Shape: ``ssm`` = SatisfactionSubjectMember → SatisfactionParameter
+    → … → FeatureChainMember.memberElement (QualifiedName) whose last
+    segment is the satisfying feature.  ``ors.referencedFeature.names``
+    carries the target requirement reference.
+    """
+    ssm = satisfy_dict.get("ssm")
+    if not isinstance(ssm, dict):
+        return None
+    members = _find_named_dicts(ssm, "FeatureChainMember")
+    for m in members:
+        me = m.get("memberElement") or {}
+        names = me.get("names")
+        if isinstance(names, list) and names:
+            return "::".join(str(n) for n in names)
+    return None
+
+
 def _find_named_dicts(node: Any, name: str) -> list:
     """Locate every dict with ``dict["name"] == name`` in a tree."""
     out: list = []
@@ -2495,6 +2515,7 @@ class SemanticAnalyzer:
         issues.extend(self._check_requirement_coverage(model))
         issues.extend(self._check_trace_targets(model, symtab, lib_roots))
         issues.extend(self._check_verify_targets(model, symtab, lib_roots))
+        issues.extend(self._check_satisfy_parts(model, symtab, lib_roots))
         issues.extend(self._check_connector_directions(model))
 
         # Step 6: Stylistic checks (warnings, not errors)
@@ -3294,6 +3315,72 @@ class SemanticAnalyzer:
             return table.lookup(parts[-1])
         return None
 
+    def _check_satisfy_parts(
+        self,
+        model: Any,
+        symtab: "SymbolTable",
+        lib_roots: list,
+    ) -> list[SemanticIssue]:
+        """Resolve ``satisfy <req> by <part>`` subjects (Goal 9).
+
+        The ``by`` reference names the satisfying part; both
+        package-level satisfies (grammar ``SatisfyRequirementUsage``
+        wrappers yielded by ``_walk_usages``) and satisfies nested
+        inside requirement bodies (extracted from the requirement's
+        grammar dict — the visitor surfaces nested verify members but
+        not satisfy members) are checked.  An unresolved by-part is a
+        UNRESOLVED_SATISFY_PART error.
+        """
+        issues: list[SemanticIssue] = []
+
+        def issue(obj, ref):
+            issues.append(SemanticIssue(
+                severity="error",
+                code="UNRESOLVED_SATISFY_PART",
+                message=(
+                    f"satisfy 'by {ref}' does not resolve to a "
+                    "defined part"),
+                element=obj,
+                reference=ref,
+            ))
+
+        for element, scope_path in self._walk_usages(model):
+            gname = (element.grammar.__class__.__name__
+                     if getattr(element, "grammar", None) is not None else "")
+            if gname == "SatisfyRequirementUsage":
+                # package-level wrapper; .ssm dump is the by reference
+                g = element.grammar
+                ssm = getattr(g, "ssm", None)
+                if ssm is None:
+                    continue
+                ref = ssm.dump().strip().rstrip(";").strip()
+                if not ref:
+                    continue
+                if not self._is_resolved(ref, symtab, scope_path, lib_roots):
+                    issue(element, ref)
+                continue
+            if gname not in ("RequirementDefinition", "RequirementUsage"):
+                continue
+            # nested satisfy members: scan the requirement's grammar dict
+            grammar = element.grammar
+            if grammar is None:
+                continue
+            try:
+                grammar_def = grammar.get_definition()
+            except Exception:
+                continue
+            if not isinstance(grammar_def, dict):
+                continue
+            for sat in _find_named_dicts(
+                    grammar_def, "SatisfyRequirementUsage"):
+                by_ref = _satisfy_by_ref(sat)
+                if not by_ref:
+                    continue
+                if not self._is_resolved(
+                        by_ref, symtab, scope_path, lib_roots):
+                    issue(element, by_ref)
+        return issues
+
     def _check_verify_targets(
         self,
         model: Any,
@@ -3372,6 +3459,7 @@ class SemanticAnalyzer:
 
         scope_ports: dict = {}   # def/usage name -> {port: direction}
         part_typing: dict = {}   # part usage name -> typed-by name
+        member_typing: dict = {}  # (container name, member) -> typed-by
         connections: list = []   # (name, scope_stack, [chain, ...])
 
         def walk2(node, scope_stack):
@@ -3409,6 +3497,9 @@ class SemanticAnalyzer:
                         t = _usage_typed_by(node)
                         if t:
                             part_typing[declared] = t
+                            if scope_stack:
+                                member_typing[(scope_stack[-1],
+                                               declared)] = t
                 for k, v in node.items():
                     if isinstance(v, (dict, list)):
                         walk2(v, new_stack)
@@ -3433,7 +3524,29 @@ class SemanticAnalyzer:
                     t = part_typing.get(scope)
                     if t and port_name in scope_ports.get(t, {}):
                         return scope_ports[t][port_name]
-            return None
+            # deep chains (>=3 segments: bus.a.p3) — resolve segment by
+            # segment: seg0 via the part's typing, middle segments via
+            # member typing in the resolved container, final port via
+            # the container's port directions.
+            first = chain[0]
+            cur = part_typing.get(first)
+            if cur is None:
+                for scope in reversed(scope_stack):
+                    t = member_typing.get((scope, first))
+                    if t:
+                        cur = t
+                        break
+            if cur is None:
+                return None
+            for seg in chain[1:-1]:
+                t = member_typing.get((cur, seg))
+                if t is None:
+                    # members declared on the seg0 *usage* itself
+                    t = member_typing.get((first, seg))
+                if t is None:
+                    return None
+                cur = t
+            return scope_ports.get(cur, {}).get(chain[-1])
 
         for cname, cstack, chains in connections:
             d1 = end_direction(chains[0], cstack)

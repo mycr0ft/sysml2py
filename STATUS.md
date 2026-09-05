@@ -136,7 +136,9 @@ These classes are fully implemented, have programmatic construction, `dump()` se
   (v0.70.0) adds `UNRESOLVED_TRACE_TARGET` / `TRACE_TARGET_NOT_REQUIREMENT`
   on `satisfy` targets — dangling edges no longer materialize phantom
   requirements in coverage reports un-flagged.  Batch 4 (v0.71.0)
-  adds `UNRESOLVED_VERIFY_TARGET` and `CONNECTOR_DIRECTION_MISMATCH`.
+  adds `UNRESOLVED_VERIFY_TARGET` and `CONNECTOR_DIRECTION_MISMATCH`;
+  batch 5 (v0.72.0) adds `UNRESOLVED_SATISFY_PART` and fixes nested
+  satisfies silently reading as uncovered.
 - **Relationship legends opt-in** — `include_legend=False` by
   default everywhere; the built-in legends restated standard
   notation and are noise. Monochrome `bw` remains the default style
