@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0720-2026-09-04" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.72.0 (2026-09-04)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0710-2026-09-04" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3042,6 +3053,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0720-2026-09-04" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.72.0 (2026-09-04)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0710-2026-09-04" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5558,6 +5580,30 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0720-2026-09-04">v0.72.0 (2026-09-04)<a class="headerlink" href="#v0720-2026-09-04" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Goal 9 batch 5: satisfy parts + nested coverage + deep chains</strong> —</li>
+<li><strong>Bug fix: satisfies nested inside requirement bodies</strong> now count
+    as coverage.  <code>requirement top { satisfy top by v; }</code> parsed fine
+    but was invisible to <code>extract_traceability()</code> (the visitor
+    handles nested <em>verify</em> members, not satisfy), so the requirement
+    read as REQUIREMENT_UNCOVERED and the trace edge was missing.
+    Nested satisfy members are now extracted from the requirement's
+    grammar dict and recorded on the trace.</li>
+<li><code>UNRESOLVED_SATISFY_PART</code> (error): the <code>by &lt;part&gt;</code> reference of a
+    satisfy member resolves against the symbol table — both
+    package-level and nested members.</li>
+<li><strong>Deep feature-chain connection ends</strong> (<code>connect bus.a.p3 to
+    b.p2</code>) now resolve for direction checks: segment 0 through the
+    part's typing, middle segments through member typing in the
+    resolved container, final port through the container's port
+    directions.  Batch 4 handled chains up to two segments.</li>
+<li>The stale <code>[Requirement] Unhandled nested requirement type</code>
+    print no longer fires for satisfy/verify members (both handled).</li>
+<li>Defer: <code>satisfy</code> subject <em>type</em> compatibility (needs an
+  inheritance walk — subject type vs by-part type subtyping).</li>
+<li>6 new validator tests (67).</li>
+</ul>
 <h2 id="v0710-2026-09-04">v0.71.0 (2026-09-04)<a class="headerlink" href="#v0710-2026-09-04" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Goal 9 batch 4: verify targets + connector directions</strong> —</li>

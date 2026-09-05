@@ -725,10 +725,14 @@ are complete.  Follow-up work is organized under the
     requirements) and <code>CONNECTOR_DIRECTION_MISMATCH</code> (warning;
     same-direction port wiring, scoped end resolution).  The visitor
     drops verify members' <code>: VC</code> typing (fsp empty) — noted.</li>
-<li>[ ] <strong>Batch 5 candidates</strong> — abstract-typing warnings (needs spec
+<li>[x] <strong>Batch 5 (v0.72.0)</strong> — nested-satisfy coverage bug fix
+    (false REQUIREMENT_UNCOVERED), <code>UNRESOLVED_SATISFY_PART</code> (error),
+    deep feature-chain ends (&gt;=3 segments) in direction checks.</li>
+<li>[ ] <strong>Batch 6 candidates</strong> — abstract-typing warnings (needs spec
     research first: typing by abstract defs inside abstract
-    definitions is legitimate via redefinition), deeper feature-chain
-    connection ends (a.bus.p3), <code>satisfy</code> subject resolution.</li>
+    definitions is legitimate via redefinition), <code>satisfy</code> subject
+    <em>type</em> compatibility (subject type vs by-part type needs an
+    inheritance walk), port-owned parts in chains (a.p1.bus).</li>
 <li>[ ] <strong>Goal 10 — Technical stubs</strong> (connector-end compatibility, <code>*</code>/<code>/</code> unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)</li>
 </ul>
 <p>Legacy candidate follow-up work:</p>
