@@ -2012,6 +2012,8 @@ class Interface(Usage):
         shortname : str, optional
             Abbreviated name.
         """
+        # Base-Usage state — see Requirement.__init__ (v0.82.0).
+        Usage.__init__(self)
         self.is_definition = definition
         self.name = name if name else str(uuidlib.uuid4())
         self.children = []
@@ -2942,6 +2944,11 @@ class Requirement(Usage):
         Requirement(definition=True, name='SafetyRequirement') # requirement def SafetyRequirement;
     """
     def __init__(self, definition=False, name=None, shortname=None):
+        # Base-Usage state (_typed_by_name / _specializes_names /
+        # _redefined_refs / _referenced_refs) — without it
+        # _extract_specialization_info crashes on grammar loads with
+        # redefinitions/subsettings (e.g. ``requirement r2 :>> r1;``).
+        Usage.__init__(self)
         if definition:
             self.grammar = RequirementDefinition(None)
             if self.grammar.declaration is not None and hasattr(self.grammar.declaration, 'identification'):
@@ -3362,6 +3369,8 @@ class Message(Usage):
             to_port: Target port/part path (e.g., 'controller')
             of_type: Optional item type (e.g., 'SensorData')
         """
+        # Base-Usage state — see Requirement.__init__ (v0.82.0).
+        Usage.__init__(self)
         self.name = name if name else str(uuidlib.uuid4())
         self.children = []
         self.typedby = None

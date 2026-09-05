@@ -145,7 +145,7 @@ else:
 | `navigate_test.py` | 33 | `Searchable` mixin, model traversal |
 | `import_test.py` | 31 | Import visibility/round-trip, `add_import()`, `.imports`, source-order preservation |
 | `validator_test.py` | 84 | Validator rules (+ state-machine/trigger/requirement/trace/direction/satisfy/connector checks) |
-| `diff_test.py` | 16 | Semantic model diff (`diff_models`/`diff_files`, rendering, CLI paths) |
+| `diff_test.py` | 41 | Semantic model diff: rename detection, grammar fields, state-machine diff, trace edges, change-rate gate |
 | `project_test.py` | 21 | `load_files()`, `load_project()` |
 | `store_test.py` | 118 | Storage backends (networkx/kuzu skipped if not installed; Cayley tests skipped without a live server: `podman run -d --name cayley -p 64210:64210 docker.io/cayleygraph/cayley`) |
 | `cayley_store_test.py` | 22 | CayleyStore against a live server at localhost:64210 (skipped when the server is down) |

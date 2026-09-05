@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## v0.82.0 (2026-09-05)
+
+**Goal 11 Batch 3 — diff batch 2.**
+
+1. *Rename detection*: removed+added pairs with equal kind and equal
+   structural signature (typing/subject/value/multiplicity/direction/
+   abstract/traces — `doc` excluded, it often changes with the name)
+   match as `renamed` when the candidate is unique; ambiguous
+   signatures stay removed+added.  `ElementChange.old_name` /
+   `old_qualified_name` carry the previous identity; summary, text
+   (`>` marker) and markdown render renames.
+2. *Grammar-level signature fields*: `value` (default-value
+   expression), `multiplicity` (`[2]`, `[1..3] ordered nonunique`),
+   `direction` (in/out/inout) and `abstract` are heuristic reads of
+   the element's canonical `dump()` text.  Documentation is a tree
+   attribute (requirements) — `doc /* ... */` does not survive the
+   grammar round-trip on usage/definition kinds.
+3. *Requirement trace edges*: signature field `traces` (sorted
+   `satisfy:x`, `verify:y` edges via
+   `traceability.extract_traceability`) — satisfy/verify changes now
+   surface as field changes.
+4. *State-machine diff*: `diff_state_machines(old, new, focus=None)`
+   diffs two models' machines via the simulator's
+   `MachineDescriptor` — initial state, states, transitions
+   (source/target/trigger/guard/effect/history_region), named or
+   endpoint-identified anonymous transitions.
+5. *`--threshold` CI gate*: `sysmlpy diff OLD NEW --threshold 0.1`
+   exits 1 only when the change rate (changes / old elements,
+   `ModelDiff.change_rate`) exceeds the fraction;
+   `elements_old`/`elements_new`/`change_rate` in the JSON output.
+
+Also fixed: `requirement r2 :>> r1;` (and interface/message loads with
+redefinitions) crashed with `AttributeError: '_redefined_refs'` —
+`Requirement.__init__` / `Interface.__init__` / `Message.__init__` now
+initialize base-`Usage` state (same family as the v0.79.1 `Reference`
+fix).
+
+Diff tests 14 → 41 (`tests/diff_test.py`).  Fast suite 1419,
+conformance 123/123.
+
 ## v0.81.0 (2026-09-05)
 
 **Goal 11 Batch 2 — sim: assignment effects + history pseudostates.**

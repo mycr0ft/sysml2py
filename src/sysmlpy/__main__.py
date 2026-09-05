@@ -117,15 +117,25 @@ def cmd_diff(args) -> int:
         print(f"Parse error: {e}", file=sys.stderr)
         return 2
 
+    threshold = getattr(args, "threshold", None)
+    if threshold is not None and not 0 <= threshold <= 1:
+        print(f"Error: --threshold expects a fraction in 0..1, "
+              f"got {threshold}", file=sys.stderr)
+        return 2
+
     if args.format == "json":
         import json as _json
         print(_json.dumps({
             "summary": d.summary(),
+            "elements_old": d.elements_old,
+            "elements_new": d.elements_new,
+            "change_rate": round(d.change_rate, 6),
             "changes": [
                 {
                     "change": c.change,
                     "kind": c.kind,
                     "qualified_name": c.qualified_name,
+                    "old_qualified_name": c.old_qualified_name,
                     "fields": [
                         {"field": fc.field, "old": fc.old,
                          "new": fc.new} for fc in c.fields
@@ -138,6 +148,14 @@ def cmd_diff(args) -> int:
         print(d.as_markdown(), end="")
     else:
         print(d.as_text(), end="")
+
+    if threshold is not None:
+        rate = d.change_rate
+        failed = rate > threshold
+        print(f"change gate: {len(d.changes)} changes / "
+              f"{d.elements_old} elements = {rate:.2%}; threshold "
+              f"{threshold:.2%} -> {'FAIL' if failed else 'OK'}")
+        return 1 if failed else 0
 
     # CI-friendly: differences are findings
     return 1 if not d.is_empty() else 0
@@ -761,6 +779,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_diff.add_argument(
         "--format", choices=("text", "markdown", "json"), default="text",
         help="Output format: text (default), markdown or JSON",
+    )
+    p_diff.add_argument(
+        "--threshold", type=float, default=None, metavar="FRAC",
+        help="CI gate: exit 1 only when the change rate (changes / old "
+             "elements) exceeds FRAC (0..1); exit 0 under the gate "
+             "even when the models differ.  Without this flag any "
+             "difference exits 1.",
     )
     p_diff.set_defaults(func=cmd_diff)
 

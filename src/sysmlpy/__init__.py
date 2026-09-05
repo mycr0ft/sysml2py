@@ -34,7 +34,7 @@ __all__ = [
     "render_state_transition_view_svg", "boxes_view",
 ]
 __author__ = "Jon Fox"
-__version__ = "0.81.0"
+__version__ = "0.82.0"
 
 from sysmlpy.usage import (
     Item, Attribute, Part, Port, Action, Reference, UseCase, Requirement, Interface, Message,
@@ -449,7 +449,7 @@ def __getattr__(name):
         globals()[name] = fn
         return fn
     if name in ("ModelDiff", "ElementChange", "FieldChange",
-                "diff_models", "diff_files"):
+                "diff_models", "diff_files", "diff_state_machines"):
         from sysmlpy import diff as _diff
         fn = getattr(_diff, name)
         globals()[name] = fn

@@ -183,10 +183,16 @@ are complete.  Follow-up work is organized under the
     `deep_history=True` option + `sysmlpy sim --deep-history`; region
     default entry as the no-history fallback).  Parallel regions
     still raise (by design, for now).
-  - [ ] **Batch 3 — diff batch 2**: rename detection (heuristic match on
-    kind+signature), grammar-level fields (values, multiplicities,
-    directions, doc strings), state-machine diff via sim's
-    `MachineDescriptor`, requirement trace edges, `--threshold` gate.
+  - [x] **Batch 3 — diff batch 2 (v0.82.0)**: rename detection
+    (kind + structural-signature unique-candidate match; ambiguous
+    stays removed+added); grammar-level signature fields (value,
+    multiplicity, direction, abstract — canonical-dump heuristics);
+    state-machine diff via sim's MachineDescriptor
+    (`diff_state_machines`); requirement trace edges (`traces`
+    signature field via extract_traceability); `--threshold`
+    change-rate gate (CLI + `ModelDiff.change_rate`).  Also fixed
+    Requirement/Interface/Message base-Usage init (redefinition
+    loads crashed).
   - [ ] **Batch 4 — LSP**: incremental sync, position-tracked semantic
     diagnostics, workspace/symbol, `.`-completion.
   - [ ] **Batch 5 — performance**: visitor profiling (`parse_to_dict`

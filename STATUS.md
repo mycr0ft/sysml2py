@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.81.0** (2026-09-05)
+Current version: **v0.82.0** (2026-09-05)
 
 ---
 
@@ -339,6 +339,18 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 ---
 
 ## Completed Since v0.27.0
+
+### Semantic Diff: Renames, Grammar Fields, State Machines, Trace Gate (v0.82.0)
+
+- Rename detection: removed+added pairs with equal kind and structural
+  signature match as `renamed` (unique candidate only; ambiguous stays
+  removed+added); `ElementChange.old_name`/`old_qualified_name`.
+- Grammar-level signature fields: `value`, `multiplicity`, `direction`,
+  `abstract` (canonical-dump heuristics); requirement `traces` edges.
+- `diff_state_machines()` — state-machine diff via the simulator's
+  `MachineDescriptor`.
+- `sysmlpy diff --threshold FRAC` change-rate CI gate;
+  `ModelDiff.change_rate` / `elements_old` / `elements_new`.
 
 ### State-Machine Simulation: Assignment Effects & History (v0.81.0)
 
