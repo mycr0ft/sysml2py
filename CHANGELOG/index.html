@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0820-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.82.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0810-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3163,6 +3174,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0820-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.82.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0810-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5800,6 +5822,43 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0820-2026-09-05">v0.82.0 (2026-09-05)<a class="headerlink" href="#v0820-2026-09-05" title="Permanent link">&para;</a></h2>
+<p><strong>Goal 11 Batch 3 — diff batch 2.</strong></p>
+<ol>
+<li><em>Rename detection</em>: removed+added pairs with equal kind and equal
+   structural signature (typing/subject/value/multiplicity/direction/
+   abstract/traces — <code>doc</code> excluded, it often changes with the name)
+   match as <code>renamed</code> when the candidate is unique; ambiguous
+   signatures stay removed+added.  <code>ElementChange.old_name</code> /
+   <code>old_qualified_name</code> carry the previous identity; summary, text
+   (<code>&gt;</code> marker) and markdown render renames.</li>
+<li><em>Grammar-level signature fields</em>: <code>value</code> (default-value
+   expression), <code>multiplicity</code> (<code>[2]</code>, <code>[1..3] ordered nonunique</code>),
+   <code>direction</code> (in/out/inout) and <code>abstract</code> are heuristic reads of
+   the element's canonical <code>dump()</code> text.  Documentation is a tree
+   attribute (requirements) — <code>doc /* ... */</code> does not survive the
+   grammar round-trip on usage/definition kinds.</li>
+<li><em>Requirement trace edges</em>: signature field <code>traces</code> (sorted
+   <code>satisfy:x</code>, <code>verify:y</code> edges via
+   <code>traceability.extract_traceability</code>) — satisfy/verify changes now
+   surface as field changes.</li>
+<li><em>State-machine diff</em>: <code>diff_state_machines(old, new, focus=None)</code>
+   diffs two models' machines via the simulator's
+   <code>MachineDescriptor</code> — initial state, states, transitions
+   (source/target/trigger/guard/effect/history_region), named or
+   endpoint-identified anonymous transitions.</li>
+<li><em><code>--threshold</code> CI gate</em>: <code>sysmlpy diff OLD NEW --threshold 0.1</code>
+   exits 1 only when the change rate (changes / old elements,
+   <code>ModelDiff.change_rate</code>) exceeds the fraction;
+   <code>elements_old</code>/<code>elements_new</code>/<code>change_rate</code> in the JSON output.</li>
+</ol>
+<p>Also fixed: <code>requirement r2 :&gt;&gt; r1;</code> (and interface/message loads with
+redefinitions) crashed with <code>AttributeError: '_redefined_refs'</code> —
+<code>Requirement.__init__</code> / <code>Interface.__init__</code> / <code>Message.__init__</code> now
+initialize base-<code>Usage</code> state (same family as the v0.79.1 <code>Reference</code>
+fix).</p>
+<p>Diff tests 14 → 41 (<code>tests/diff_test.py</code>).  Fast suite 1419,
+conformance 123/123.</p>
 <h2 id="v0810-2026-09-05">v0.81.0 (2026-09-05)<a class="headerlink" href="#v0810-2026-09-05" title="Permanent link">&para;</a></h2>
 <p><strong>Goal 11 Batch 2 — sim: assignment effects + history pseudostates.</strong></p>
 <ol>
