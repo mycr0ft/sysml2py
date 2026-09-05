@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0840-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.84.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0830-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3185,6 +3196,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0840-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.84.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0830-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5844,6 +5866,41 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0840-2026-09-05">v0.84.0 (2026-09-05)<a class="headerlink" href="#v0840-2026-09-05" title="Permanent link">&para;</a></h2>
+<p><strong>Goal 11 Batch 5 — performance (cold-start parse).</strong></p>
+<ol>
+<li><em>Persistent ANTLR DFA cache</em> (<code>sysmlpy.dfa_cache</code>): after the first
+   successful parse the warmed parser+lexer ATN/DFA/prediction-context
+   graphs are pickled to
+   <code>~/.cache/sysmlpy/dfa-&lt;key&gt;.pkl</code> (keyed by SHA-1 of both serialized
+   ATNs + antlr4 runtime + sysmlpy version + pickle protocol) and
+   reinstalled at the start of subsequent processes.  Benchmark
+   (<code>benchmarks/bench_parse.py</code>, 27 KB model): cold <strong>8–10 s</strong> →
+   cached <strong>~2.9 s</strong> — <strong>3.7x faster / ~73-85 % of the cold start
+   eliminated</strong>.  Cache failures degrade to normal parsing with a
+   one-time warning and never break a parse; <code>SYSSMLPY_DFA_CACHE=off</code>
+   (or <code>set_dfa_cache(False)</code>) disables it; <code>SYSSMLPY_DFA_CACHE=&lt;dir&gt;</code>
+   overrides the location.
+   Pickled-graph identity hazards are repaired on load: unpickled
+   <code>EmptyPredictionContext</code> copies are rebound to the live
+   <code>PredictionContext.EMPTY</code> singleton (walk via
+   <code>SingletonPredictionContext.parentCtx</code> / <code>ArrayPredictionContext.
+   parents</code>), <code>EmptySemanticContext</code> copies to <code>SemanticContext.NONE</code>,
+   across the shared cache and every DFA config set.  Correctness
+   verified by the full grammar suite (143) and OMG conformance suite
+   (123) running against a loaded cache.</li>
+<li><em>Visitor profiling</em> (<code>benchmarks/profile_parse.py</code>): the ANTLR
+   parse dominates (~80 % of end-to-end, almost entirely
+   <code>adaptivePredict</code> + token-stream bookkeeping); the visitor and
+   grammar classes share the remaining ~20 % across hundreds of small
+   helpers with no single hotspot — visitor micro-optimisation
+   deliberately not pursued; profiling harness kept under
+   <code>benchmarks/</code>.</li>
+</ol>
+<p>Tests +14 (<code>tests/dfa_cache_test.py</code>: round-trip equivalence, corrupt/
+wrong-shape/missing cache fallbacks, disable flags, env overrides,
+key stability, cross-process save/load).  Fast suite 1469, conformance
+123/123.  <code>set_dfa_cache</code> exported from the package root.</p>
 <h2 id="v0830-2026-09-05">v0.83.0 (2026-09-05)<a class="headerlink" href="#v0830-2026-09-05" title="Permanent link">&para;</a></h2>
 <p><strong>Goal 11 Batch 4 — LSP enhancements.</strong></p>
 <ol>

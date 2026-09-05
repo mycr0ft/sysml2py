@@ -830,9 +830,15 @@ are complete.  Follow-up work is organized under the
     scan, cached); <code>.</code>-member completion via type names, falling
     back to the last good parse while the text is transiently
     broken.  Parser-side token positions remain future work.</li>
-<li>[ ] <strong>Batch 5 — performance</strong>: visitor profiling (<code>parse_to_dict</code>
-    dominates end-to-end time), persistent DFA cache serialization to
-    eliminate cold-start parse cost.</li>
+<li>[x] <strong>Batch 5 — performance (v0.84.0)</strong>: persistent DFA cache
+    (<code>sysmlpy.dfa_cache</code>) — warmed parser/lexer ATN+DFA+prediction-
+    context graphs pickled after the first parse, reinstated on cold
+    start (cold 8–10 s → ~2.9 s on the 27 KB benchmark model, 3.7x;
+    identity rebinds for <code>PredictionContext.EMPTY</code> /
+    <code>SemanticContext.NONE</code> copies on load; cache failures fall back to
+    normal parsing).  Visitor profiling harness (<code>benchmarks/
+    profile_parse.py</code>) shows the ANTLR parse dominates ~80 % with no
+    single visitor hotspot — micro-optimisation not pursued.</li>
 <li>[ ] <strong>Batch 6 — interchange/evaluator</strong>: spec-normative JSON-LD
     context mapping (OMG property IRIs); conditional expressions and
     calc <code>in</code> parameters in the evaluator.</li>
@@ -841,8 +847,8 @@ are complete.  Follow-up work is organized under the
 <ul>
 <li>[x] <code>*</code>/<code>/</code> unit-dimension derivation (<code>mass * speed</code> vs <code>ForceValue</code>) <em>(→ Goal 10, v0.75.0)</em></li>
 <li>[x] SLL error-message parity (align ANTLR wording between prediction modes) <em>(→ Goal 10, v0.75.0)</em></li>
-<li>[ ] Persistent DFA cache serialization to eliminate cold-start parse cost</li>
-<li>[ ] Visitor performance profiling (<code>parse_to_dict</code> dominates end-to-end time)</li>
+<li>[x] Persistent DFA cache serialization to eliminate cold-start parse cost <em>(→ Batch 5, v0.84.0)</em></li>
+<li>[x] Visitor performance profiling (<code>parse_to_dict</code> dominates end-to-end time) <em>(→ Batch 5, v0.84.0 — no visitor hotspot found; parse dominates)</em></li>
 <li>[ ] CayleyStore query extensions (parity with NetworkX/Kùzu) <em>(→ Goal 10)</em></li>
 </ul>
 <hr />
