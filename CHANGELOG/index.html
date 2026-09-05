@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0740-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.74.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0730-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3064,6 +3075,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0740-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.74.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0730-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5602,6 +5624,30 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0740-2026-09-05">v0.74.0 (2026-09-05)<a class="headerlink" href="#v0740-2026-09-05" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Goal 8 batch 1: semantic model diff</strong> (<code>sysmlpy.diff</code>) —</li>
+<li><code>diff_models(old, new)</code> / <code>diff_files(a, b)</code> compare two models
+    element-by-element; identity is <code>(kind, qualified name)</code> with a
+    <code>Def</code>/<code>Usage</code> kind suffix, so repurposing a name across roles
+    reports as removed + added, not a silent change.</li>
+<li>Element signatures compare typing (<code>typed_by_name</code>, qualified),
+    requirement subjects and doc text; changes report field-level
+    old/new values.</li>
+<li><code>ModelDiff</code> renders as monochrome text, Markdown (review
+    workflows) and JSON; renames surface as removed + added pairs
+    (heuristic rename detection is a tracked follow-up).</li>
+<li>CLI: <code>sysmlpy diff old.sysml new.sysml [--format
+    text|markdown|json]</code> — exit 0 identical, 1 differences, 2 load
+    failure (CI gate for review).</li>
+<li>Excluded by design: Model objects (random UUID per parse),
+    transitions (grammar-dict riders, not tree objects — sim
+    descriptor diff is a follow-up), values/multiplicities/directions
+    (grammar dicts — follow-up batch).</li>
+<li>Lazy exports <code>diff_models</code> / <code>diff_files</code> / <code>ModelDiff</code> /
+  <code>ElementChange</code> / <code>FieldChange</code> from <code>sysmlpy.__getattr__</code>.</li>
+<li>16 new tests (<code>tests/diff_test.py</code>).</li>
+</ul>
 <h2 id="v0730-2026-09-05">v0.73.0 (2026-09-05)<a class="headerlink" href="#v0730-2026-09-05" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Goal 9 batch 6: connector ends + subject types</strong> —</li>
