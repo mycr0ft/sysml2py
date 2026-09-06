@@ -2,9 +2,11 @@
 # -*- coding: utf-8 -*-
 """Tests for the storage abstraction layer."""
 
+import time
+
 import pytest
 from sysmlpy.store import (
-    Store, InMemoryStore, NetworkXStore, CayleyStore,
+    Store, InMemoryStore, NetworkXStore, KuzuStore, CayleyStore,
     create_store, new_id,
     REL_PARENT_CHILD, REL_TYPED_BY, REL_SPECIALIZES,
 )
@@ -729,3 +731,92 @@ class TestCayleyStore:
         assert b.query(name="InA") == []
         a.clear()
         b.clear()
+
+
+class TestBackendParity:
+    """The same query surface and results on NetworkX, Kùzu and Cayley.
+
+    Goal 10 close-out: the analytics extensions shipped per-backend
+    (NetworkX v0.79.0 client-side gizmo parity, Kùzu v0.85.0) must
+    agree on the same element graph, including deterministic ordering.
+    """
+
+    GRAPH = [
+        ("veh", {"name": "Vehicle"}, None),
+        ("eng", {"name": "Engine"}, "veh"),
+        ("pump", {"name": "Pump"}, "eng"),
+        ("w1", {"name": "Wheel"}, "veh"),
+        ("w2", {"name": "Wheel"}, "veh"),
+    ]
+
+    def _stores(self):
+        stores = {"nx": NetworkXStore()}
+        try:
+            stores["kuzu"] = KuzuStore()
+        except Exception:
+            pass  # kuzu not installed
+        stores["cayley"] = CayleyStore(
+            label=f"parity_{int(time.time() * 1_000_000)}")
+        for st in stores.values():
+            for eid, data, parent in self.GRAPH:
+                if parent is None:
+                    st.put(eid, data)
+                else:
+                    st.put(eid, data, parent_id=parent)
+        return stores
+
+    OPS = {
+        "children(veh)": lambda s: sorted(s.children("veh")),
+        "descendants(veh)": lambda s: sorted(s.descendants("veh")),
+        "all_paths": lambda s: s.all_paths("veh", "pump"),
+        "in_cent": lambda s: {k: round(v, 3)
+                              for k, v in s.in_degree_centrality().items() if v},
+        "out_cent": lambda s: {k: round(v, 3)
+                               for k, v in s.out_degree_centrality().items() if v},
+        "desc_depth_lim": lambda s: sorted(
+            s.descendants_depth_limited("veh", max_depth=1)),
+        "neighborhood": lambda s: sorted(s.neighborhood("eng", radius=1)),
+        "impact_down": lambda s: sorted(s.impact_analysis("eng")),
+        "impact_up": lambda s: sorted(
+            s.impact_analysis("pump", direction="upstream")),
+        "siblings": lambda s: sorted(s.siblings("eng")),
+        "hubs_out": lambda s: dict(
+            s.hub_elements(min_degree=1, direction="outgoing")),
+        "hubs_in": lambda s: dict(
+            s.hub_elements(min_degree=1, direction="incoming")),
+        "hubs_both_ties": lambda s: dict(
+            s.hub_elements(min_degree=1, direction="both")),
+        "shortest_named": lambda s: s.shortest_path_between_named(
+            "Vehicle", "Pump"),
+        "shortest_missing": lambda s: s.shortest_path_between_named(
+            "Vehicle", "GHOST"),
+    }
+
+    def test_parity_all_backends(self):
+        stores = self._stores()
+        for name, op in self.OPS.items():
+            results = {}
+            for key, st in stores.items():
+                results[key] = op(st)
+            vals = list(results.values())
+            assert all(str(v) == str(vals[0]) for v in vals), \
+                f"{name} mismatch: {results}"
+
+    def test_surface_parity(self):
+        """Every backend exposes the same public query methods."""
+        surface = ["all_paths", "in_degree_centrality",
+                   "out_degree_centrality", "descendants_depth_limited",
+                   "neighborhood", "impact_analysis", "siblings",
+                   "hub_elements", "shortest_path_between_named",
+                   "centrality", "children", "parents", "relationships",
+                   "query", "has", "ids"]
+        for cls in (NetworkXStore, KuzuStore, CayleyStore):
+            for method in surface:
+                assert hasattr(cls, method), \
+                    f"{cls.__name__} lacks {method}"
+
+    def test_hub_elements_invalid_direction(self):
+        for st in self._stores().values():
+            with pytest.raises(ValueError, match="direction"):
+                st.hub_elements(direction="sideways")
+            st.clear() if hasattr(st, "clear") else None

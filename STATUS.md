@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.84.0** (2026-09-05)
+Current version: **v0.86.0** (2026-09-06)
 
 ---
 
@@ -339,6 +339,18 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 ---
 
 ## Completed Since v0.27.0
+
+### Storage Query Parity Across Backends (v0.86.0)
+
+- NetworkXStore gains `siblings` / `hub_elements` /
+  `shortest_path_between_named`; KuzuStore gains `all_paths` /
+  in-out degree centrality / `descendants_depth_limited` /
+  `neighborhood` / `impact_analysis` (client-side, mirroring Cayley)
+  plus hub direction validation and deterministic tie-breaking.
+- `TestBackendParity`: 14 analytics queries must return identical
+  results on NetworkX, Kùzu and a live Cayley server — the three
+  graph stores now expose the same query surface.  Goal 10 fully
+  closed.
 
 ### Interchange & Evaluator: Conditional Expressions, Calc Parameters, JSON-LD Context (v0.85.0)
 

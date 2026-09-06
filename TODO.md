@@ -121,7 +121,7 @@ are complete.  Follow-up work is organized under the
     SysML v2 — flagging would be a false positive by construction.
 - [x] **Goal 9 — Validator depth** complete after 6 batches (v0.69.0 –
   v0.73.0): 29 rule codes total.
-- [~] **Goal 10 — Technical stubs** (connector-end compatibility, `*`/`/` unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)
+- [x] **Goal 10 — Technical stubs** (connector-end compatibility, `*`/`/` unit derivation, SLL error parity, regex→parser library extraction, Cayley parity) — closed v0.77.0; query-surface parity across NetworkX/Kùzu/Cayley finished v0.86.0
   - [x] **Batch 1 (v0.75.0): `*`/`/` unit-dimension derivation** —
     `UNIT_DIMENSION_DERIVATION_MISMATCH` (error, rule code 30):
     initializer dimension derived algebraically (`*` adds, `/`
@@ -222,9 +222,9 @@ Legacy candidate follow-up work:
 - [x] SLL error-message parity (align ANTLR wording between prediction modes) *(→ Goal 10, v0.75.0)*
 - [x] Persistent DFA cache serialization to eliminate cold-start parse cost *(→ Batch 5, v0.84.0)*
 - [x] Visitor performance profiling (`parse_to_dict` dominates end-to-end time) *(→ Batch 5, v0.84.0 — no visitor hotspot found; parse dominates)*
-- [ ] CayleyStore query extensions (parity with NetworkX/Kùzu) *(→ Goal 10)*
-- [ ] Spec-normative JSON-LD context mapping (OMG property IRIs) *(→ Batch 6, v0.85.0)*
-- [ ] Conditional expressions and calc `in` parameters in the evaluator *(→ Batch 6, v0.85.0)*
+- [x] CayleyStore query extensions (parity with NetworkX/Kùzu) *(→ Goal 10, closed v0.86.0 — identical query surface + parity test on NetworkX/Kùzu/Cayley)*
+- [x] Spec-normative JSON-LD context mapping (OMG property IRIs) *(→ Batch 6, v0.85.0)*
+- [x] Conditional expressions and calc `in` parameters in the evaluator *(→ Batch 6, v0.85.0)*
 
 ---
 

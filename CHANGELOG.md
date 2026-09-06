@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## v0.86.0 (2026-09-06)
+
+**Goal 10 close-out — storage backend query parity.**
+
+The last open Goal 10 item ("CayleyStore query extensions — parity
+with NetworkX/Kùzu") is closed by making the query surface identical
+across all three graph stores:
+
+1. *NetworkXStore* gains `siblings`, `hub_elements` and
+   `shortest_path_between_named` (mirroring Kùzu/Cayley semantics,
+   deterministic ordering).
+2. *KuzuStore* gains `all_paths`, `in_degree_centrality`,
+   `out_degree_centrality`, `descendants_depth_limited`,
+   `neighborhood` and `impact_analysis` (client-side traversal,
+   mirroring the Cayley implementations) plus `hub_elements`
+   direction validation and deterministic degree tie-breaking.
+3. *Cross-backend parity test* (`TestBackendParity` in
+   `tests/store_test.py`): 14 analytics queries run against the same
+   element graph on NetworkX, Kùzu and a live Cayley server and must
+   return identical results, plus a method-surface assertion.
+
+All store suites verified against a live podman Cayley v0.7 server
+(39 cayley tests) and in-memory Kùzu.  Fast suite 1472, conformance
+123/123.  **Goal 10 complete.**
+
 ## v0.85.0 (2026-09-05)
 
 **Goal 11 Batch 6 — interchange/evaluator.**

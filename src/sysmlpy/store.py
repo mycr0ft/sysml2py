@@ -980,6 +980,74 @@ class NetworkXStore(Store):
         seen.discard(element_id)
         return seen
 
+    def siblings(self, element_id: str) -> list[str]:
+        """Elements sharing a structural parent with *element_id*.
+
+        Mirrors :meth:`KuzuStore.siblings` / :meth:`CayleyStore.siblings`
+        (parent-child edges only); deterministic parent-then-child
+        order, self excluded.
+        """
+        result: list[str] = []
+        for parent in self.parents(element_id):
+            for sib in self.children(parent):
+                if sib != element_id and sib not in result:
+                    result.append(sib)
+        return result
+
+    def hub_elements(self, min_degree: int = 3,
+                     direction: str = "outgoing") -> list[tuple[str, int]]:
+        """Elements with high relationship degree.
+
+        Mirrors :meth:`KuzuStore.hub_elements` — *(element_id, degree)*
+        pairs with degree ≥ *min_degree*, sorted by degree descending
+        (id ascending on ties).  *direction* selects which edge
+        direction to count.
+        """
+        dirn = {"outgoing": "out", "incoming": "in", "both": "both"}.get(direction)
+        if dirn is None:
+            raise ValueError(
+                f"direction must be 'outgoing', 'incoming' or 'both', "
+                f"got {direction!r}")
+        counts: list[tuple[str, int]] = []
+        for eid in self.ids():
+            degree = len(self.relationships(eid, direction=dirn))
+            if degree >= min_degree:
+                counts.append((eid, degree))
+        counts.sort(key=lambda kv: (-kv[1], kv[0]))
+        return counts
+
+    def shortest_path_between_named(self, source_name: str, target_name: str,
+                                    max_hops: int = 10) -> Optional[list[str]]:
+        """Shortest structural path between two *named* elements.
+
+        Mirrors :meth:`CayleyStore.shortest_path_between_named` —
+        multi-source BFS over all relationship types, one hop-level at
+        a time up to *max_hops*; returns the ID path or ``None`` when
+        disconnected.  When several elements share a name, the first
+        path reaching any target wins.
+        """
+        sources = self.query(name=source_name)
+        targets = set(self.query(name=target_name))
+        if not sources or not targets:
+            return None
+        frontier = {sid: [sid] for sid in sources}
+        visited = set(sources)
+        for _ in range(max_hops):
+            nxt_frontier = {}
+            for node, path in frontier.items():
+                for other, _rt, _d in self.relationships(node, direction="out"):
+                    if other in visited:
+                        continue
+                    new_path = path + [other]
+                    if other in targets:
+                        return new_path
+                    visited.add(other)
+                    nxt_frontier[other] = new_path
+            if not nxt_frontier:
+                break
+            frontier = nxt_frontier
+        return None
+
 
 # ── Kuzu Store ──────────────────────────────────────────────────────────────
 
@@ -1658,15 +1726,158 @@ class KuzuStore(Store):
             pattern = "MATCH (hub:Element)-[r:Relationship]->() WITH hub, count(r) AS deg"
         elif direction == "incoming":
             pattern = "MATCH ()-[r:Relationship]->(hub:Element) WITH hub, count(r) AS deg"
-        else:
+        elif direction == "both":
             pattern = (
                 "MATCH (hub:Element)-[r:Relationship]-() WITH hub, count(r) AS deg"
             )
+        else:
+            raise ValueError(
+                f"direction must be 'outgoing', 'incoming' or 'both', "
+                f"got {direction!r}")
         rows = self.execute_cypher(
             f'{pattern} WHERE deg >= {min_degree} '
             f'RETURN hub.id AS element_id, deg ORDER BY deg DESC'
         )
-        return [(r["element_id"], r["deg"]) for r in rows]
+        # deterministic tie-break (degree desc, then id asc) so all
+        # three backends agree when degrees are equal
+        out = [(r["element_id"], r["deg"]) for r in rows]
+        out.sort(key=lambda kv: (-kv[1], kv[0]))
+        return out
+
+    # -- graph analytics (client-side; NetworkX/Cayley parity) ----------
+
+    def all_paths(self, source_id: str, target_id: str,
+                  rel_type: Optional[str] = None,
+                  max_paths: int = 20) -> list[list[str]]:
+        """Find up to *max_paths* simple paths between two elements.
+
+        Mirrors :meth:`NetworkXStore.all_paths` /
+        :meth:`CayleyStore.all_paths`.  Depth-first enumeration over the
+        relationship edge list (any type when *rel_type* is None);
+        client-side because Kùzu has no simple-path enumeration.
+        """
+        if not self.has(source_id) or not self.has(target_id):
+            return []
+        results: list[list[str]] = []
+
+        def _dfs(node: str, path: list[str]) -> None:
+            if len(results) >= max_paths:
+                return
+            if node == target_id:
+                results.append(list(path))
+                return
+            for nxt, _rt, _d in self.relationships(
+                    node, rel_type=rel_type, direction="out"):
+                if nxt in path:  # simple paths only
+                    continue
+                path.append(nxt)
+                _dfs(nxt, path)
+                path.pop()
+
+        _dfs(source_id, [source_id])
+        return results
+
+    def in_degree_centrality(self, rel_type: Optional[str] = None) -> dict[str, float]:
+        """In-degree fraction per element (how many elements reference *me*).
+
+        Mirrors :meth:`NetworkXStore.in_degree_centrality` (degree
+        divided by ``n - 1``).
+        """
+        n = len(self)
+        if n <= 1:
+            return {eid: 0.0 for eid in self.ids()}
+        denom = n - 1
+        return {
+            eid: len(self.relationships(eid, rel_type=rel_type,
+                                        direction="in")) / denom
+            for eid in self.ids()
+        }
+
+    def out_degree_centrality(self, rel_type: Optional[str] = None) -> dict[str, float]:
+        """Out-degree fraction per element (how many elements *I* reference)."""
+        n = len(self)
+        if n <= 1:
+            return {eid: 0.0 for eid in self.ids()}
+        denom = n - 1
+        return {
+            eid: len(self.relationships(eid, rel_type=rel_type,
+                                        direction="out")) / denom
+            for eid in self.ids()
+        }
+
+    def descendants_depth_limited(self, root_id: str, max_depth: int = 3,
+                                  rel_type: str = REL_PARENT_CHILD) -> list[str]:
+        """Descendants within *max_depth* levels of *root_id*.
+
+        Mirrors :meth:`NetworkXStore.descendants_depth_limited` —
+        breadth-first, each level sorted for deterministic output.
+        """
+        if not self.has(root_id):
+            return []
+        result: list[str] = []
+        frontier = {root_id}
+        visited = {root_id}
+        for _ in range(max_depth):
+            nxt: set[str] = set()
+            for node in frontier:
+                for child in self.children(node, rel_type):
+                    if child not in visited:
+                        nxt.add(child)
+            visited |= nxt
+            result.extend(sorted(nxt))
+            frontier = nxt
+            if not frontier:
+                break
+        return result
+
+    def neighborhood(self, element_id: str, radius: int = 2,
+                     rel_type: Optional[str] = None) -> set[str]:
+        """Ego-neighborhood of *element_id* within *radius* hops.
+
+        Follows edges in both directions (like NetworkX's undirected
+        ego graph); includes the element itself.
+        """
+        if not self.has(element_id):
+            return set()
+        seen = {element_id}
+        frontier = {element_id}
+        for _ in range(radius):
+            nxt: set[str] = set()
+            for node in frontier:
+                for other, _rt, _d in self.relationships(
+                        node, rel_type=rel_type, direction="both"):
+                    if other not in seen:
+                        nxt.add(other)
+            seen |= nxt
+            frontier = nxt
+            if not frontier:
+                break
+        return seen
+
+    def impact_analysis(self, element_id: str,
+                        rel_types: Optional[list[str]] = None,
+                        direction: str = "downstream") -> set[str]:
+        """Elements transitively affected by changes to *element_id*.
+
+        Mirrors :meth:`NetworkXStore.impact_analysis` — *downstream*
+        follows outgoing edges (what I affect), *upstream* follows
+        incoming edges (what affects me).
+        """
+        if not self.has(element_id):
+            return set()
+        dirn = "out" if direction == "downstream" else "in"
+        seen = {element_id}
+        frontier = [element_id]
+        while frontier:
+            current = frontier.pop()
+            for other, rt, _d in self.relationships(current, direction=dirn):
+                if rel_types and rt not in rel_types:
+                    continue
+                if other not in seen:
+                    seen.add(other)
+                    frontier.append(other)
+        seen.discard(element_id)
+        return seen
 
 
 # ── Cayley Store ──────────────────────────────────────────────────────────────
