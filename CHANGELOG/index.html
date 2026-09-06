@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0850-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.85.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0840-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3196,6 +3207,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0850-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.85.0 (2026-09-05)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0840-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5866,6 +5888,43 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0850-2026-09-05">v0.85.0 (2026-09-05)<a class="headerlink" href="#v0850-2026-09-05" title="Permanent link">&para;</a></h2>
+<p><strong>Goal 11 Batch 6 — interchange/evaluator.</strong></p>
+<ol>
+<li><em>Conditional expressions</em> in the evaluator (<code>sysmlpy.evaluator</code>).
+   The vendored SysML v2 grammar's conditional spelling is
+   <code>if &lt;cond&gt; ? &lt;then&gt; else &lt;else&gt;</code> (no <code>then</code> keyword, no
+   <code>? :</code> form).  Ternaries in attribute defaults, constraint bodies,
+   and <code>calc def</code> result expressions now evaluate correctly —
+   conditions must be boolean, nested else-chains are supported,
+   embedded ternaries inside larger expressions (e.g.
+   <code>2.0 * (if x &gt; 0 ? 1.5 else 2.5)</code>) are evaluated via fragment
+   substitution, and unit suffixes on branches work
+   (<code>if c ? 3.0 [m] else 2.0 [m]</code>).  Glued ternary text respaces on
+   dump (<code>if x &gt; 0 ? 1.0 else 2.0</code>) so models with ternaries
+   round-trip through the grammar.</li>
+<li><em>Calc <code>in</code> parameter invocation</em>.  Collected <code>calc def</code> bodies
+   are invocable from any expression: positional arguments bind to
+   <code>in</code>/<code>inout</code> parameters in order, declared defaults
+   (<code>in h : Real := 2.0</code>) fill gaps, and recursion is supported up
+   to a fixed depth (32).  Constraint bodies can reference calcs with
+   what-if <code>bindings</code> overrides.</li>
+<li><em>Spec-normative JSON-LD context mapping</em> (<code>sysmlpy.interchange</code>).
+   :func:<code>build_jsonld_context</code> produces explicit property/metaclass
+   term definitions mapping every name to <code>&lt;vocabulary&gt;#&lt;name&gt;</code> —
+   the OMG JSON-LD vocabulary convention — so interchange documents
+   are self-describing for RDF/JSON-LD tooling.  No OMG-published
+   JSON-LD context file exists to bundle (checked against the SysML v2
+   pilot implementation), so the vocabulary IRI is configurable via
+   :func:<code>to_interchange</code> <code>vocabulary=</code> and
+   :data:<code>INTERCHANGE_VOCABULARY</code>.  Import side normalizes IRI-keyed
+   properties (<code>&lt;vocab&gt;#&lt;prop&gt;</code>) back to local names automatically.</li>
+<li><em>CLI export</em>: <code>sysmlpy export FILE --format interchange
+   [--vocabulary URI] [--explicit-terms]</code>.</li>
+</ol>
+<p>Tests +38 (<code>tests/interchange_test.py</code> extends with vocab/terms/IRI
+tests; <code>tests/evaluator_test.py</code> adds conditional + calc-param tests).
+Fast suite 1469, conformance 123/123.</p>
 <h2 id="v0840-2026-09-05">v0.84.0 (2026-09-05)<a class="headerlink" href="#v0840-2026-09-05" title="Permanent link">&para;</a></h2>
 <p><strong>Goal 11 Batch 5 — performance (cold-start parse).</strong></p>
 <ol>

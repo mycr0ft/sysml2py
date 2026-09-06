@@ -839,9 +839,11 @@ are complete.  Follow-up work is organized under the
     normal parsing).  Visitor profiling harness (<code>benchmarks/
     profile_parse.py</code>) shows the ANTLR parse dominates ~80 % with no
     single visitor hotspot — micro-optimisation not pursued.</li>
-<li>[ ] <strong>Batch 6 — interchange/evaluator</strong>: spec-normative JSON-LD
-    context mapping (OMG property IRIs); conditional expressions and
-    calc <code>in</code> parameters in the evaluator.</li>
+<li>[x] <strong>Batch 6 — interchange/evaluator (v0.85.0)</strong>: spec-normative
+    JSON-LD context mapping (<code>build_jsonld_context</code>, configurable
+    vocabulary IRI); conditional expressions (<code>if c ? a else b</code>) and
+    calc <code>in</code> parameters in the evaluator (positional invocation,
+    declared defaults, recursion).</li>
 </ul>
 <p>Legacy candidate follow-up work:</p>
 <ul>
@@ -850,6 +852,8 @@ are complete.  Follow-up work is organized under the
 <li>[x] Persistent DFA cache serialization to eliminate cold-start parse cost <em>(→ Batch 5, v0.84.0)</em></li>
 <li>[x] Visitor performance profiling (<code>parse_to_dict</code> dominates end-to-end time) <em>(→ Batch 5, v0.84.0 — no visitor hotspot found; parse dominates)</em></li>
 <li>[ ] CayleyStore query extensions (parity with NetworkX/Kùzu) <em>(→ Goal 10)</em></li>
+<li>[ ] Spec-normative JSON-LD context mapping (OMG property IRIs) <em>(→ Batch 6, v0.85.0)</em></li>
+<li>[ ] Conditional expressions and calc <code>in</code> parameters in the evaluator <em>(→ Batch 6, v0.85.0)</em></li>
 </ul>
 <hr />
 <h2 id="recently-completed">Recently Completed<a class="headerlink" href="#recently-completed" title="Permanent link">&para;</a></h2>

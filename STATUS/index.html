@@ -636,6 +636,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#interchange-evaluator-conditional-expressions-calc-parameters-json-ld-context-v0850" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interchange &amp; Evaluator: Conditional Expressions, Calc Parameters, JSON-LD Context (v0.85.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#performance-persistent-dfa-cache-profiling-harness-v0840" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1115,6 +1126,17 @@
   
     <nav class="md-nav" aria-label="Completed Since v0.27.0">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#interchange-evaluator-conditional-expressions-calc-parameters-json-ld-context-v0850" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interchange &amp; Evaluator: Conditional Expressions, Calc Parameters, JSON-LD Context (v0.85.0)
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#performance-persistent-dfa-cache-profiling-harness-v0840" class="md-nav__link">
@@ -2187,6 +2209,21 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </ul>
 <hr />
 <h2 id="completed-since-v0270">Completed Since v0.27.0<a class="headerlink" href="#completed-since-v0270" title="Permanent link">&para;</a></h2>
+<h3 id="interchange-evaluator-conditional-expressions-calc-parameters-json-ld-context-v0850">Interchange &amp; Evaluator: Conditional Expressions, Calc Parameters, JSON-LD Context (v0.85.0)<a class="headerlink" href="#interchange-evaluator-conditional-expressions-calc-parameters-json-ld-context-v0850" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Conditional expressions</strong>: <code>if &lt;cond&gt; ? &lt;then&gt; else &lt;else&gt;</code>
+  evaluate in attribute defaults, constraints, and calc bodies;
+  boolean condition enforced, nested else-chains, embedded ternaries
+  via fragment substitution, unit suffixes on branches; dump respaces
+  glued ternary text so models round-trip.</li>
+<li><strong>Calc invocation</strong>: positional <code>in</code> parameter binding with
+  declared defaults, recursion supported (depth 32), constraints can
+  call calcs with what-if bindings.</li>
+<li><strong>JSON-LD context</strong>: :func:<code>build_jsonld_context</code> produces explicit
+  term definitions (<code>&lt;vocab&gt;#&lt;name&gt;</code>); vocabulary IRI configurable
+  (no normative OMG context file exists to bundle); import normalizes
+  IRI-keyed properties.</li>
+</ul>
 <h3 id="performance-persistent-dfa-cache-profiling-harness-v0840">Performance: Persistent DFA Cache + Profiling Harness (v0.84.0)<a class="headerlink" href="#performance-persistent-dfa-cache-profiling-harness-v0840" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>sysmlpy.dfa_cache</code> — warmed parser/lexer ATN+DFA graphs pickled to
