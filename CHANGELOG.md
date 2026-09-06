@@ -1,5 +1,44 @@
 # CHANGELOG
 
+## v0.85.0 (2026-09-05)
+
+**Goal 11 Batch 6 — interchange/evaluator.**
+
+1. *Conditional expressions* in the evaluator (`sysmlpy.evaluator`).
+   The vendored SysML v2 grammar's conditional spelling is
+   ``if <cond> ? <then> else <else>`` (no ``then`` keyword, no
+   ``? :`` form).  Ternaries in attribute defaults, constraint bodies,
+   and ``calc def`` result expressions now evaluate correctly —
+   conditions must be boolean, nested else-chains are supported,
+   embedded ternaries inside larger expressions (e.g.
+   ``2.0 * (if x > 0 ? 1.5 else 2.5)``) are evaluated via fragment
+   substitution, and unit suffixes on branches work
+   (``if c ? 3.0 [m] else 2.0 [m]``).  Glued ternary text respaces on
+   dump (``if x > 0 ? 1.0 else 2.0``) so models with ternaries
+   round-trip through the grammar.
+2. *Calc ``in`` parameter invocation*.  Collected ``calc def`` bodies
+   are invocable from any expression: positional arguments bind to
+   ``in``/``inout`` parameters in order, declared defaults
+   (``in h : Real := 2.0``) fill gaps, and recursion is supported up
+   to a fixed depth (32).  Constraint bodies can reference calcs with
+   what-if ``bindings`` overrides.
+3. *Spec-normative JSON-LD context mapping* (`sysmlpy.interchange`).
+   :func:`build_jsonld_context` produces explicit property/metaclass
+   term definitions mapping every name to ``<vocabulary>#<name>`` —
+   the OMG JSON-LD vocabulary convention — so interchange documents
+   are self-describing for RDF/JSON-LD tooling.  No OMG-published
+   JSON-LD context file exists to bundle (checked against the SysML v2
+   pilot implementation), so the vocabulary IRI is configurable via
+   :func:`to_interchange` ``vocabulary=`` and
+   :data:`INTERCHANGE_VOCABULARY`.  Import side normalizes IRI-keyed
+   properties (``<vocab>#<prop>``) back to local names automatically.
+4. *CLI export*: ``sysmlpy export FILE --format interchange
+   [--vocabulary URI] [--explicit-terms]``.
+
+Tests +38 (`tests/interchange_test.py` extends with vocab/terms/IRI
+tests; `tests/evaluator_test.py` adds conditional + calc-param tests).
+Fast suite 1469, conformance 123/123.
+
 ## v0.84.0 (2026-09-05)
 
 **Goal 11 Batch 5 — performance (cold-start parse).**

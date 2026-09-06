@@ -210,9 +210,11 @@ are complete.  Follow-up work is organized under the
     normal parsing).  Visitor profiling harness (`benchmarks/
     profile_parse.py`) shows the ANTLR parse dominates ~80 % with no
     single visitor hotspot — micro-optimisation not pursued.
-  - [ ] **Batch 6 — interchange/evaluator**: spec-normative JSON-LD
-    context mapping (OMG property IRIs); conditional expressions and
-    calc `in` parameters in the evaluator.
+  - [x] **Batch 6 — interchange/evaluator (v0.85.0)**: spec-normative
+    JSON-LD context mapping (`build_jsonld_context`, configurable
+    vocabulary IRI); conditional expressions (``if c ? a else b``) and
+    calc ``in`` parameters in the evaluator (positional invocation,
+    declared defaults, recursion).
 
 Legacy candidate follow-up work:
 
@@ -221,6 +223,8 @@ Legacy candidate follow-up work:
 - [x] Persistent DFA cache serialization to eliminate cold-start parse cost *(→ Batch 5, v0.84.0)*
 - [x] Visitor performance profiling (`parse_to_dict` dominates end-to-end time) *(→ Batch 5, v0.84.0 — no visitor hotspot found; parse dominates)*
 - [ ] CayleyStore query extensions (parity with NetworkX/Kùzu) *(→ Goal 10)*
+- [ ] Spec-normative JSON-LD context mapping (OMG property IRIs) *(→ Batch 6, v0.85.0)*
+- [ ] Conditional expressions and calc `in` parameters in the evaluator *(→ Batch 6, v0.85.0)*
 
 ---
 

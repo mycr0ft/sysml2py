@@ -9407,6 +9407,15 @@ class QualifiedName:
                     self.names.append(name)
 
     def dump(self):
+        if len(self.names) == 1:
+            # A ternary conditional glues into a single ``names`` entry
+            # (visitor fallback); respaced text is required for the
+            # dump to re-parse (``ifx>0?1.0else2.0`` lexes ``ifx`` as
+            # an identifier).
+            from sysmlpy.evaluator import _respace_ternary_glue
+            spaced = _respace_ternary_glue(self.names[0])
+            if spaced is not None:
+                return spaced
         return "::".join(self.names)
 
     def get_definition(self):

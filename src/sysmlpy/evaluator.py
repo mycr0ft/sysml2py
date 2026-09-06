@@ -27,10 +27,18 @@ Supported expression subset (SysML v2 textual):
 - references: feature names resolved through the ownership chain;
   dotted feature chains (``wheels.mass``) with type fallback
   (``part w : W`` resolves through ``W``'s values)
+- conditionals: ``if <cond> ? <then> else <else>`` (the vendored
+  grammar's conditional spelling); condition must be boolean
+- calc invocation: user-defined ``calc def`` bodies collected by the
+  collector are invocable as ``name(arg, ...)``; positional ``in``
+  parameters bind argument values, declared defaults fill gaps, and
+  recursion is supported up to a fixed depth
 
 Not supported (raise :class:`UnsupportedExpressionError` with a clear
-message): conditional (``? :``) expressions, sequences/collections,
-metadata access, casts, string concatenation, calc ``in`` parameters.
+message): the ``cond ? a : b`` conditional spelling (not accepted by
+the vendored grammar at parse time), sequences/collections, metadata
+access, casts, string concatenation, named invocation arguments,
+``out`` parameter binding.
 
 Public surface:
 
@@ -254,7 +262,12 @@ class _Collector:
             if name in _CALC_TYPES:
                 expr = self._body_expression(body)
                 if expr is not None:
-                    self.calcs["::".join(qname + (dn,))] = (expr, list(scope))
+                    # scope: the calc's own namespace first (body locals
+                    # are visible), then the enclosing namespaces.
+                    self.calcs["::".join(qname + (dn,))] = (
+                        expr, [child] + list(scope),
+                        self._calc_parameters(body),
+                    )
                     ns.values.setdefault(dn, ("calc", expr))
             for k, v in node.items():
                 if k not in ("declaration", "body"):
@@ -278,6 +291,63 @@ class _Collector:
             self._walk(v, ns, qname, scope)
 
     # -- carriers --------------------------------------------------------
+
+    @staticmethod
+    def _calc_parameters(body):
+        """Ordered [(name, direction, default expr | None), ...] for the
+        ``in``-parameter declarations in a calculation/function body.
+
+        The visitor emits each parameter as a direction-bearing usage
+        (``RefPrefix.direction``) inside the calc body; defaults come
+        from the usage's value part.
+        """
+        params = []
+
+        def scan(node):
+            if isinstance(node, dict):
+                name = node.get("name")
+                prefix = node.get("prefix")
+                direction = None
+                if isinstance(name, str) and name.endswith("Usage") \
+                        and isinstance(prefix, dict):
+                    # the visitor emits RefPrefix both as the prefix
+                    # node itself and nested under a "RefPrefix" key
+                    ref_prefix = prefix.get("RefPrefix")
+                    if not isinstance(ref_prefix, dict) \
+                            and prefix.get("name") == "RefPrefix":
+                        ref_prefix = prefix
+                    if isinstance(ref_prefix, dict):
+                        d = ref_prefix.get("direction")
+                        if isinstance(d, dict):
+                            for key in ("in", "inout", "out"):
+                                if d.get(key):
+                                    direction = key
+                                    break
+                if direction:
+                    dn = _declared_name(node.get("declaration"))
+                    if dn:
+                        # defaults sit at usage.valuepart on calc-body
+                        # items, and at completion.valuepart elsewhere
+                        valuepart = node.get("valuepart")
+                        if not isinstance(valuepart, dict):
+                            completion = node.get("completion")
+                            valuepart = (
+                                completion.get("valuepart")
+                                if isinstance(completion, dict) else None
+                            )
+                        default = (
+                            _find_first(valuepart, "OwnedExpression")
+                            if isinstance(valuepart, dict) else None
+                        )
+                        params.append((dn, direction, default))
+                for v in node.values():
+                    scan(v)
+            elif isinstance(node, list):
+                for item in node:
+                    scan(item)
+
+        scan(body)
+        return params
 
     def _handle_usage(self, node, ns):
         completion = node.get("completion")
@@ -392,12 +462,16 @@ _ARITH_OPS = {"+", "-", "*", "/", "%", "**"}
 class _Evaluator:
     """Evaluate OwnedExpression dicts against a namespace scope."""
 
-    def __init__(self, scope, bindings=None, memo=None, types=None):
+    def __init__(self, scope, bindings=None, memo=None, types=None,
+                 calcs=None):
         # scope: innermost-first list of _Namespace
         self.scope = list(scope)
         self.bindings = dict(bindings or {})
         self.memo = {} if memo is None else memo
         self.types = types if types is not None else {}
+        # qname string -> (result expr dict, scope namespaces, params)
+        self.calcs = calcs if calcs is not None else {}
+        self._calc_depth = 0
 
     # -- name resolution -------------------------------------------------
 
@@ -587,12 +661,27 @@ class _Evaluator:
         )
 
     def _eval_conditional(self, node):
-        if node.get("operator"):
-            raise UnsupportedExpressionError(
-                "conditional expressions ('? :' / 'if then else') are not "
-                "supported by the evaluator"
-            )
+        operator = node.get("operator")
         operand = node.get("operand")
+        # Structured shape: operator list carries the if/else markers and
+        # operand carries [condition, then-expression, else-expression]
+        # (the visitor currently emits ternaries as glued text, so this
+        # shape mainly arises from programmatically built dicts).
+        if isinstance(operator, list) and len(operator) >= 2 \
+                and isinstance(operand, list) and len(operand) >= 3:
+            cond = self.evaluate(operand[0])
+            if not isinstance(cond, bool):
+                raise EvaluationError(
+                    "conditional condition must be boolean, got "
+                    f"{type(cond).__name__}: {cond!r}"
+                )
+            return self.evaluate(operand[1] if cond else operand[2])
+        if operator:
+            raise UnsupportedExpressionError(
+                "unsupported conditional operator shape "
+                f"({operator!r} with {len(operand or [])} operand(s)) — "
+                "the evaluator supports 'if <cond> ? <then> else <else>'"
+            )
         if isinstance(operand, list) and operand:
             return self.evaluate(operand[0])
         raise EvaluationError("Empty conditional expression")
@@ -724,6 +813,8 @@ class _Evaluator:
                     "(recursion limit)"
                 )
             stripped = text.strip()
+            if _has_bare_question(stripped):
+                return self._eval_ternary_text(stripped)
             if stripped.endswith("]") and "[" in stripped \
                     and not stripped.startswith('"'):
                 idx = stripped.index("[")
@@ -756,12 +847,6 @@ class _Evaluator:
         type_node = owned.get("type") or {}
         qn = (type_node.get("type") or {}).get("names") or []
         func_name = qn[-1] if qn else None
-        func = _FUNCTIONS.get(func_name)
-        if func is None:
-            raise UnsupportedExpressionError(
-                f"Unknown function '{func_name}' — supported: "
-                f"{sorted(_FUNCTIONS)}"
-            )
         args = []
         arg_list = rel.get("arg_list") or {}
         pos = (arg_list.get("pos_list") or {}).get("ownedRelationship") or []
@@ -773,13 +858,349 @@ class _Evaluator:
                     oe = val.get("ownedRelatedElement")
                     if isinstance(oe, dict):
                         args.append(self.evaluate(oe))
-        return func(*args)
+        func = _FUNCTIONS.get(func_name)
+        if func is not None:
+            return func(*args)
+        return self._invoke_calc(func_name, args)
+
+    def _eval_fragment(self, text):
+        """Evaluate one conditional part: nested ternaries recurse,
+        everything else parses and evaluates in scope."""
+        frag = text.strip()
+        if frag.startswith("if") and _has_bare_question(frag):
+            value = self._eval_ternary_text(frag)
+            if value is None:
+                raise EvaluationError(
+                    f"Cannot evaluate conditional fragment {frag!r}"
+                )
+            return value
+        return self._eval_text_in_scope(frag)
+
+    # -- user-defined calc invocation --------------------------------
+
+    def _lookup_calc(self, name):
+        """Find a collected calc def by bare or qualified name."""
+        calcs = self.calcs or {}
+        entry = calcs.get(name)
+        if entry is not None:
+            return entry
+        matches = [e for q, e in calcs.items()
+                   if q.rsplit("::", 1)[-1] == name]
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise EvaluationError(
+                f"Ambiguous calculation '{name}' — defined as "
+                f"{sorted(q for q in calcs if q.rsplit('::', 1)[-1] == name)}"
+            )
+        return None
+
+    def _invoke_calc(self, name, args):
+        entry = self._lookup_calc(name)
+        if entry is None:
+            raise UnsupportedExpressionError(
+                f"Unknown function '{name}' — supported built-ins: "
+                f"{sorted(_FUNCTIONS)}; calc defs must be defined in the "
+                "model to be invocable"
+            )
+        expr, scope, params = entry
+        bindings = _bind_calc_args(params, args, scope, self.types,
+                                   self.calcs, self._calc_depth, name)
+        child = _Evaluator(scope, bindings=bindings, types=self.types,
+                           calcs=self.calcs)
+        child._calc_depth = self._calc_depth + 1
+        if child._calc_depth > _CALC_RECURSION_LIMIT:
+            raise EvaluationError(
+                f"calc recursion limit ({_CALC_RECURSION_LIMIT}) "
+                f"exceeded evaluating '{name}'"
+            )
+        return child.evaluate(expr)
+
+    # -- conditional expressions --------------------------------------
+
+    def _eval_ternary_text(self, text):
+        """Evaluate glued text containing a conditional expression.
+
+        Handles both ``if <cond> ? <then> else <else>`` at the top of
+        the text and conditional expressions embedded in parentheses
+        inside a larger glued expression (the latter via placeholder
+        substitution — the sub-values are bound, not stringified, so
+        pint quantities keep their units).
+        """
+        stripped = text.strip()
+        if stripped.startswith("if") and len(stripped) > 4:
+            parts = _split_ternary(stripped)
+            if parts is None:
+                return None
+            cond_text, then_text, else_text = parts
+            cond = self._eval_fragment(cond_text)
+            if not isinstance(cond, bool):
+                raise EvaluationError(
+                    "conditional condition must be boolean, got "
+                    f"{type(cond).__name__}: {cond!r}"
+                )
+            return self._eval_fragment(then_text if cond else else_text)
+        regions = _paren_ternary_regions(stripped)
+        if not regions:
+            return None
+        bindings = {}
+        skeleton = []
+        last = 0
+        for start, end in regions:
+            value = self._eval_ternary_text(stripped[start + 1:end - 1])
+            if value is None:
+                return None
+            name = f"__t{len(bindings)}"
+            bindings[name] = value
+            skeleton.append(stripped[last:start])
+            skeleton.append(name)
+            last = end
+        skeleton.append(stripped[last:])
+        sub = _Evaluator(self.scope,
+                         bindings={**self.bindings, **bindings},
+                         types=self.types, calcs=self.calcs)
+        sub._calc_depth = self._calc_depth
+        try:
+            expr_dict = _parse_expression_text("".join(skeleton))
+        except EvaluationError:
+            return None
+        return sub.evaluate(expr_dict)
 
 
 def _looks_like_expression(text):
     """Heuristic: a "name" containing operators is glued expression text."""
-    return isinstance(text, str) and any(c in text for c in "+-*/%([") and \
+    return isinstance(text, str) and \
+        any(c in text for c in "+-*/%([<>?=!") and \
         not text.strip().startswith('"')
+
+
+# ---------------------------------------------------------------------------
+# conditional-expression text splitting (v0.85.0 — Goal 11 Batch 6)
+# ---------------------------------------------------------------------------
+
+# The vendored grammar's conditional spelling is
+# ``IF ownedExpression QUESTION ownedExpression ELSE ownedExpression``
+# (no ``then`` keyword, no ``? :`` form).  The visitor cannot structure
+# ternaries and falls back to glued text (``getText()`` — all whitespace
+# stripped), so the evaluator splits the glued text here.
+
+_CALC_RECURSION_LIMIT = 32
+
+
+def _has_bare_question(text):
+    """True when *text* contains a ``?`` ternary operator anywhere.
+
+    Skips string literals and the ``?.`` / ``??`` tokens (feature-chain
+    and null-coalescing), which are different lexer tokens.  A bare
+    ``?`` inside parentheses still counts — that is exactly the shape
+    of a conditional embedded in a larger glued expression.
+    """
+    i = 0
+    n = len(text)
+    while i < n:
+        c = text[i]
+        if c in ('"', "'"):
+            i += 1
+            while i < n and text[i] != c:
+                if text[i] == "\\":
+                    i += 1
+                i += 1
+        elif c == "?":
+            nxt = text[i + 1:i + 2]
+            if nxt in (".", "?"):
+                i += 2
+                continue
+            return True
+        i += 1
+    return False
+
+
+def _find_bare_question(text, start, end=None):
+    """Index of the first top-level bare ``?`` in text[start:end]."""
+    depth = 0
+    i = start
+    n = len(text) if end is None else end
+    while i < n:
+        c = text[i]
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth = max(0, depth - 1)
+        elif c in ('"', "'"):
+            i += 1
+            while i < n and text[i] != c:
+                if text[i] == "\\":
+                    i += 1
+                i += 1
+        elif depth == 0 and c == "?":
+            nxt = text[i + 1:i + 2]
+            if nxt in (".", "?"):
+                i += 2
+                continue
+            return i
+        i += 1
+    return -1
+
+
+def _top_level_occurrences(text, word, start, end=None):
+    """Yield start indices of *word* at bracket depth 0 (strings skipped)."""
+    depth = 0
+    i = start
+    n = len(text) if end is None else end
+    lw = len(word)
+    while i < n:
+        c = text[i]
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth = max(0, depth - 1)
+        elif c in ('"', "'"):
+            i += 1
+            while i < n and text[i] != c:
+                if text[i] == "\\":
+                    i += 1
+                i += 1
+        elif depth == 0 and text.startswith(word, i):
+            yield i
+            i += lw
+            continue
+        i += 1
+
+
+def _split_ternary(text):
+    """Split ``if <cond> ? <then> else <else>`` text into its three parts.
+
+    Handles glued text (whitespace stripped by ``getText()``) and spaced
+    text alike.  ``else`` candidates are tried left to right and both
+    sides must parse, which protects against identifiers that happen to
+    contain "else".  Unparenthesized nested ternaries in the *then*
+    position cannot be disambiguated from glued text and are not
+    supported (parenthesize them).
+
+    Returns ``(cond, then, else)`` strings or ``None``.
+    """
+    s = text.strip()
+    if not s.startswith("if") or len(s) <= 4:
+        return None
+    qi = _find_bare_question(s, 2)
+    if qi <= 2:
+        return None
+    cond = s[2:qi]
+    for ei in _top_level_occurrences(s, "else", qi + 1):
+        then_part = s[qi + 1:ei].strip()
+        else_part = s[ei + 4:].strip()
+        if not then_part or not else_part:
+            continue
+        if _fragment_ok(cond) and _fragment_ok(then_part) \
+                and _fragment_ok(else_part):
+            return cond, then_part, else_part
+    return None
+
+
+def _respace_ternary_glue(text):
+    """Re-add the spacing ``getText()`` stripped from a ternary.
+
+    The visitor falls back to glued text for conditional expressions
+    (``ifx>0?1.0else2.0``), which does not re-parse — ``ifx`` lexes as
+    an identifier.  Splitting and re-spacing (``if x>0 ? 1.0 else
+    2.0``) restores a parseable spelling that re-glues to the same
+    text, so models carrying ternaries dump-round-trip.  Used by
+    ``QualifiedName.dump``.
+
+    Returns the spaced text, or ``None`` when *text* is not a glued
+    ternary.
+    """
+    if not isinstance(text, str) or not text.startswith("if") \
+            or not _has_bare_question(text):
+        return None
+    parts = _split_ternary(text)
+    if parts is None:
+        return None
+    cond, then_part, else_part = parts
+    return f"if {cond} ? {then_part} else {else_part}"
+
+
+def _fragment_ok(text):
+    """A ternary part validates if it parses outright or is itself a
+    splittable conditional (nested else-chains glue their ``if`` into
+    the preceding identifier, so a plain re-parse cannot see them)."""
+    if _expression_parses(text):
+        return True
+    return text.startswith("if") and _has_bare_question(text) \
+        and _split_ternary(text) is not None
+
+
+def _paren_ternary_regions(text):
+    """Top-level ``(if ... ? ... else ...)`` regions as (start, end) pairs.
+
+    *end* lies just past the closing paren.  Only regions whose content
+    starts with ``if`` and carries a bare ``?`` qualify.
+    """
+    regions = []
+    depth = 0
+    open_idx = -1
+    i = 0
+    n = len(text)
+    while i < n:
+        c = text[i]
+        if c in ('"', "'"):
+            i += 1
+            while i < n and text[i] != c:
+                if text[i] == "\\":
+                    i += 1
+                i += 1
+        elif c == "(":
+            if depth == 0:
+                open_idx = i
+            depth += 1
+        elif c == ")":
+            depth = max(0, depth - 1)
+            if depth == 0 and open_idx >= 0:
+                inner = text[open_idx + 1:i].strip()
+                if inner.startswith("if") and _has_bare_question(inner):
+                    regions.append((open_idx, i + 1))
+                open_idx = -1
+        i += 1
+    return regions
+
+
+def _expression_parses(text):
+    """Cheap check that *text* parses as a SysML expression."""
+    try:
+        _parse_expression_text(text)
+        return True
+    except EvaluationError:
+        return False
+
+
+def _bind_calc_args(params, args, scope, types, calcs, depth, calc_name):
+    """Bind invocation arguments to ``in`` parameters positionally.
+
+    Unbound parameters fall back to their declared default value
+    (``in a : Real := 1.0``), evaluated in the calc scope with the
+    bindings accumulated so far.
+    """
+    bindings = {}
+    args = list(args or [])
+    in_params = [prm for prm in params if prm[1] in ("in", "inout")]
+    if len(args) > len(in_params):
+        raise EvaluationError(
+            f"calc '{calc_name}' expects at most {len(in_params)} "
+            f"argument(s), got {len(args)}"
+        )
+    for (pname, _direction, _default), value in zip(in_params, args):
+        bindings[pname] = value
+    for pname, _direction, default_expr in in_params[len(args):]:
+        if default_expr is None:
+            raise EvaluationError(
+                f"calc '{calc_name}': missing value for parameter "
+                f"'{pname}' (and no declared default)"
+            )
+        tmp = _Evaluator(scope, bindings=dict(bindings), types=types,
+                         calcs=calcs)
+        tmp._calc_depth = depth + 1
+        bindings[pname] = tmp.evaluate(default_expr)
+    return bindings
 
 
 def _base_reference_names(base):
@@ -1032,7 +1453,8 @@ def collect_values(model, bindings=None):
     out = {}
     for ns, qname in _iter_namespaces(collector.root):
         evaluator = _Evaluator(_namespace_scope(ns), bindings=bindings,
-                               types=collector.types)
+                               types=collector.types,
+                               calcs=collector.calcs)
         for name in ns.values:
             full = "::".join(qname + (name,))
             if name in bindings:
@@ -1105,18 +1527,20 @@ def evaluate_expression(expr, model=None, element=None, bindings=None):
         collector = _collect_model(model)
         scope = _scope_chain_for(collector, element) if element else [collector.root]
         evaluator = _Evaluator(scope, bindings=bindings,
-                               types=collector.types)
+                               types=collector.types,
+                               calcs=collector.calcs)
     else:
         evaluator = _Evaluator([], bindings=bindings)
     expr_dict = _parse_expression_text(expr)
     return evaluator.evaluate(expr_dict)
 
 
-def evaluate_calculation(model, calc_name, bindings=None):
+def evaluate_calculation(model, calc_name, bindings=None, args=None):
     """Evaluate a named ``calc def`` result expression.
 
-    ``bindings`` supplies name overrides (e.g. ``in`` parameter values).
-    Returns the evaluated value.
+    ``args`` binds the calc's ``in`` parameters positionally (declared
+    defaults fill any gap); ``bindings`` supplies name overrides on top
+    (e.g. what-if values).  Returns the evaluated value.
     """
     collector = _collect_model(model)
     entry = collector.calcs.get(calc_name)
@@ -1130,8 +1554,13 @@ def evaluate_calculation(model, calc_name, bindings=None):
             f"No calculation named '{calc_name}' — found: "
             f"{sorted(collector.calcs)}"
         )
-    expr, scope = entry
-    evaluator = _Evaluator(scope, bindings=bindings, types=collector.types)
+    expr, scope, params = entry
+    call_bindings = _bind_calc_args(params, args, scope, collector.types,
+                                    collector.calcs, 0, calc_name)
+    if bindings:
+        call_bindings.update(bindings)
+    evaluator = _Evaluator(scope, bindings=call_bindings,
+                           types=collector.types, calcs=collector.calcs)
     return evaluator.evaluate(expr)
 
 
@@ -1144,7 +1573,8 @@ def check_constraints(model, bindings=None):
     results = []
     for qname, expr, scope, textual in collector.constraints:
         evaluator = _Evaluator(scope, bindings=bindings,
-                               types=collector.types)
+                               types=collector.types,
+                               calcs=collector.calcs)
         result = ConstraintResult(qualified_name=qname)
         if expr is None:
             language, text = textual[0]

@@ -340,6 +340,21 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 
 ## Completed Since v0.27.0
 
+### Interchange & Evaluator: Conditional Expressions, Calc Parameters, JSON-LD Context (v0.85.0)
+
+- **Conditional expressions**: ``if <cond> ? <then> else <else>``
+  evaluate in attribute defaults, constraints, and calc bodies;
+  boolean condition enforced, nested else-chains, embedded ternaries
+  via fragment substitution, unit suffixes on branches; dump respaces
+  glued ternary text so models round-trip.
+- **Calc invocation**: positional ``in`` parameter binding with
+  declared defaults, recursion supported (depth 32), constraints can
+  call calcs with what-if bindings.
+- **JSON-LD context**: :func:`build_jsonld_context` produces explicit
+  term definitions (``<vocab>#<name>``); vocabulary IRI configurable
+  (no normative OMG context file exists to bundle); import normalizes
+  IRI-keyed properties.
+
 ### Performance: Persistent DFA Cache + Profiling Harness (v0.84.0)
 
 - `sysmlpy.dfa_cache` — warmed parser/lexer ATN+DFA graphs pickled to

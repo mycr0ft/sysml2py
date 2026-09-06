@@ -142,6 +142,7 @@ else:
 | `constraint_text_test.py` | 12 | `rep`/rescued constraint textual bodies |
 | `plantuml_test.py` | 108 | All `as_*_view()` functions |
 | `semantic_test.py` | 116 | `analyze()`, OCL checks, symbol resolution, imports |
+| `evaluator_test.py` | 52 | Conditional expressions, calc ``in`` parameter invocation, recursion, what-if bindings |
 | `navigate_test.py` | 33 | `Searchable` mixin, model traversal |
 | `import_test.py` | 31 | Import visibility/round-trip, `add_import()`, `.imports`, source-order preservation |
 | `validator_test.py` | 84 | Validator rules (+ state-machine/trigger/requirement/trace/direction/satisfy/connector checks) |
