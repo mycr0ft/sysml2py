@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0860-2026-09-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.86.0 (2026-09-06)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0850-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3207,6 +3218,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0860-2026-09-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.86.0 (2026-09-06)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0850-2026-09-05" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5888,6 +5910,28 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0860-2026-09-06">v0.86.0 (2026-09-06)<a class="headerlink" href="#v0860-2026-09-06" title="Permanent link">&para;</a></h2>
+<p><strong>Goal 10 close-out — storage backend query parity.</strong></p>
+<p>The last open Goal 10 item ("CayleyStore query extensions — parity
+with NetworkX/Kùzu") is closed by making the query surface identical
+across all three graph stores:</p>
+<ol>
+<li><em>NetworkXStore</em> gains <code>siblings</code>, <code>hub_elements</code> and
+   <code>shortest_path_between_named</code> (mirroring Kùzu/Cayley semantics,
+   deterministic ordering).</li>
+<li><em>KuzuStore</em> gains <code>all_paths</code>, <code>in_degree_centrality</code>,
+   <code>out_degree_centrality</code>, <code>descendants_depth_limited</code>,
+   <code>neighborhood</code> and <code>impact_analysis</code> (client-side traversal,
+   mirroring the Cayley implementations) plus <code>hub_elements</code>
+   direction validation and deterministic degree tie-breaking.</li>
+<li><em>Cross-backend parity test</em> (<code>TestBackendParity</code> in
+   <code>tests/store_test.py</code>): 14 analytics queries run against the same
+   element graph on NetworkX, Kùzu and a live Cayley server and must
+   return identical results, plus a method-surface assertion.</li>
+</ol>
+<p>All store suites verified against a live podman Cayley v0.7 server
+(39 cayley tests) and in-memory Kùzu.  Fast suite 1472, conformance
+123/123.  <strong>Goal 10 complete.</strong></p>
 <h2 id="v0850-2026-09-05">v0.85.0 (2026-09-05)<a class="headerlink" href="#v0850-2026-09-05" title="Permanent link">&para;</a></h2>
 <p><strong>Goal 11 Batch 6 — interchange/evaluator.</strong></p>
 <ol>

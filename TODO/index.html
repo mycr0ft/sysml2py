@@ -747,7 +747,7 @@ are complete.  Follow-up work is organized under the
     SysML v2 — flagging would be a false positive by construction.</li>
 <li>[x] <strong>Goal 9 — Validator depth</strong> complete after 6 batches (v0.69.0 –
   v0.73.0): 29 rule codes total.</li>
-<li>[~] <strong>Goal 10 — Technical stubs</strong> (connector-end compatibility, <code>*</code>/<code>/</code> unit derivation, SLL error parity, regex→parser library extraction, Cayley parity)</li>
+<li>[x] <strong>Goal 10 — Technical stubs</strong> (connector-end compatibility, <code>*</code>/<code>/</code> unit derivation, SLL error parity, regex→parser library extraction, Cayley parity) — closed v0.77.0; query-surface parity across NetworkX/Kùzu/Cayley finished v0.86.0</li>
 <li>[x] <strong>Batch 1 (v0.75.0): <code>*</code>/<code>/</code> unit-dimension derivation</strong> —
     <code>UNIT_DIMENSION_DERIVATION_MISMATCH</code> (error, rule code 30):
     initializer dimension derived algebraically (<code>*</code> adds, <code>/</code>
@@ -851,9 +851,9 @@ are complete.  Follow-up work is organized under the
 <li>[x] SLL error-message parity (align ANTLR wording between prediction modes) <em>(→ Goal 10, v0.75.0)</em></li>
 <li>[x] Persistent DFA cache serialization to eliminate cold-start parse cost <em>(→ Batch 5, v0.84.0)</em></li>
 <li>[x] Visitor performance profiling (<code>parse_to_dict</code> dominates end-to-end time) <em>(→ Batch 5, v0.84.0 — no visitor hotspot found; parse dominates)</em></li>
-<li>[ ] CayleyStore query extensions (parity with NetworkX/Kùzu) <em>(→ Goal 10)</em></li>
-<li>[ ] Spec-normative JSON-LD context mapping (OMG property IRIs) <em>(→ Batch 6, v0.85.0)</em></li>
-<li>[ ] Conditional expressions and calc <code>in</code> parameters in the evaluator <em>(→ Batch 6, v0.85.0)</em></li>
+<li>[x] CayleyStore query extensions (parity with NetworkX/Kùzu) <em>(→ Goal 10, closed v0.86.0 — identical query surface + parity test on NetworkX/Kùzu/Cayley)</em></li>
+<li>[x] Spec-normative JSON-LD context mapping (OMG property IRIs) <em>(→ Batch 6, v0.85.0)</em></li>
+<li>[x] Conditional expressions and calc <code>in</code> parameters in the evaluator <em>(→ Batch 6, v0.85.0)</em></li>
 </ul>
 <hr />
 <h2 id="recently-completed">Recently Completed<a class="headerlink" href="#recently-completed" title="Permanent link">&para;</a></h2>

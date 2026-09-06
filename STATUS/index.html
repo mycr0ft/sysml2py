@@ -636,6 +636,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#storage-query-parity-across-backends-v0860" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage Query Parity Across Backends (v0.86.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#interchange-evaluator-conditional-expressions-calc-parameters-json-ld-context-v0850" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1128,6 +1139,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#storage-query-parity-across-backends-v0860" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage Query Parity Across Backends (v0.86.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#interchange-evaluator-conditional-expressions-calc-parameters-json-ld-context-v0850" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1374,7 +1396,7 @@
 
 
 <h1 id="sysmlpy-project-status">sysmlpy — Project Status<a class="headerlink" href="#sysmlpy-project-status" title="Permanent link">&para;</a></h1>
-<p>Current version: <strong>v0.84.0</strong> (2026-09-05)</p>
+<p>Current version: <strong>v0.86.0</strong> (2026-09-06)</p>
 <hr />
 <h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
 <h3 id="public-api-classes">Public API Classes<a class="headerlink" href="#public-api-classes" title="Permanent link">&para;</a></h3>
@@ -2209,6 +2231,18 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </ul>
 <hr />
 <h2 id="completed-since-v0270">Completed Since v0.27.0<a class="headerlink" href="#completed-since-v0270" title="Permanent link">&para;</a></h2>
+<h3 id="storage-query-parity-across-backends-v0860">Storage Query Parity Across Backends (v0.86.0)<a class="headerlink" href="#storage-query-parity-across-backends-v0860" title="Permanent link">&para;</a></h3>
+<ul>
+<li>NetworkXStore gains <code>siblings</code> / <code>hub_elements</code> /
+  <code>shortest_path_between_named</code>; KuzuStore gains <code>all_paths</code> /
+  in-out degree centrality / <code>descendants_depth_limited</code> /
+  <code>neighborhood</code> / <code>impact_analysis</code> (client-side, mirroring Cayley)
+  plus hub direction validation and deterministic tie-breaking.</li>
+<li><code>TestBackendParity</code>: 14 analytics queries must return identical
+  results on NetworkX, Kùzu and a live Cayley server — the three
+  graph stores now expose the same query surface.  Goal 10 fully
+  closed.</li>
+</ul>
 <h3 id="interchange-evaluator-conditional-expressions-calc-parameters-json-ld-context-v0850">Interchange &amp; Evaluator: Conditional Expressions, Calc Parameters, JSON-LD Context (v0.85.0)<a class="headerlink" href="#interchange-evaluator-conditional-expressions-calc-parameters-json-ld-context-v0850" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Conditional expressions</strong>: <code>if &lt;cond&gt; ? &lt;then&gt; else &lt;else&gt;</code>
