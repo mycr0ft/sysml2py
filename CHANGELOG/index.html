@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0881-2026-09-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.88.1 (2026-09-06)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0880-2026-09-06" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3240,6 +3251,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0881-2026-09-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.88.1 (2026-09-06)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0880-2026-09-06" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5954,6 +5976,46 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0881-2026-09-06">v0.88.1 (2026-09-06)<a class="headerlink" href="#v0881-2026-09-06" title="Permanent link">&para;</a></h2>
+<p><strong>Visitor dead-code removal + nested-definition fidelity + API typing
+cosmetics.</strong></p>
+<ol>
+<li><em>Dead code deleted</em> — <code>_visit_nested_usage</code> (zero call sites) plus 11
+   more zero-reference helpers (<code>_visit_accept_action_usage</code>,
+   <code>_get_usage_typed_by</code>, <code>_visit_nested_definition</code>, and the
+   <code>_build_binary_chain</code>/<code>_splice_unary</code>/<code>_layer_rank</code>/... expression
+   family): 410 lines.  The remaining 12 <code>"specialization": None</code> slots
+   in the node-declaration emitters were verified empirically to be
+   unreachable — the grammar rejects typed declarations on send /
+   terminate / accept / assignment / message / binding / succession
+   forms, so they are correct as written (kept, not deleted).</li>
+<li><em>Nested definitions no longer dropped</em> — <code>part p { state def X; }</code>
+   (and 16 sibling kinds: action / requirement / use case / enum / view /
+   viewpoint / concern / metadata / verification / case / analysis case /
+   individual / rendering / allocation / connection / flow defs, plus
+   nested dependencies) were silently dropped by the nested-definition
+   dispatcher (7 of ~25 kinds covered); the dump lost them entirely.
+   <code>_visit_nested_definition_element</code> now dispatches all the kinds the
+   package-level dispatcher handles.</li>
+<li><em>Nested usages in state bodies surface</em> — <code>state s1 { action a1 : A; }</code>
+   inside a part had no API object (State body walk only knew nested
+   states); the full load path now runs, so nested actions carry name +
+   typed_by_name and nested states keep their children
+   (<code>part p { state s1 { state s2; } }</code> previously lost s2).</li>
+<li><em>Typed transitions</em> — <code>transition t1 : T first e1;</code> dropped <code>: T</code>
+   on dump (hardcoded <code>specialization: None</code>); the typing now round-trips
+   and carries on the Transition object as typed_by_name.</li>
+<li><em>Satisfy API typing</em> — satisfy members now carry typed_by_name from
+   the fsp requirement typing.  Important semantic note discovered here:
+   in the ors+fsp form (<code>satisfy s1 : R</code>) the member is <strong>anonymous</strong> —
+   <code>s1</code> (ors) is the <em>requirement being satisfied</em> (the trace target),
+   not the member's name.  An initial attempt to name the member from
+   the ors was reverted: it made satisfy targets self-resolve in the
+   validator (UNRESOLVED_TRACE_TARGET silently vanished) and produced
+   double matches in find_one.  The declaration form
+   (<code>satisfy requirement r1 { ... }</code>) keeps its declared name.</li>
+</ol>
+<p>Fast suite 1501 passed / 2 skipped; conformance 123/123.</p>
 <h2 id="v0880-2026-09-06">v0.88.0 (2026-09-06)<a class="headerlink" href="#v0880-2026-09-06" title="Permanent link">&para;</a></h2>
 <p><strong>Control-flow member fidelity + usage-body imports.</strong></p>
 <p>All four follow-ups surfaced by the v0.87.0 fidelity sweep, plus one

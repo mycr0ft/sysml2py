@@ -636,6 +636,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#dead-code-removal-nested-definition-fidelity-v0881" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dead-Code Removal + Nested-Definition Fidelity (v0.88.1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#control-flow-member-fidelity-usage-body-imports-v0880" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1161,6 +1172,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#dead-code-removal-nested-definition-fidelity-v0881" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dead-Code Removal + Nested-Definition Fidelity (v0.88.1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#control-flow-member-fidelity-usage-body-imports-v0880" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1440,7 +1462,7 @@
 
 
 <h1 id="sysmlpy-project-status">sysmlpy — Project Status<a class="headerlink" href="#sysmlpy-project-status" title="Permanent link">&para;</a></h1>
-<p>Current version: <strong>v0.88.0</strong> (2026-09-06)</p>
+<p>Current version: <strong>v0.88.1</strong> (2026-09-06)</p>
 <hr />
 <h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
 <h3 id="public-api-classes">Public API Classes<a class="headerlink" href="#public-api-classes" title="Permanent link">&para;</a></h3>
@@ -1743,13 +1765,14 @@
 <li>Non-raising <code>parse(text)</code> variant: returns <code>(Model, [])</code> on success, <code>(None, [errors])</code> on syntax error</li>
 </ul>
 <h3 id="grammar-round-trip-coverage-parse-dump">Grammar Round-Trip Coverage (parse → dump)<a class="headerlink" href="#grammar-round-trip-coverage-parse-dump" title="Permanent link">&para;</a></h3>
-<p><strong>160 / 160 tests passing (100%)</strong> as of v0.88.0.</p>
-<p>The suite grew from 96 to 160 cases (full-model round-trips drawn from the
+<p><strong>165 / 165 tests passing (100%)</strong> as of v0.88.1.</p>
+<p>The suite grew from 96 to 165 cases (full-model round-trips drawn from the
 OMG spec corpus, including ActionTest / ControlNodeTest / DecisionTest
 action-body successions; v0.87.0 added view filter/expose members, guarded
 entry transitions, typed-nameless connections, and typed prefixed-usage
 round-trips; v0.88.0 added usage-body imports, satisfy valueparts, and
-accept-member name/typing/multiplicity round-trips). Earlier corpus-level
+accept-member name/typing/multiplicity round-trips; v0.88.1 added
+nested-definition and typed-transition round-trips). Earlier corpus-level
 fixes: implicit-package wrap vs trailing
 line comments, MetadataFeature /
 TextualRepresentation annotating elements, missing succession-member
@@ -2130,7 +2153,7 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tbody>
 </table>
 <h3 id="test-coverage">Test Coverage<a class="headerlink" href="#test-coverage" title="Permanent link">&para;</a></h3>
-<p>Counts from <code>pytest --collect-only</code> at v0.88.0 (1618 total).</p>
+<p>Counts from <code>pytest --collect-only</code> at v0.88.1 (1626 total).</p>
 <table>
 <thead>
 <tr>
@@ -2142,7 +2165,7 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 <tbody>
 <tr>
 <td><code>tests/grammar_test.py</code></td>
-<td>160</td>
+<td>165</td>
 <td>✅ All pass (100%)</td>
 </tr>
 <tr>
@@ -2162,7 +2185,7 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><code>tests/class_test.py</code></td>
-<td>81</td>
+<td>84</td>
 <td>✅ All pass</td>
 </tr>
 <tr>
@@ -2287,8 +2310,8 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><strong>Total</strong></td>
-<td><strong>1618</strong></td>
-<td><strong>1495 fast + 123 conformance pass (2 skipped: optional deps)</strong></td>
+<td><strong>1626</strong></td>
+<td><strong>1501 fast + 123 conformance pass (2 skipped: optional deps)</strong></td>
 </tr>
 </tbody>
 </table>
@@ -2305,6 +2328,24 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </ul>
 <hr />
 <h2 id="completed-since-v0270">Completed Since v0.27.0<a class="headerlink" href="#completed-since-v0270" title="Permanent link">&para;</a></h2>
+<h3 id="dead-code-removal-nested-definition-fidelity-v0881">Dead-Code Removal + Nested-Definition Fidelity (v0.88.1)<a class="headerlink" href="#dead-code-removal-nested-definition-fidelity-v0881" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>410 dead lines deleted</strong> — <code>_visit_nested_usage</code> and 11 more
+  zero-reference visitor helpers; the remaining <code>specialization: None</code>
+  node-declaration slots verified unreachable (grammar rejects typed
+  declarations there).</li>
+<li><strong>Nested definitions round-trip</strong> — <code>part p { state def X; }</code> and 16
+  sibling kinds were silently dropped even at the grammar-dump level;
+  the nested dispatcher now covers all package-level kinds.</li>
+<li><strong>Nested usages in state bodies surface</strong> — <code>state s1 { action a1 : A; }</code>
+  now yields an Action child with name + typed_by_name; nested states
+  keep their children.</li>
+<li><strong>Typed transitions</strong> — <code>transition t1 : T first e1;</code> keeps <code>: T</code>
+  (round-trips, typed_by_name on the Transition object).</li>
+<li><strong>Satisfy typing</strong> — members carry typed_by_name; semantic finding:
+  ors is the requirement reference, not the member name (anonymous by
+  design).</li>
+</ul>
 <h3 id="control-flow-member-fidelity-usage-body-imports-v0880">Control-Flow Member Fidelity + Usage-Body Imports (v0.88.0)<a class="headerlink" href="#control-flow-member-fidelity-usage-body-imports-v0880" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Usage-body imports</strong> — <code>part p1 { private import Q::*; }</code> (and
