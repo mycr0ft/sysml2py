@@ -1001,18 +1001,25 @@ against the v0.86.0 tree on 2026-09-06 (fast suite 1472 passed,
       friends — the nested behavior dispatch emitters
       (<code>_visit_nested_occurrence_usage</code>, <code>_visit_nested_usage</code>) still
       hardcode <code>specialization: None</code>; top-level and grammar-class dump
-      paths are fixed (v0.87.0)</li>
-<li>[ ] Nested <code>rendering r2 : E;</code> inside a part body dumps correctly but
-      produces no public-API object (usage.py nested walk has no
-      RenderingUsage dispatch); <code>metadata m1</code> is also not findable via
-      <code>find()</code></li>
-<li>[ ] Usage-body imports dropped everywhere
+      paths are fixed (v0.87.0).  Verified 2026-09-06: common shapes
+      (<code>action a1 : A;</code>, <code>state</code>, <code>entry</code>, <code>do</code>) already round-trip via
+      other paths, and <code>_visit_nested_usage</code> has <strong>zero call sites</strong> —
+      candidate for dead-code cleanup rather than emitter fixes.</li>
+<li>[x] Nested <code>rendering r2 : E;</code> inside a part body dumps correctly but
+      produces no public-API object; <code>metadata m1</code> also not findable
+      via <code>find()</code> <em>(→ v0.88.0: Rendering child + Metadata child with
+      name/typed_by_name; <code>MetadataFeature</code> accepted by
+      <code>NonOccurrenceUsageElement</code> for rebuild round-trips)</em></li>
+<li>[x] Usage-body imports dropped everywhere
       (<code>part p1 : E { private import Q::*; }</code>) — the visitor never
       dispatches <code>importRule</code> in <code>_visit_definition_body_item_dict</code> and
-      <code>DefinitionBodyItem</code> has no Import branch</li>
-<li>[ ] <code>satisfy</code> valuepart dropped on dump (<code>satisfy R = 3;</code> loads, but
+      <code>DefinitionBodyItem</code> has no Import branch <em>(→ v0.88.0: all
+      visibility forms round-trip; bare <code>import</code> stays rejected —
+      grammar-correct)</em></li>
+<li>[x] <code>satisfy</code> valuepart dropped on dump (<code>satisfy R = 3;</code> loads, but
       the visitor emits a <code>"valuepart"</code> key ~antlr_visitor.py:2521 that
-      the grammar class ignores)</li>
+      the grammar class ignores) <em>(→ v0.88.0: emitter now uses the
+      shared <code>_visit_value_part</code> helper; EQ/COLON_EQ/DEFAULT preserved)</em></li>
 </ul>
 <hr />
 <p>Legacy candidate follow-up work:</p>
