@@ -1,6 +1,6 @@
 # sysmlpy — TODO & Action Items
 
-See the comprehensive [Master Development Plan](docs/DEVELOPMENT_PLAN.md) for architectural roadmap, active development phases, and planned milestones.
+See the comprehensive [Master Development Plan](docs/archive/DEVELOPMENT_PLAN.md) for architectural roadmap, active development phases, and planned milestones.
 
 See [STATUS.md](STATUS.md) and [CHANGELOG.md](CHANGELOG.md) for the current project status and release history.
 
@@ -8,9 +8,9 @@ See [STATUS.md](STATUS.md) and [CHANGELOG.md](CHANGELOG.md) for the current proj
 
 ## Active Tasks (Post-Phase-D candidates)
 
-Phases A–D from the [Master Development Plan](docs/DEVELOPMENT_PLAN.md)
+Phases A–D from the [Master Development Plan](docs/archive/DEVELOPMENT_PLAN.md)
 are complete.  Follow-up work is organized under the
-[Adoption Roadmap](docs/DEVELOPMENT_PLAN.md#6-adoption-roadmap-v061--making-sysmlpy-useful-to-systems-engineers)
+[Adoption Roadmap](docs/archive/DEVELOPMENT_PLAN.md#6-adoption-roadmap-v061--making-sysmlpy-useful-to-systems-engineers)
 (§6 of the plan) — goals to make sysmlpy useful to systems engineers:
 
 - [x] **Goal 1 — CLI: `analyze` + `view` commands with exit codes** *(v0.61.0: `sysmlpy analyze FILE... [--format json] [--fail-on ...]`, `sysmlpy view FILE --view NAME [--focus ...] [-o ...]`, `parse`/`format` subcommands, documented 0/1/2 exit codes, legacy flat form preserved; 39 tests in `tests/cli_test.py`)*
@@ -27,7 +27,8 @@ are complete.  Follow-up work is organized under the
     edges) against `diagramboxes` (renamed from `boxes`, v0.4.0 nested-node layout).
     Relationship legends now opt-in (`include_legend=False` default) — standard-notation
     legends were noise; monochrome `bw` stays the default style (color-vision
-    accessibility; a dedicated palette option is tracked).
+    accessibility); the dedicated palette option shipped in v0.69.0
+    (`set_stereotype_palette("okabe-ito")`, see Goal 6).
   - [x] **sim: transition `do` effects live** (v0.69.0) — visitor
     emits `EffectBehaviorUsage` (reference form round-trips) plus
     readable `text` for send/accept/assignment forms; assignment
@@ -85,12 +86,11 @@ are complete.  Follow-up work is organized under the
     subject, doc), text/Markdown/JSON rendering, `sysmlpy diff` CLI
     (CI exit codes).  Model UUIDs excluded; renames surface as
     removed+added pairs.
-  - [ ] **Batch 2 candidates** — rename detection (heuristic match on
-    kind+signature), grammar-level fields (values, multiplicities,
-    directions, doc strings), state-machine diff via sim's
-    `MachineDescriptor`, requirement trace edges in the diff, a
-    `--threshold` gate (fail only on requirement-affecting changes).
-- **Next release: v0.70.0** — next committed batch.
+  - [x] **Batch 2 candidates** — all shipped as "Batch 3 — diff batch 2
+    (v0.82.0)" (see below): rename detection (kind + structural-signature
+    unique-candidate match), grammar-level fields (value, multiplicity,
+    direction, abstract), state-machine diff via sim's `MachineDescriptor`,
+    requirement trace edges, and the `--threshold` change-rate gate.
 - [~] **Goal 9 — Validator depth** (more OCL well-formedness checks)
   - [x] **Batch 1 (v0.69.0): state machines** — `UNRESOLVED_TRANSITION_ENDPOINT`
     (error), `NO_INITIAL_STATE` (warning), `UNREACHABLE_STATE`
@@ -216,6 +216,87 @@ are complete.  Follow-up work is organized under the
     calc ``in`` parameters in the evaluator (positional invocation,
     declared defaults, recursion).
 
+---
+
+## Next Batch — v0.87.0: round-trip fidelity close-out
+
+Theme: close the last known silent-drop round-trip gaps (the v0.79.1
+`ref` lineage), fix two dump/crash warts, a test-hygiene item, and
+bring the agent-facing docs back to reality.  All items verified
+against the v0.86.0 tree on 2026-09-06 (fast suite 1472 passed,
+2 skipped).
+
+- [x] **A1 — View `filter` / `expose` members silently dropped**
+  (last remaining silent-loss TODOs in the visitor; same class as the
+  v0.79.1 `ref` fix — `view v { filter @e1; }` parses clean and dumps
+  as `view v ;`)
+  - [x] Visitor: emit `ElementFilterMember` dicts in
+        `_visit_view_definition_body_dict` (antlr_visitor.py:9110) and
+        `_visit_view_body_dict` (:9149), and `Expose` dicts (:9151);
+        grammar rules `elementFilterMember : memberPrefix FILTER
+        ownedExpression SEMI` and `expose : EXPOSE (membershipExpose |
+        namespaceExpose) relationshipBody`
+  - [x] Grammar: implement `ElementFilterMember` and `Expose`
+        (classes.py:9762/:9777 are empty stubs, `dump()` returns `""`)
+  - [x] `ViewDefinitionBody` gains the missing `"Expose"` dispatch
+        (ViewBody already has it)
+  - [x] Round-trip tests in `tests/grammar_test.py` (filter with and
+        without memberPrefix; membership + namespace expose forms)
+- [x] **A2 — `ConnectionUsage.dump()` wart** — `keyword2 = "connect\n"`
+  hardcodes a newline and the `connection` keyword is emitted even
+  when the declaration is nameless, so `connect c1[0..1] to c2[1];`
+  round-trips as `connection  connect\n c1 [0..1] to c2 [1] ;`
+  (valid but non-canonical).  Emit bare `connect <ends>` for nameless
+  declarations; drop the `\n`.
+- [x] **A3 — `RootNamespace` latent crash + KerML silent drop**
+  (classes.py:79) — the `ElementFilterMember` branch `pass`es without
+  binding `memberclass`, then `self.children.append(memberclass)` runs
+  unconditionally → `UnboundLocalError` if ever hit; the KerML
+  `NamespaceBodyElement` root silently discards all members.  Handle
+  ElementFilterMember gracefully (v0.27.0 contract: warn + skip), and
+  load KerML root members instead of dropping them.
+- [x] **A4 — register the `conformance` pytest mark** in
+  `pyproject.toml` (removes the `PytestUnknownMarkWarning` on every
+  run)
+- [x] **B5 — fix broken `docs/DEVELOPMENT_PLAN.md` links** (moved to
+  `docs/archive/` in v0.78.0; root TODO.md ×4 + docs/PROJECT_SUMMARY.md
+  still point at the old path)
+- [x] **B6 — refresh `AGENTS.md`** — version 0.69.0 → current, 79 → 143
+  grammar tests, test-file map missing `cli`/`traceability`/
+  `interchange`/`evaluator`/`lsp`/`spreadsheet`/`dfa_cache`/`sim`/etc.
+- [x] **B7 — refresh `STATUS.md` stale tables** — Known Issues:
+  definition.py dead-code entry gone (single ActionUsage branch at
+  :1143), PackageBodyElement `#!TODO` comment gone; Medium Priority:
+  connection multiplicity ends round-trip, nested `:>>` in `return`
+  works, connector-end compat shipped v0.76.0
+- [x] **B8 — refresh `TODO.md` stale bits** — Goal 8 "Batch 2
+  candidates" all shipped in v0.82.0; "Next release: v0.70.0" line;
+  palette option done (Okabe-Ito, v0.69.0)
+- [x] **C9 — remove tracked debug artifacts** — `temp.txt`,
+  `tests/temp.txt`, `test_puml/*.png|.puml`
+
+
+**Discovered during A1–A4 implementation (follow-ups, not this batch):**
+
+- [ ] Nested behavior-usage typings: `part p { action a1 : A; }` and
+      friends — the nested behavior dispatch emitters
+      (`_visit_nested_occurrence_usage`, `_visit_nested_usage`) still
+      hardcode `specialization: None`; top-level and grammar-class dump
+      paths are fixed (v0.87.0)
+- [ ] Nested `rendering r2 : E;` inside a part body dumps correctly but
+      produces no public-API object (usage.py nested walk has no
+      RenderingUsage dispatch); `metadata m1` is also not findable via
+      `find()`
+- [ ] Usage-body imports dropped everywhere
+      (`part p1 : E { private import Q::*; }`) — the visitor never
+      dispatches `importRule` in `_visit_definition_body_item_dict` and
+      `DefinitionBodyItem` has no Import branch
+- [ ] `satisfy` valuepart dropped on dump (`satisfy R = 3;` loads, but
+      the visitor emits a `"valuepart"` key ~antlr_visitor.py:2521 that
+      the grammar class ignores)
+
+---
+
 Legacy candidate follow-up work:
 
 - [x] `*`/`/` unit-dimension derivation (`mass * speed` vs `ForceValue`) *(→ Goal 10, v0.75.0)*
@@ -279,4 +360,4 @@ Legacy candidate follow-up work:
 
 ## Upcoming Milestones
 
-- (none — Phase D is the final planned phase; see docs/DEVELOPMENT_PLAN.md)
+- (none — Phase D is the final planned phase; see docs/archive/DEVELOPMENT_PLAN.md)

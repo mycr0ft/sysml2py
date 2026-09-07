@@ -58,8 +58,10 @@ class RootNamespace:
         except ValueError:
             try:
                 if valid_definition(definition, "NamespaceBodyElement"):
-                    # This is a KerML Element
-                    pass
+                    # KerML root: member dicts share the PackageBodyElement
+                    # shapes, so load them through the same dispatch instead
+                    # of silently dropping them.
+                    self.load_package_body(definition.get("ownedRelationship", []))
             except ValueError:  # pragma: no cover
                 print(definition)
                 raise ValueError("Not expecting any other root node names.")
@@ -71,7 +73,14 @@ class RootNamespace:
                 if member["name"] == "PackageMember":
                     memberclass = PackageMember(member)
                 elif member["name"] == "ElementFilterMember":
-                    pass  # pragma: no cover
+                    # Element filters belong to view bodies; a root-level
+                    # one has no standalone meaning — warn and skip rather
+                    # than leaving `memberclass` unbound (v0.27.0 contract).
+                    print(
+                        "[RootNamespace] Skipping unsupported root member: "
+                        "ElementFilterMember"
+                    )  # pragma: no cover
+                    continue
                 elif member["name"] == "AliasMember":
                     memberclass = AliasMember(member)
                 elif member["name"] == "Import":
@@ -7692,7 +7701,7 @@ class ConnectionUsage:
         self.prefix = None
         self.declaration = None
         self.keyword = "connection"
-        self.keyword2 = "connect\n"
+        self.keyword2 = "connect"
         self.part = None
         if definition is not None:
             if valid_definition(definition, self.__class__.__name__):
@@ -7715,7 +7724,23 @@ class ConnectionUsage:
         if self.prefix is not None:
             output.append(self.prefix.dump())
 
+        # Only emit the `connection <name>` form when the declaration
+        # actually names something — a bare `connect a to b` has an
+        # empty Identification and must not dump as `connection  connect ...`.
+        # A typed but nameless declaration (`connection : PressureSeat`)
+        # still needs the `connection` keyword.
+        declared = None
         if self.declaration is not None:
+            decl = getattr(self.declaration, "declaration", None)
+            ident = getattr(decl, "identification", None)
+            if ident is not None:
+                declared = " ".join(
+                    filter(None, (ident.declaredShortName, ident.declaredName))
+                )
+            if not declared and decl is not None and decl.specialization is not None:
+                declared = True
+
+        if declared:
             output.append(self.keyword)
             output.append(self.declaration.dump())
 
@@ -9758,33 +9783,113 @@ class VerificationCaseDefinition(_DeclaredDefinitionBase):
 
 
 class ElementFilterMember:
-    # Stub for elementFilterMember — not yet fully implemented
+    # elementFilterMember : memberPrefix FILTER ownedExpression SEMI
+    # e.g. ``filter @e1;`` — the element filter of a view body.
     def __init__(self, definition=None):
         self.children = []
+        self.prefix = None
+        self.filter_expression = None
         if definition is not None:
             if valid_definition(definition, "ElementFilterMember"):
-                pass  # TODO: parse filter expression
+                if definition.get("prefix") is not None:
+                    self.prefix = MemberPrefix(definition["prefix"])
+                oe = definition.get("ownedRelatedElement")
+                if oe is not None:
+                    self.filter_expression = OwnedExpression(oe)
 
     def dump(self):
-        return ""
+        output = []
+        if self.prefix is not None:
+            output.append(self.prefix.dump())
+        output.append("filter")
+        if self.filter_expression is not None:
+            output.append(self.filter_expression.dump())
+        return " ".join(filter(None, output)) + ";"
 
     def get_definition(self):
-        return {"name": self.__class__.__name__}
+        return {
+            "name": self.__class__.__name__,
+            "prefix": self.prefix.get_definition() if self.prefix else None,
+            "ownedRelatedElement": (
+                self.filter_expression.get_definition()
+                if self.filter_expression is not None
+                else None
+            ),
+        }
+
+
+class MembershipExpose:
+    # membershipExpose : membershipImport
+    # Payload of a membership expose (``expose e;``) — reuses the
+    # ImportedMembership shape without the import prefix.
+    def __init__(self, definition):
+        if valid_definition(definition, "MembershipExpose"):
+            self.membership = ImportedMembership(definition["membership"])
+
+    def dump(self):
+        return self.membership.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "membership": self.membership.get_definition(),
+        }
+
+
+class NamespaceExpose:
+    # namespaceExpose : namespaceImport
+    # Payload of a namespace expose (``expose P::*;``) — reuses the
+    # ImportedNamespace shape without the import prefix.
+    def __init__(self, definition):
+        if valid_definition(definition, "NamespaceExpose"):
+            self.namespace = ImportedNamespace(definition["namespace"])
+
+    def dump(self):
+        return self.namespace.dump()
+
+    def get_definition(self):
+        return {
+            "name": self.__class__.__name__,
+            "ownedRelatedElement": [],
+            "namespace": self.namespace.get_definition(),
+        }
 
 
 class Expose:
-    # Stub for expose — not yet fully implemented
+    # expose : EXPOSE ( membershipExpose | namespaceExpose ) relationshipBody
+    # e.g. ``expose e;`` or ``expose P::*;`` — a member of a view body.
     def __init__(self, definition=None):
         self.children = []
+        self.body = RelationshipBody({"name": "RelationshipBody", "ownedRelationship": []})
         if definition is not None:
             if valid_definition(definition, "Expose"):
-                pass  # TODO: parse expose
+                self.body = RelationshipBody(definition["body"])
+                relationship = definition.get("ownedRelationship")
+                if relationship is not None:
+                    if relationship["name"] == "NamespaceExpose":
+                        self.children.append(NamespaceExpose(relationship))
+                    elif relationship["name"] == "MembershipExpose":
+                        self.children.append(MembershipExpose(relationship))
+                    else:
+                        print(
+                            f"[Expose] Unknown relationship: "
+                            f"{relationship.get('name', relationship)}"
+                        )
 
     def dump(self):
-        return ""
+        output = ["expose"]
+        for child in self.children:
+            output.append(child.dump())
+        return " ".join(output) + self.body.dump()
 
     def get_definition(self):
-        return {"name": self.__class__.__name__}
+        return {
+            "name": self.__class__.__name__,
+            "body": self.body.get_definition(),
+            "ownedRelationship": (
+                self.children[0].get_definition() if self.children else None
+            ),
+        }
 
 
 class RenderStateMember:
@@ -9946,6 +10051,8 @@ class ViewDefinitionBody:
                         self.children.append(RenderStateMember(item))
                     elif item_name == "ElementFilterMember":
                         self.children.append(ElementFilterMember(item))
+                    elif item_name == "Expose":
+                        self.children.append(Expose(item))
                     else:
                         print(f"ViewDefinitionBody: unknown item {item_name}")  # pragma: no cover
 

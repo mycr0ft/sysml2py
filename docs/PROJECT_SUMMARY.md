@@ -2,9 +2,9 @@
 
 > **For:** Future agents and team members
 > **Last Updated:** September 5, 2026
-> **Current Version:** v0.86.0
+> **Current Version:** v0.87.0
 > **Repository:** https://github.com/mycr0ft/sysmlpy
-> **Roadmap:** the 10-goal Adoption Roadmap (docs/DEVELOPMENT_PLAN.md,
+> **Roadmap:** the 10-goal Adoption Roadmap (docs/archive/DEVELOPMENT_PLAN.md,
 > now archived) is **complete** as of v0.77.0 — see CHANGELOG.md
 
 ---
@@ -433,18 +433,18 @@ Multiplicity ranges (`[N]`, `[N..M]`, `[*]`) are stored as part of the `FeatureS
 | **No multi-file loading support** | Added `load_files()`, `load_project()`, `load_with_dependencies()` (v0.21.0) |
 | **Standard library imports not validated** | Semantic analyzer now checks `LibrarySymbolIndex` for import targets (v0.21.0) |
 | **AliasMember / Import serialization order** | v0.58.0 — `_ensure_body()` (Model + Package) now re-emits imports/aliases at their original source positions instead of appending them to the end. |
-| **Typed-by not preserved in load_from_grammar** | v0.57.0 — `_extract_specialization_info()` hoisted to base `Usage` (both grammar layouts); new `Usage.typed_by_name` property populated for all usage kinds. |
+| **Typed-by not preserved in load_from_grammar** | v0.57.0 — `_extract_specialization_info()` hoisted to base `Usage` (both grammar layouts); new `Usage.typed_by_name` property populated for all usage kinds. v0.87.0 — post-pass covers the manually-wired dispatch kinds; visitor emits `specialization` for view/viewpoint/concern/allocation/rendering/connection/individual. |
+| **View `filter` / `expose` members silently dropped** | v0.87.0 — visitor emits `ElementFilterMember` / `Expose` dicts; grammar classes implemented (`view v { filter @e1; expose e1; }` round-trips). |
+| **Guarded entry transitions crash on load** | v0.87.0 — `_visit_guarded_target_succession` rewritten (`entry a1; if x > 0 then s2;` round-trips). |
 
 ### High Priority
 
 | Issue | Location | Impact |
 |-------|----------|--------|
-| **Action control-flow node classes missing** | `grammar/classes.py` | `IfNode`, `WhileLoopNode`, `ForLoopNode`, `ControlNode`, `SendNode`, `AcceptNode`, `TerminateNode`, etc. exist in the visitor but not in `grammar/classes.py`. 16 grammar tests fail with `KeyError`. |
-| ~**Top-level attribute multiplicity not captured**~ |Resolved — v0.40.0 fixed bounds capture (docs were stale); v0.59.0 fixed the remaining `ordered`/`nonunique` flags hardcoded `False` in the visitor + a `MultiplicityPart.dump()` XOR-guard bug. |
-| **Typing resolved to name only** | `usage.py` | v0.57.0 preserves the declared type *name* (`typed_by_name`) on usages loaded from grammar; resolving `typedby` to the definition *object* via a model pass is still open. |
-| **Duplicate ActionUsage block** | `definition.py` | Dead code — duplicate `elif inner_class == "ActionUsage"` block. |
-| **PackageBodyElement name hardcoded** | `grammar/classes.py` | Comment says `#!TODO This isn't always the case`. |
-| **RootNamespace doesn't handle AliasMember/Import** | `definition.py` | ~~`load_package_body()` raises `NotImplementedError`~~ **Resolved v0.58.0** — node types already dispatched; serialization-order gap fixed. |
+| **Typing resolved to name only** | `usage.py` | v0.57.0 preserves the declared type *name* (`typed_by_name`) on usages loaded from grammar; v0.87.0 extended name capture to every dispatch kind (view/viewpoint/concern/allocation/rendering/connection/individual/metadata/satisfy/…) and made the visitor emit `specialization` so `view v : Engine` round-trips; resolving `typedby` to the definition *object* via a model pass is still open. |
+| **Nested behavior-usage typings** | `antlr_visitor.py` | Nested dispatch emitters (`_visit_nested_occurrence_usage`, `_visit_nested_usage`) hardcode `specialization: None` — top-level kinds and the grammar-class dump chain are fixed (v0.87.0). |
+| **Usage-body imports dropped** | `antlr_visitor.py` / `grammar/classes.py` | `part p1 : E { private import Q::*; }` — the visitor never dispatches `importRule` in `_visit_definition_body_item_dict`; `DefinitionBodyItem` has no Import branch. |
+| **`satisfy` valuepart dropped on dump** | `antlr_visitor.py` ~:2521 / `grammar/classes.py` | `satisfy R = 3;` loads but the value part is ignored by the grammar class on dump. |
 
 ### Medium Priority
 

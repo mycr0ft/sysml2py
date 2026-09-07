@@ -3714,3 +3714,190 @@ def test_expression_capture_range_v046_phase1():
         assert rng["operator"][0] == "..", (
             f"RangeExpression operator is not '..'; got: {rng['operator']!r}"
         )
+
+
+# ---------------------------------------------------------------------------
+# v0.87.0: round-trip fidelity close-out
+# ---------------------------------------------------------------------------
+
+def test_view_filter_member_roundtrip():
+    """``filter @e1;`` in a view body must survive the round-trip.
+
+    Regression: the visitor had a `pass  # TODO: handle elementFilterMember`
+    stub in both view-body visitors, so filters were silently dropped and
+    the view dumped as ``view v ;``.
+    """
+    text = """package Filters {
+        part def Engine;
+        part e1 : Engine;
+        view v {
+            filter @e1;
+        }
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_view_filter_member_view_def_roundtrip():
+    """``filter @e1;`` in a view def body must survive the round-trip."""
+    text = """package Filters {
+        part def Engine;
+        part e1 : Engine;
+        view def V {
+            filter @e1;
+        }
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_view_expose_membership_roundtrip():
+    """``expose e;`` (membership expose) must survive the round-trip."""
+    text = """package Exposes {
+        part def Engine;
+        part e1 : Engine;
+        view v {
+            expose e1;
+        }
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_view_expose_namespace_roundtrip():
+    """``expose P::*;`` (namespace expose) must survive the round-trip."""
+    text = """package Outer {
+        package Inner {
+            part def Engine;
+        }
+        view v {
+            expose Inner::*;
+        }
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_view_filter_and_expose_combined_roundtrip():
+    """filter + expose together in one view body must survive."""
+    text = """package Both {
+        part def Engine;
+        part e1 : Engine;
+        view v : Engine {
+            filter @e1;
+            expose e1;
+        }
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_guarded_entry_transition_roundtrip():
+    """``entry a1; if x > 0 then s2;`` must parse and round-trip.
+
+    Regression: the visitor's guardedTargetSuccession handler probed
+    nonexistent ctx attributes (guard and target succession silently
+    dropped) and emitted a dict shape the GuardedTargetSuccession
+    grammar class could not load (KeyError crash).
+    """
+    text = """package Guarded {
+        state def M {
+            action a1;
+            state s1 {
+                entry a1;
+                if x > 0 then s2;
+            }
+            state s2;
+        }
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_bare_connect_dump_canonical():
+    """A bare ``connect a to b`` must not dump as ``connection  connect``.
+
+    Regression: ConnectionUsage.dump() emitted the ``connection`` keyword
+    even for nameless declarations and hardcoded a newline after
+    ``connect``.
+    """
+    text = """package Conns {
+        part def C;
+        part c1 : C[0..1];
+        part c2 : C[1];
+        connect c1[0..1] to c2[1];
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+    # The multiplicity ends must survive too (previously listed as a
+    # STATUS.md Medium-Priority gap; verified working).
+    assert "0..1" in b.dump().replace(" ", "")
+
+
+def test_named_connection_dump_canonical():
+    """``connection c1 connect c1 to c2;`` must round-trip without the
+    stray newline after ``connect``."""
+    text = """package Conns {
+        part def C;
+        part c1 : C;
+        part c2 : C;
+        connection c1 connect c1 to c2;
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_typed_nameless_connection_roundtrip():
+    """``connection : PressureSeat connect ...`` (typed, nameless) must
+    keep the ``connection`` keyword and typing on round-trip.
+
+    Regression: when ConnectionUsage.dump() stopped emitting the
+    ``connection`` keyword for nameless declarations, this form lost
+    its typing.
+    """
+    text = """package P {
+        connection def PressureSeat {
+            end bead : TireBead[1];
+            end mountingRim : TireMountingRim[1];
+        }
+        part def Tire;
+        part def TireBead;
+        part def TireMountingRim;
+        part w {
+            part bead : TireBead[1];
+            part rim : TireMountingRim[1];
+            connection : PressureSeat
+                connect bead to rim;
+        }
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_prefixed_usage_typings_roundtrip():
+    """Typed-by on view/viewpoint/concern/allocation/rendering usages
+    must survive the round-trip (previously dropped with
+    ``specialization: None`` in their visitor emitters)."""
+    text = """package P {
+        part def E;
+        requirement def R;
+        allocation def AD;
+        rendering def RD;
+        view v : E;
+        viewpoint vp : R;
+        concern c : R;
+        allocation a1 : AD;
+        rendering r1 : RD;
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())

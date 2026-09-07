@@ -983,7 +983,14 @@ class Usage(Searchable):
                 for body_item in body.children:
                     if hasattr(body_item, 'children') and body_item.children:
                         member = body_item.children[0]
-                        mc = member.children if isinstance(member.children, list) else [member.children]
+                        # View-body members like Expose carry their payload
+                        # directly (Expose.children = [MembershipExpose])
+                        # and have no model children of their own — treat a
+                        # missing/payload member gracefully instead of
+                        # raising AttributeError.
+                        mc = getattr(member, 'children', None)
+                        if not isinstance(mc, list):
+                            mc = [mc] if mc is not None else []
                         for inner in mc:
                             if inner is None:
                                 continue
@@ -1162,7 +1169,15 @@ class Usage(Searchable):
             (PartUsage, AttributeUsage, ItemUsage, PortUsage, ...)
           - behavior-style: ``grammar.declaration.declaration.declaration.specialization``
             (ActionUsage, ...)
+
+        Idempotent (v0.87.0): re-running on the same object would append
+        duplicate names to ``_specializes_names`` and friends (a
+        subsetting-only usage has ``_typed_by_name`` None, so callers
+        that guard on that attribute alone would re-extract).
         """
+        if getattr(self, '_spec_info_extracted', False):
+            return
+        self._spec_info_extracted = True
         spec = None
         g = getattr(grammar, 'grammar', grammar)
         ud = getattr(g, 'usage', None)

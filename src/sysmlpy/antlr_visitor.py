@@ -2383,7 +2383,7 @@ def _make_assert_constraint_usage_dict(acu_ctx, prefix=None):
         if hasattr(cud, 'valuePart') and cud.valuePart():
             vp = cud.valuePart()
             if hasattr(vp, 'ownedExpression') and vp.ownedExpression():
-                expr = _visit_expression(vp.ownedExpression())
+                expr = _visit_owned_expression(vp.ownedExpression())
                 if expr:
                     valuepart = {"name": "ValuePart", "ownedRelationship": expr}
         
@@ -2497,7 +2497,7 @@ def _make_satisfy_requirement_usage_dict(sru_ctx, prefix=None):
     if hasattr(sru_ctx, 'valuePart') and sru_ctx.valuePart():
         vp = sru_ctx.valuePart()
         if hasattr(vp, 'ownedExpression') and vp.ownedExpression():
-            expr = _visit_expression(vp.ownedExpression())
+            expr = _visit_owned_expression(vp.ownedExpression())
             if expr:
                 valuepart = {"name": "ValuePart", "ownedRelationship": expr}
     
@@ -5024,30 +5024,48 @@ def _visit_entry_transition_member(ctx):
 
 
 def _visit_guarded_target_succession(ctx):
-    """Visit a guardedTargetSuccession context."""
+    """Visit a guardedTargetSuccession context.
+
+    guardedTargetSuccession : guardExpressionMember THEN transitionSuccessionMember
+
+    Emits the ``ownedRelationship`` member-list shape the
+    ``GuardedTargetSuccession`` grammar class loads (guard + target were
+    silently dropped before v0.87.0, and the old dict shape crashed the
+    class loader with a KeyError).
+    """
     if ctx is None:
         return None
-    
-    guard = None
-    if hasattr(ctx, 'guardExpression') and ctx.guardExpression():
-        guard_dict = _visit_expression(ctx.guardExpression())
-        guard = {
-            "name": "GuardExpression",
-            "expression": guard_dict
-        }
-    
-    succession = None
-    if hasattr(ctx, 'succession') and ctx.succession():
-        succ = ctx.succession()
-        if isinstance(succ, list):
-            succ = succ[0]
-        if succ:
-            succession = _visit_succession(succ)
-    
+
+    owned_relationship = []
+
+    gem = None
+    if hasattr(ctx, 'guardExpressionMember') and ctx.guardExpressionMember():
+        gem = ctx.guardExpressionMember()
+        if isinstance(gem, list):
+            gem = gem[0]
+        guard_member = _visit_guard_expression_member(gem)
+        if guard_member:
+            owned_relationship.append(guard_member)
+
+    tsm = None
+    if hasattr(ctx, 'transitionSuccessionMember') and ctx.transitionSuccessionMember():
+        tsm = ctx.transitionSuccessionMember()
+        if isinstance(tsm, list):
+            tsm = tsm[0]
+        ts = None
+        if hasattr(tsm, 'transitionSuccession') and tsm.transitionSuccession():
+            ts = tsm.transitionSuccession()
+            if isinstance(ts, list):
+                ts = ts[0]
+        if ts:
+            owned_relationship.append({
+                "name": "TransitionSuccessionMember",
+                "ownedRelatedElement": _visit_transition_succession(ts),
+            })
+
     return {
         "name": "GuardedTargetSuccession",
-        "guard": guard,
-        "ownedRelatedElement": succession
+        "ownedRelationship": owned_relationship,
     }
 
 
@@ -6661,6 +6679,10 @@ def _make_connection_usage_dict(ctx, prefix=None):
     """Create a ConnectionUsage dictionary."""
     name, shortname = _get_usage_identification(ctx)
 
+    # Typed-by etc. on the connection declaration (e.g.
+    # ``connection cn1 : CD``) — previously hardcoded to None.
+    specialization = _build_full_specialization_from_ctx(ctx)
+
     # Parse the connector part (``connect X to Y``) so endpoints survive
     # into the grammar object tree (v0.67.0 — fixes the "part": None stub)
     # connectionUsage: occurrenceUsagePrefix ( CONNECTION usageDeclaration?
@@ -6731,7 +6753,7 @@ def _make_connection_usage_dict(ctx, prefix=None):
                                     "declaredShortName": shortname,
                                     "declaredName": name
                                 },
-                                "specialization": None
+                                "specialization": specialization
                             }
                         },
                         "part": conn_part_dict,
@@ -8050,6 +8072,9 @@ def _make_view_usage_dict(ctx, prefix=None):
     body_items = []
     if hasattr(ctx, 'viewBody') and ctx.viewBody():
         body_items = _visit_view_body_dict(ctx.viewBody())
+    # Typed-by / redefinition / subsets on the view declaration
+    # (e.g. ``view v : Engine``) — previously hardcoded to None.
+    specialization = _build_full_specialization_from_ctx(ctx)
     return {
         "name": "PackageMember",
         "prefix": None,
@@ -8071,7 +8096,7 @@ def _make_view_usage_dict(ctx, prefix=None):
                                     "declaredShortName": shortname,
                                     "declaredName": name
                                 },
-                                "specialization": None
+                                "specialization": specialization
                             }
                         },
                         "body": {
@@ -8092,6 +8117,7 @@ def _make_viewpoint_usage_dict(ctx, prefix=None):
     """
     name = None
     shortname = None
+    specialization = None
     if ctx is not None:
         cud = None
         if hasattr(ctx, 'constraintUsageDeclaration') and ctx.constraintUsageDeclaration():
@@ -8112,6 +8138,11 @@ def _make_viewpoint_usage_dict(ctx, prefix=None):
                     elif len(name_list) == 1:
                         name_text = name_list[0].getText()
                         name, shortname = _extract_name_shortname(name_text)
+        
+        # Typed-by etc. on the viewpoint declaration (e.g.
+        # ``viewpoint v : R``) — previously dropped.
+        if ud is not None:
+            specialization = _build_full_specialization_from_ud(ud)
     
     return {
         "name": "PackageMember",
@@ -8134,7 +8165,7 @@ def _make_viewpoint_usage_dict(ctx, prefix=None):
                                     "declaredShortName": shortname,
                                     "declaredName": name
                                 },
-                                "specialization": None
+                                "specialization": specialization
                             }
                         },
                         "body": {
@@ -8158,6 +8189,7 @@ def _make_concern_usage_dict(ctx, prefix=None):
     """
     name = None
     shortname = None
+    specialization = None
     if ctx is not None:
         cud = None
         if hasattr(ctx, 'constraintUsageDeclaration') and ctx.constraintUsageDeclaration():
@@ -8178,6 +8210,10 @@ def _make_concern_usage_dict(ctx, prefix=None):
                     elif len(name_list) == 1:
                         name_text = name_list[0].getText()
                         name, shortname = _extract_name_shortname(name_text)
+        
+        # Typed-by etc. on the concern declaration — previously dropped.
+        if ud is not None:
+            specialization = _build_full_specialization_from_ud(ud)
     
     return {
         "name": "PackageMember",
@@ -8200,7 +8236,7 @@ def _make_concern_usage_dict(ctx, prefix=None):
                                     "declaredShortName": shortname,
                                     "declaredName": name
                                 },
-                                "specialization": None
+                                "specialization": specialization
                             }
                         },
                         "body": {
@@ -8236,6 +8272,7 @@ def _make_allocation_usage_dict(ctx, prefix=None):
     name = None
     shortname = None
     connector_part = None
+    specialization = None
     if ctx is not None:
         aud = None
         if hasattr(ctx, 'allocationUsageDeclaration') and ctx.allocationUsageDeclaration():
@@ -8263,6 +8300,11 @@ def _make_allocation_usage_dict(ctx, prefix=None):
         if aud and hasattr(aud, 'connectorPart') and aud.connectorPart():
             connector_part = _build_connector_part_dict(aud.connectorPart())
 
+        # Typed-by etc. on the allocation declaration (e.g.
+        # ``allocation a1 : AD``) — previously dropped.
+        if ud is not None:
+            specialization = _build_full_specialization_from_ud(ud)
+
     return {
         "name": "PackageMember",
         "prefix": None,
@@ -8284,7 +8326,7 @@ def _make_allocation_usage_dict(ctx, prefix=None):
                                     "declaredShortName": shortname,
                                     "declaredName": name
                                 },
-                                "specialization": None
+                                "specialization": specialization
                             }
                         },
                         "part": connector_part,
@@ -8309,6 +8351,7 @@ def _make_rendering_usage_dict(ctx, prefix=None):
     """
     name = None
     shortname = None
+    specialization = None
     if ctx is not None:
         # RenderingUsage uses just `usage` (not usageDeclaration)
         usage = None
@@ -8330,6 +8373,12 @@ def _make_rendering_usage_dict(ctx, prefix=None):
                     elif len(name_list) == 1:
                         name_text = name_list[0].getText()
                         name, shortname = _extract_name_shortname(name_text)
+        
+        # Typed-by etc. on the rendering declaration (e.g.
+        # ``rendering r1 : RD``) — previously dropped. The rendering
+        # usage ctx carries ``usage`` directly, so the ctx-based
+        # builder works here.
+        specialization = _build_full_specialization_from_ctx(ctx)
     
     return {
         "name": "PackageMember",
@@ -8352,7 +8401,7 @@ def _make_rendering_usage_dict(ctx, prefix=None):
                                     "declaredShortName": shortname,
                                     "declaredName": name
                                 },
-                                "specialization": None
+                                "specialization": specialization
                             }
                         },
                         "body": {
@@ -8376,6 +8425,7 @@ def _make_individual_usage_dict(ctx, prefix=None):
     """
     name = None
     shortname = None
+    specialization = None
     if ctx is not None:
         # individualUsage has `usage` at the end
         usage = None
@@ -8397,6 +8447,9 @@ def _make_individual_usage_dict(ctx, prefix=None):
                     elif len(name_list) == 1:
                         name_text = name_list[0].getText()
                         name, shortname = _extract_name_shortname(name_text)
+        
+        # Typed-by etc. on the individual declaration — previously dropped.
+        specialization = _build_full_specialization_from_ctx(ctx)
     
     # Use IndividualUsageSimple per our simplified model
     return {
@@ -8420,7 +8473,7 @@ def _make_individual_usage_dict(ctx, prefix=None):
                                     "declaredShortName": shortname,
                                     "declaredName": name
                                 },
-                                "specialization": None
+                                "specialization": specialization
                             }
                         },
                         "body": {
@@ -8992,7 +9045,7 @@ def _make_view_rendering_member_dict(ctx, prefix=None):
                             "declaredShortName": shortname,
                             "declaredName": name
                         },
-                        "specialization": None
+                        "specialization": _build_full_specialization_from_ctx(usage_ctx)
                     }
                 },
                 "completion": None
@@ -9074,6 +9127,102 @@ def _make_render_state_member_dict(ctx, prefix=None):
     }
 
 
+def _make_element_filter_member_dict(ctx):
+    """Visit an elementFilterMember context and return its dict.
+
+    elementFilterMember : memberPrefix FILTER ownedExpression SEMI
+
+    e.g. ``filter @e1;`` — the element filter of a view.
+    """
+    if ctx is None:
+        return None
+
+    prefix = None
+    if hasattr(ctx, 'memberPrefix') and ctx.memberPrefix():
+        mp = ctx.memberPrefix()
+        if hasattr(mp, 'visibilityIndicator') and mp.visibilityIndicator():
+            prefix = {
+                "name": "MemberPrefix",
+                "visibility": _visit_visibility_indicator_dict(mp.visibilityIndicator()),
+            }
+
+    expr = None
+    if hasattr(ctx, 'ownedExpression') and ctx.ownedExpression():
+        expr = _visit_owned_expression(ctx.ownedExpression())
+
+    return {
+        "name": "ElementFilterMember",
+        "prefix": prefix,
+        "ownedRelatedElement": expr,
+    }
+
+
+def _make_expose_dict(ctx):
+    """Visit an expose context and return its dict.
+
+    expose : EXPOSE ( membershipExpose | namespaceExpose ) relationshipBody
+    membershipExpose : membershipImport
+    namespaceExpose : namespaceImport
+
+    e.g. ``expose e;`` (membership form) or ``expose P::*;`` (namespace
+    form).  The membership/namespace payload reuses the Import dict
+    shapes (without the import prefix).
+    """
+    if ctx is None:
+        return None
+
+    relationship = None
+
+    if hasattr(ctx, 'membershipExpose') and ctx.membershipExpose():
+        me = ctx.membershipExpose()
+        if not hasattr(me, 'membershipImport') or me.membershipImport() is None:
+            print("[visitor] expose: unsupported membershipExpose form, skipped")
+            return None
+        mi = me.membershipImport()
+        qn_text = mi.qualifiedName().getText()
+        is_recursive = mi.STAR_STAR() is not None
+        relationship = {
+            "name": "MembershipExpose",
+            "membership": {
+                "name": "ImportedMembership",
+                "importedMembership": {
+                    "name": "QualifiedName",
+                    "names": qn_text.split("::"),
+                },
+                "isRecursive": is_recursive,
+            },
+        }
+
+    elif hasattr(ctx, 'namespaceExpose') and ctx.namespaceExpose():
+        ne = ctx.namespaceExpose()
+        if not hasattr(ne, 'namespaceImport') or ne.namespaceImport() is None:
+            print("[visitor] expose: unsupported namespaceExpose form, skipped")
+            return None
+        ns = ne.namespaceImport()
+        if ns.filterPackage() is not None:
+            print("[visitor] expose: filterPackage form not supported, skipped")
+            return None
+        qn_text = ns.qualifiedName().getText()
+        is_recursive = ns.STAR_STAR() is not None
+        relationship = {
+            "name": "NamespaceExpose",
+            "namespace": {
+                "name": "ImportedNamespace",
+                "namespace": {"name": "QualifiedName", "names": qn_text.split("::")},
+                "isRecursive": is_recursive,
+            },
+        }
+
+    if relationship is None:
+        return None
+
+    return {
+        "name": "Expose",
+        "body": {"name": "RelationshipBody", "ownedRelationship": []},
+        "ownedRelationship": relationship,
+    }
+
+
 def _visit_view_definition_body_dict(body_ctx):
     """Visit a viewDefinitionBody and return a list of body item dicts.
     
@@ -9107,7 +9256,9 @@ def _visit_view_definition_body_dict(body_ctx):
                 if item_dict:
                     items.append(item_dict)
             elif hasattr(item_ctx, 'elementFilterMember') and item_ctx.elementFilterMember():
-                pass  # TODO: handle elementFilterMember
+                item_dict = _make_element_filter_member_dict(item_ctx.elementFilterMember())
+                if item_dict:
+                    items.append(item_dict)
     
     return items
 
@@ -9146,9 +9297,13 @@ def _visit_view_body_dict(body_ctx):
                 if item_dict:
                     items.append(item_dict)
             elif hasattr(item_ctx, 'elementFilterMember') and item_ctx.elementFilterMember():
-                pass  # TODO: handle elementFilterMember
+                item_dict = _make_element_filter_member_dict(item_ctx.elementFilterMember())
+                if item_dict:
+                    items.append(item_dict)
             elif hasattr(item_ctx, 'expose') and item_ctx.expose():
-                pass  # TODO: handle expose
+                item_dict = _make_expose_dict(item_ctx.expose())
+                if item_dict:
+                    items.append(item_dict)
     
     return items
 
@@ -13976,6 +14131,22 @@ def _build_full_specialization_from_ctx(ctx):
         if isinstance(ud, list):
             ud = ud[0] if ud else None
     
+    if ud is None and hasattr(ctx, 'usageDeclaration') and ctx.usageDeclaration():
+        # Some usage contexts (e.g. viewUsage) carry the usageDeclaration
+        # directly instead of through a nested ``usage`` element.
+        ud = ctx.usageDeclaration()
+        if isinstance(ud, list):
+            ud = ud[0] if ud else None
+    
+    if ud is None:
+        return None
+    
+    return _build_full_specialization_from_ud(ud)
+
+
+def _build_full_specialization_from_ud(ud):
+    """Build a full FeatureSpecializationPart dict from a usageDeclaration
+    ANTLR context (the shared core of the ctx-based variant above)."""
     if ud is None:
         return None
     

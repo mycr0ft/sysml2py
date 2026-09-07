@@ -1,5 +1,70 @@
 # CHANGELOG
 
+## v0.87.0 (2026-09-06)
+
+**Round-trip fidelity close-out + view body members.**
+
+*View `filter` / `expose` members (A1)* — the last known silent-drop
+TODOs in the visitor (same class as the v0.79.1 `ref` fix):
+
+1. *Visitor*: `_visit_view_definition_body_dict` and
+   `_visit_view_body_dict` now emit `ElementFilterMember` dicts
+   (``filter @e1;``) and `Expose` dicts (``expose e;`` /
+   ``expose P::*;``) via new `_make_element_filter_member_dict` /
+   `_make_expose_dict` helpers — previously a `pass  # TODO` stub,
+   so views dumped as `view v ;`.
+2. *Grammar classes*: `ElementFilterMember`, `Expose`,
+   `MembershipExpose`, `NamespaceExpose` implemented (were empty
+   stubs); `ViewDefinitionBody` gains the missing `"Expose"`
+   dispatch; usage.py's View body walk tolerates payload-carrying
+   members without their own model children.
+
+*Other fixes:*
+
+- **Guarded entry transitions** — `_visit_guarded_target_succession`
+  probed nonexistent ctx attributes and emitted a dict shape the
+  grammar class could not load (KeyError crash on
+  ``entry a1; if x > 0 then s2;``). Rewritten to emit
+  GuardExpressionMember + TransitionSuccessionMember; guarded entry
+  now round-trips. Also fixed the two remaining undefined
+  `_visit_expression` call sites (constraint member, satisfy visit).
+- **`ConnectionUsage.dump()`** — bare `connect a to b;` no longer
+  dumps as `connection  connect\n...`; typed-but-nameless
+  connections (`connection : PressureSeat connect ...`) keep their
+  typing.
+- **`RootNamespace`** — KerML `NamespaceBodyElement` roots load their
+  members (were silently dropped); a root-level `ElementFilterMember`
+  warns + skips instead of raising `UnboundLocalError`.
+- **Typing round-trip on prefixed usages** — the visitor emitters for
+  view / viewpoint / concern / allocation / rendering / connection /
+  individual hardcoded `specialization: None`, so
+  `view v : Engine` dumped as `view v ;`. All now extract the
+  feature specialization (shared `_build_full_specialization_from_ud`
+  core; `_build_full_specialization_from_ctx` falls back to a direct
+  `usageDeclaration` child).
+- **`typed_by_name` wiring** — the dispatch branches that assign
+  grammar manually (viewpoint, concern, allocation, rendering,
+  metadata, individual, constraint, calculation, connection, flow,
+  satisfy, dependency, ...) never ran `_extract_specialization_info`; a
+  post-pass in `Package.load_from_grammar` now covers them.
+  `_extract_specialization_info` is idempotent (re-running would
+  append duplicate subsetting names).
+- **Registered the `conformance` pytest mark** (no more
+  `PytestUnknownMarkWarning`).
+
+*Docs/hygiene:* fixed stale `docs/DEVELOPMENT_PLAN.md` links (→
+`docs/archive/`); refreshed AGENTS.md (version, 153-test grammar
+status, complete test-file map), STATUS.md Known Issues / Remaining
+Work tables, and TODO.md stale Goal-8/palette/next-release bits;
+removed tracked debug artifacts (`temp.txt`, `tests/temp.txt`,
+`test_puml/*`)
+
+*Known remaining gaps recorded in TODO.md:* nested behavior-usage
+typings (`part p { action a1 : A; }`), nested `rendering` public-API
+objects, usage-body imports, `satisfy` valuepart.
+
+Fast suite 1484 passed / 2 skipped, conformance 123/123.
+
 ## v0.86.0 (2026-09-06)
 
 **Goal 10 close-out — storage backend query parity.**

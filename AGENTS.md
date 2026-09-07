@@ -11,7 +11,7 @@ already knows.
 | Field | Value |
 |-------|-------|
 | Name | sysmlpy |
-| Current version | 0.69.0 |
+| Current version | 0.87.0 |
 | Language | Python 3.9+ |
 | Package manager | **Poetry** (use `poetry run` for all commands) |
 | Test runner | pytest via `poetry run pytest` |
@@ -43,7 +43,7 @@ poetry run pytest tests/ --tb=short -q
 
 ### Grammar test status
 
-All **79 grammar round-trip tests pass** (100%) as of v0.31.3+.
+All **153 grammar round-trip tests pass** (100%) as of v0.87.0.
 
 ---
 
@@ -131,28 +131,42 @@ else:
 
 ## Test File Map
 
+Counts from `pytest --collect-only` at v0.87.0 (1609 total: 1486 + 123 conformance).
+
 | File | Count | What it tests |
 |------|-------|--------------|
-| `grammar_test.py` | 79 (all pass) | Parse → grammar object → `dump()` round-trips |
-| `class_test.py` | 77 | Programmatic API: `Part()`, `Action()`, `dump()`, etc. |
+| `grammar_test.py` | 153 (all pass) | Parse → grammar object → `dump()` round-trips |
+| `class_test.py` | 79 | Programmatic API: `Part()`, `Action()`, `dump()`, etc. |
 | `main_test.py` | 7 | `load()` / `loads()` / `load_grammar()` public API |
 | `partial_test.py` | 7 | Partial-parse recovery (`loads_partial` / `load_partial`) |
 | `resolve_test.py` | 12 | `Model.resolve_types()` typedby resolution |
 | `reference_parse_test.py` | 12 | `ref` usages in the object tree (all forms) |
 | `constraint_text_test.py` | 12 | `rep`/rescued constraint textual bodies |
-| `plantuml_test.py` | 108 | All `as_*_view()` functions |
-| `semantic_test.py` | 116 | `analyze()`, OCL checks, symbol resolution, imports |
-| `evaluator_test.py` | 52 | Conditional expressions, calc ``in`` parameter invocation, recursion, what-if bindings |
-| `navigate_test.py` | 33 | `Searchable` mixin, model traversal |
+| `plantuml_test.py` | 151 | All `as_*_view()` functions |
+| `semantic_test.py` | 179 | `analyze()`, OCL checks, symbol resolution, imports |
+| `evaluator_test.py` | 44 | Conditional expressions, calc ``in`` parameter invocation, recursion, what-if bindings |
+| `navigate_test.py` | 42 | `Searchable` mixin, model traversal |
 | `import_test.py` | 31 | Import visibility/round-trip, `add_import()`, `.imports`, source-order preservation |
 | `validator_test.py` | 84 | Validator rules (+ state-machine/trigger/requirement/trace/direction/satisfy/connector checks) |
 | `diff_test.py` | 41 | Semantic model diff: rename detection, grammar fields, state-machine diff, trace edges, change-rate gate |
 | `project_test.py` | 21 | `load_files()`, `load_project()` |
 | `dfa_cache_test.py` | 14 | Persistent DFA cache: round-trip equivalence, fallbacks, env/`set_dfa_cache` config, cross-process save/load |
-| `store_test.py` | 118 | Storage backends (networkx/kuzu skipped if not installed; Cayley tests skipped without a live server: `podman run -d --name cayley -p 64210:64210 docker.io/cayleygraph/cayley`) |
-| `cayley_store_test.py` | 22 | CayleyStore against a live server at localhost:64210 (skipped when the server is down) |
-| `conformance_test.py` | 123 | OMG 2026-03 XPect parse conformance (slow) |
+| `store_test.py` | 121 | Storage backends (networkx/kuzu skipped if not installed; Cayley tests skipped without a live server: `podman run -d --name cayley -p 64210:64210 docker.io/cayleygraph/cayley`) |
+| `kuzu_store_test.py` | 32 | KùzuStore against a local database (skipped if `kuzu` is not installed) |
+| `cayley_store_test.py` | 39 | CayleyStore against a live server at localhost:64210 (skipped when the server is down) |
+| `conformance_test.py` | 123 | OMG 2026-03 XPect parse conformance (slow; `-m conformance`) |
 | `sim_test.py` | 52 | State-machine simulation: guards, executing assignment effects, history pseudostates (`sim` extra) |
+| `cli_test.py` | 39 | `sysmlpy` CLI commands (`python -m sysmlpy`) |
+| `lsp_test.py` | 37 | Language Server Protocol server (position/completion/hover) |
+| `lsp_batch4_test.py` | 36 | LSP batch-4 features (references, rename, semantic tokens) |
+| `traceability_test.py` | 46 | Requirement traceability matrices and satisfy/verify edges |
+| `interchange_test.py` | 38 | JSON-LD / property-interchange export-import round-trips |
+| `spreadsheet_test.py` | 37 | Spreadsheet (Excel/CSV) export/import views |
+| `repr_test.py` | 34 | `repr()` output for grammar and API objects |
+| `boxes_view_test.py` | 54 | Boxes-backed state-machine visualizer (`boxes_view.py`) |
+| `redefined_name_test.py` | 14 | `redefined_name` resolution edge cases |
+| `two_stage_parse_test.py` | 12 | Two-stage parse pipeline (dict → grammar classes) |
+| `palette_test.py` | 6 | PlantUML color palette (Okabe-Ito) |
 
 ---
 

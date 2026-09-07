@@ -1514,6 +1514,25 @@ class Package(Searchable):
         for child in grammar.body.children:
             if child.__class__.__name__ in ('Import', 'AliasMember'):
                 self._imports.append(child)
+
+        # v0.87.0: several dispatch branches above assign ``grammar``
+        # manually instead of going through Usage.load_from_grammar, so
+        # _extract_specialization_info never ran for those kinds and
+        # typed_by_name stayed None (viewpoint, concern, allocation,
+        # rendering, metadata, individual, constraint, calculation,
+        # connection, flow, satisfy...). Run it once over the built
+        # children; kinds that went through the full load path already
+        # carry their typing and are skipped by the _typed_by_name guard.
+        for child in self.children:
+            g = getattr(child, 'grammar', None)
+            if g is None or getattr(child, '_typed_by_name', None) is not None:
+                continue
+            extract = getattr(child, '_extract_specialization_info', None)
+            if extract is not None:
+                try:
+                    extract(g)
+                except Exception as exc:  # pragma: no cover
+                    print(f"[Package.load_from_grammar] specialization extraction failed for {getattr(child, 'name', child)!r}: {exc}")
         
         return self
 

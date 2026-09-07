@@ -952,3 +952,58 @@ def test_reference_set_type_renders():
     r2 = Reference(name="payload", redefines=True)
     r2.set_type(person)
     assert r2.dump() == "ref :>> payload : Person;"
+
+
+def test_typed_by_name_prefixed_usage_kinds():
+    """v0.87.0: view/viewpoint/concern/allocation/rendering/constraint/
+    connection usages capture typed_by_name (their dispatch branches
+    previously skipped _extract_specialization_info, unlike View)."""
+    import sysmlpy
+    text = """package P {
+        part def Engine;
+        requirement def R;
+        constraint def CT;
+        allocation def AD;
+        rendering def RD;
+        connection def CD;
+        view v1 : Engine;
+        viewpoint vp1 : Engine;
+        concern c1 : Engine;
+        allocation a1 : Engine;
+        rendering r1 : Engine;
+        constraint c2 : Engine;
+        connection cn1 : Engine;
+    }"""
+    m = sysmlpy.loads(text)
+    expected = {
+        "v1": "Engine",
+        "vp1": "Engine",
+        "c1": "Engine",
+        "a1": "Engine",
+        "r1": "Engine",
+        "c2": "Engine",
+        "cn1": "Engine",
+    }
+    for name, want in expected.items():
+        el = _find_by_name(m, name)
+        assert el is not None, f"{name} missing from model tree"
+        assert el.typed_by_name == want, (
+            f"{name}: typed_by_name={el.typed_by_name!r}, want {want!r}"
+        )
+
+
+def test_typed_by_name_nested_connection():
+    """Nested typed connections (``part w { connection cn : CD ...; }``)
+    capture typed_by_name."""
+    import sysmlpy
+    text = """package P {
+        connection def CD;
+        part def Vehicle {
+            connection cn : CD connect Vehicle to Vehicle;
+        }
+    }"""
+    m = sysmlpy.loads(text)
+    veh = _find_by_name(m, "Vehicle")
+    conns = [c for c in veh.children if type(c).__name__ == "Connection"]
+    assert len(conns) == 1
+    assert conns[0].typed_by_name == "CD"

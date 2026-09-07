@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.86.0** (2026-09-06)
+Current version: **v0.87.0** (2026-09-06)
 
 ---
 
@@ -168,12 +168,14 @@ These classes are fully implemented, have programmatic construction, `dump()` se
 
 ### Grammar Round-Trip Coverage (parse → dump)
 
-**97 / 97 tests passing (100%)** as of v0.40.0.
+**153 / 153 tests passing (100%)** as of v0.87.0.
 
-The suite grew from 79 to 96 cases (full-model round-trips drawn from the
+The suite grew from 96 to 153 cases (full-model round-trips drawn from the
 OMG spec corpus, including ActionTest / ControlNodeTest / DecisionTest
-action-body successions). v0.37.0 additionally fixed corpus-level load
-crashes: implicit-package wrap vs trailing line comments, MetadataFeature /
+action-body successions; v0.87.0 added view filter/expose members, guarded
+entry transitions, typed-nameless connections, and typed prefixed-usage
+round-trips). Earlier corpus-level fixes: implicit-package wrap vs trailing
+line comments, MetadataFeature /
 TextualRepresentation annotating elements, missing succession-member
 classes, WHEN triggers, and malformed interface ends.
 
@@ -297,33 +299,40 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 
 ### Test Coverage
 
+Counts from `pytest --collect-only` at v0.87.0 (1609 total).
+
 | Test file | Tests | Status |
 |---|---|---|
-| `tests/grammar_test.py` | 143 | ✅ All pass (100%) |
-| `tests/semantic_test.py` | 170 | ✅ All pass |
-| `tests/plantuml_test.py` | 131 | ✅ All pass (incl. official-notation tests) |
-| `tests/store_test.py` | 97 | Pass (optional deps skipped if not installed) |
-| `tests/class_test.py` | 75 | ✅ All pass |
+| `tests/grammar_test.py` | 153 | ✅ All pass (100%) |
+| `tests/semantic_test.py` | 179 | ✅ All pass |
+| `tests/plantuml_test.py` | 151 | ✅ All pass (incl. official-notation tests) |
+| `tests/store_test.py` | 121 | Pass (optional deps skipped if not installed) |
+| `tests/class_test.py` | 79 | ✅ All pass |
 | `tests/traceability_test.py` | 46 | ✅ All pass |
 | `tests/interchange_test.py` | 38 | ✅ All pass |
 | `tests/evaluator_test.py` | 44 | ✅ All pass |
-| `tests/lsp_test.py` | 56 | ✅ All pass (batch 4: 17 more in `tests/lsp_batch4_test.py`) |
+| `tests/lsp_test.py` | 37 | ✅ All pass (batch 4: 36 more in `tests/lsp_batch4_test.py`) |
 | `tests/spreadsheet_test.py` | 37 | ✅ 35 pass, 2 skip (no openpyxl) |
 | `tests/navigate_test.py` | 42 | ✅ All pass |
 | `tests/cli_test.py` | 39 | ✅ All pass |
-| `tests/validator_test.py` | 34 | ✅ All pass |
+| `tests/validator_test.py` | 84 | ✅ All pass |
 | `tests/repr_test.py` | 34 | ✅ All pass |
 | `tests/kuzu_store_test.py` | 32 | Pass (skipped if kuzu not installed) |
 | `tests/import_test.py` | 31 | ✅ All pass |
-| `tests/cayley_store_test.py` | 22 | Pass (skipped if cayley not installed) |
-| `tests/boxes_view_test.py` | 48 | Pass (skipped if diagramboxes not installed) |
-| `tests/project_test.py` | 17 | ✅ All pass |
+| `tests/cayley_store_test.py` | 39 | Pass (skipped if cayley not installed) |
+| `tests/boxes_view_test.py` | 54 | Pass (skipped if diagramboxes not installed) |
+| `tests/project_test.py` | 21 | ✅ All pass |
 | `tests/redefined_name_test.py` | 14 | ✅ All pass (100%) |
-| `tests/two_stage_parse_test.py` | 7 | ✅ All pass |
+| `tests/dfa_cache_test.py` | 14 | ✅ All pass |
+| `tests/resolve_test.py` | 12 | ✅ All pass |
+| `tests/reference_parse_test.py` | 12 | ✅ All pass |
+| `tests/constraint_text_test.py` | 12 | ✅ All pass |
+| `tests/two_stage_parse_test.py` | 12 | ✅ All pass |
 | `tests/main_test.py` | 7 | ✅ All pass |
-| `tests/partial_test.py` | 6 | ✅ All pass |
+| `tests/partial_test.py` | 7 | ✅ All pass |
+| `tests/palette_test.py` | 6 | ✅ All pass |
 | `tests/conformance_test.py` | 123 | ✅ All pass (100%) |
-| **Total** | **1274** | **1151 fast + 123 conformance pass (24 skipped: optional deps)** |
+| **Total** | **1609** | **1486 fast + 123 conformance pass (2 skipped: optional deps)** |
 
 ### Documentation
 
@@ -339,6 +348,31 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 ---
 
 ## Completed Since v0.27.0
+
+### Round-Trip Fidelity Close-Out + View Body Members (v0.87.0)
+
+- **View `filter` / `expose` members** — the last known silent-drop
+  TODOs in the visitor: `view v { filter @e1; expose e1; }` now
+  parses into grammar classes and dumps back losslessly (was
+  `view v ;`).  Grammar classes `ElementFilterMember` / `Expose` /
+  `MembershipExpose` / `NamespaceExpose` implemented.
+- **Guarded entry transitions** — `entry a1; if x > 0 then s2;`
+  round-trips (the visitor handler probed nonexistent ctx attributes
+  and the dict shape crashed the grammar class).
+- **Typing round-trip on prefixed usages** — `view v : Engine`,
+  `viewpoint`, `concern`, `allocation`, `rendering`, `connection`,
+  `individual` usages keep their typing on dump (visitor emitters
+  previously hardcoded `specialization: None`).
+- **`typed_by_name` for all dispatch kinds** — viewpoint, concern,
+  allocation, rendering, metadata, individual, constraint,
+  calculation, connection, flow, satisfy, dependency now populate
+  typing names (post-pass over `Package.load_from_grammar`
+  children; extraction made idempotent).
+- **`ConnectionUsage.dump()` canonicalization** — bare `connect a to
+  b;` no longer renders `connection  connect\n…`; typed-nameless
+  connections keep the `connection` keyword + typing.
+- **`RootNamespace`** — KerML roots load members; root-level
+  `ElementFilterMember` warns + skips (no `UnboundLocalError`).
 
 ### Storage Query Parity Across Backends (v0.86.0)
 
@@ -460,11 +494,9 @@ All private underscore-prefixed mutation methods given public aliases:
 
 | Location | Description |
 |---|---|
-| `grammar/classes.py` | `PackageBodyElement` name is hardcoded; `#!TODO This isn't always the case` |
-| `definition.py` (`RootNamespace`) | ~~`load_package_body()` raises `NotImplementedError` for `AliasMember` and `Import` nodes~~ **Resolved in v0.58.0** — node types were already dispatched; the real gap (imports/aliases moved to the end of the package body on public-API dump) is fixed. |
-| `antlr_visitor.py` ~line 9558 | Top-level attribute multiplicity not captured (nested attributes work) |
-| `definition.py` | Dead code — duplicate `elif inner_class == "ActionUsage"` block |
-| `usage.py` | ~~Type relationships (`: TypeName`) not preserved in `load_from_grammar()`~~ **Fixed in v0.57.0** — `_extract_specialization_info()` hoisted to base `Usage`; new `Usage.typed_by_name` populates on all usage kinds. `typedby` object resolution is a follow-up. |
+| `antlr_visitor.py` | ~~Top-level attribute multiplicity not captured~~ **Resolved** — bounds since v0.40.0, `ordered`/`nonunique` flags since v0.59.0 (note: `nonunique ordered` canonicalizes to `ordered nonunique` on dump; grammatically identical). |
+| `definition.py` (`RootNamespace`) | ~~`load_package_body()` raises `NotImplementedError` for `AliasMember` and `Import` nodes~~ **Resolved in v0.58.0** — node types were already dispatched; the real gap (imports/aliases moved to the end of the package body on public-API dump) is fixed. KerML `NamespaceBodyElement` roots load their members since v0.87.0. |
+| `usage.py` | ~~Type relationships (`: TypeName`) not preserved in `load_from_grammar()`~~ **Fixed in v0.57.0** — `_extract_specialization_info()` hoisted to base `Usage`; `typed_by_name` now populates on all usage kinds, including the prefixed kinds (`view`, `viewpoint`, `concern`, `allocation`, `rendering`, `constraint`, `connection`) whose dispatch branches skipped it — wired via a post-pass in v0.87.0. `typedby` object resolution is a follow-up. |
 | `semantic.py` | `*`/`/` dimension derivation (`mass * speed → ForceValue` inference) not yet implemented (future); `+`/`-` dimension equality and operand-category checks are complete (v0.55.0). |
 | `antlr_parser.py` | SLL error *wording* may differ from LL wording (`missing '}' at '<EOF>'` vs `extraneous input '<EOF>' ...`); source position always matches (v0.56.0). |
 
@@ -476,7 +508,7 @@ All private underscore-prefixed mutation methods given public aliases:
 
 | Feature | Description |
 |---|---|
-| ~Typed-by preservation~ | **Done in v0.57.0** — `_typed_by_name` / `typed_by_name` preserved for all usage kinds loaded from grammar (`Part`, `Attribute`, `Item`, `Port`, `Action`, `Interface`, `UseCase`, `Requirement`, `State`, behavior children). Resolving `typedby` to the definition *object* via a model pass remains a follow-up. |
+| ~Typed-by preservation~ | **Done in v0.57.0, extended in v0.87.0** — `_typed_by_name` / `typed_by_name` preserved for all usage kinds loaded from grammar. v0.57.0 covered `Part`, `Attribute`, `Item`, `Port`, `Action`, `Interface`, `UseCase`, `Requirement`, `State`, behavior children; v0.87.0 wired the prefixed kinds (`view`, `viewpoint`, `concern`, `allocation`, `rendering`, `constraint`, `connection`, `individual`, `metadata`, `satisfy`) whose dispatch branches assigned grammar manually, and made the *visitor* emit `specialization` for view/viewpoint/concern/allocation/rendering/connection/individual so `view v : Engine` round-trips its typing. Resolving `typedby` to the definition *object* via a model pass remains a follow-up. |
 | ~Fix top-level attribute multiplicity~ | **Verified fixed (v0.40.0) + flags bug fixed in v0.59.0** — bounds (`[N]`, `[N..M]`, `[*]`) already survived since v0.40.0 (docs were stale); the real remaining bug was `ordered`/`nonunique` hardcoded `False` in the visitor extractors plus a `MultiplicityPart.dump()` XOR-guard that dropped `ordered`. All fixed. |
 | ~AliasMember / Import handling~ | **Done in v0.58.0** — nodes were already parsed and held on `Package.imports` (definition.py); the gap was `_ensure_body()` reordering imports/aliases to the end of the body on dump. Source-order interleaving now preserved in both Model and Package rebuild paths. |
 
@@ -485,9 +517,9 @@ All private underscore-prefixed mutation methods given public aliases:
 | Feature | Description |
 |---|---|
 | ~Feature chain type resolution~ | **Done in v0.60.0** — `ReferenceCollector` tags reference kind (`typing`/`subsetting`/`redefinition`/`subclassification`); chain check applies only to genuine feature chains (fixes false `INCOMPATIBLE_FEATURE_CHAIN` on every qualified type name like `ScalarValues::Real`). Dotted expression chains (`wheels.hub.mass`) resolve through the declared *type* of each feature, following `:>` inheritance; members of an enclosing usage's declared type (`part myCar : Car { attribute x :> engine::power; }`) resolve for `::`, `.`, and single-member references (`_resolve_through_context`); inherited chain features advance to their declared type in the compatibility check. 17 tests. |
-| Connection multiplicity ends | `connect X[0..1] to Y[1]` multiplicity in connector ends |
-| Nested `:>>` redefines in return | `return attribute X : Type { :>> feature = expr; }` |
-| Connector end compatibility | Full type-assignability check in `_check_connector_ends_compatible()` |
+| ~Connection multiplicity ends~ | **Verified fixed (v0.87.0)** — `connect c1[0..1] to c2[1];` parses and the multiplicity ends survive the round-trip (round-trip test `test_bare_connect_dump_canonical`). |
+| ~Nested `:>>` redefines in return~ | **Verified working (v0.87.0)** — `return attribute X : Type { :>> feature = expr; }` parses and round-trips. |
+| ~Connector end compatibility~ | **Done in v0.76.0** — full type-assignability check in `_check_connector_ends_compatible()` flags `CONNECTOR_END_TYPE_MISMATCH` (warning). |
 
 ### Low Priority
 
