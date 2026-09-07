@@ -11,7 +11,7 @@ already knows.
 | Field | Value |
 |-------|-------|
 | Name | sysmlpy |
-| Current version | 0.87.0 |
+| Current version | 0.88.0 |
 | Language | Python 3.9+ |
 | Package manager | **Poetry** (use `poetry run` for all commands) |
 | Test runner | pytest via `poetry run pytest` |
@@ -43,7 +43,7 @@ poetry run pytest tests/ --tb=short -q
 
 ### Grammar test status
 
-All **153 grammar round-trip tests pass** (100%) as of v0.87.0.
+All **160 grammar round-trip tests pass** (100%) as of v0.88.0.
 
 ---
 
@@ -131,12 +131,12 @@ else:
 
 ## Test File Map
 
-Counts from `pytest --collect-only` at v0.87.0 (1609 total: 1486 + 123 conformance).
+Counts from `pytest --collect-only` at v0.88.0 (1618 total: 1495 + 123 conformance).
 
 | File | Count | What it tests |
 |------|-------|--------------|
-| `grammar_test.py` | 153 (all pass) | Parse → grammar object → `dump()` round-trips |
-| `class_test.py` | 79 | Programmatic API: `Part()`, `Action()`, `dump()`, etc. |
+| `grammar_test.py` | 160 (all pass) | Parse → grammar object → `dump()` round-trips |
+| `class_test.py` | 81 | Programmatic API: `Part()`, `Action()`, `dump()`, etc. |
 | `main_test.py` | 7 | `load()` / `loads()` / `load_grammar()` public API |
 | `partial_test.py` | 7 | Partial-parse recovery (`loads_partial` / `load_partial`) |
 | `resolve_test.py` | 12 | `Model.resolve_types()` typedby resolution |

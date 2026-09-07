@@ -2,7 +2,7 @@
 
 > **For:** Future agents and team members
 > **Last Updated:** September 5, 2026
-> **Current Version:** v0.87.0
+> **Current Version:** v0.88.0
 > **Repository:** https://github.com/mycr0ft/sysmlpy
 > **Roadmap:** the 10-goal Adoption Roadmap (docs/archive/DEVELOPMENT_PLAN.md,
 > now archived) is **complete** as of v0.77.0 — see CHANGELOG.md

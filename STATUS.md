@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.87.0** (2026-09-06)
+Current version: **v0.88.0** (2026-09-06)
 
 ---
 
@@ -168,13 +168,15 @@ These classes are fully implemented, have programmatic construction, `dump()` se
 
 ### Grammar Round-Trip Coverage (parse → dump)
 
-**153 / 153 tests passing (100%)** as of v0.87.0.
+**160 / 160 tests passing (100%)** as of v0.88.0.
 
-The suite grew from 96 to 153 cases (full-model round-trips drawn from the
+The suite grew from 96 to 160 cases (full-model round-trips drawn from the
 OMG spec corpus, including ActionTest / ControlNodeTest / DecisionTest
 action-body successions; v0.87.0 added view filter/expose members, guarded
 entry transitions, typed-nameless connections, and typed prefixed-usage
-round-trips). Earlier corpus-level fixes: implicit-package wrap vs trailing
+round-trips; v0.88.0 added usage-body imports, satisfy valueparts, and
+accept-member name/typing/multiplicity round-trips). Earlier corpus-level
+fixes: implicit-package wrap vs trailing
 line comments, MetadataFeature /
 TextualRepresentation annotating elements, missing succession-member
 classes, WHEN triggers, and malformed interface ends.
@@ -299,15 +301,15 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 
 ### Test Coverage
 
-Counts from `pytest --collect-only` at v0.87.0 (1609 total).
+Counts from `pytest --collect-only` at v0.88.0 (1618 total).
 
 | Test file | Tests | Status |
 |---|---|---|
-| `tests/grammar_test.py` | 153 | ✅ All pass (100%) |
+| `tests/grammar_test.py` | 160 | ✅ All pass (100%) |
 | `tests/semantic_test.py` | 179 | ✅ All pass |
 | `tests/plantuml_test.py` | 151 | ✅ All pass (incl. official-notation tests) |
 | `tests/store_test.py` | 121 | Pass (optional deps skipped if not installed) |
-| `tests/class_test.py` | 79 | ✅ All pass |
+| `tests/class_test.py` | 81 | ✅ All pass |
 | `tests/traceability_test.py` | 46 | ✅ All pass |
 | `tests/interchange_test.py` | 38 | ✅ All pass |
 | `tests/evaluator_test.py` | 44 | ✅ All pass |
@@ -332,7 +334,7 @@ Counts from `pytest --collect-only` at v0.87.0 (1609 total).
 | `tests/partial_test.py` | 7 | ✅ All pass |
 | `tests/palette_test.py` | 6 | ✅ All pass |
 | `tests/conformance_test.py` | 123 | ✅ All pass (100%) |
-| **Total** | **1609** | **1486 fast + 123 conformance pass (2 skipped: optional deps)** |
+| **Total** | **1618** | **1495 fast + 123 conformance pass (2 skipped: optional deps)** |
 
 ### Documentation
 
@@ -348,6 +350,24 @@ Counts from `pytest --collect-only` at v0.87.0 (1609 total).
 ---
 
 ## Completed Since v0.27.0
+
+### Control-Flow Member Fidelity + Usage-Body Imports (v0.88.0)
+
+- **Usage-body imports** — `part p1 { private import Q::*; }` (and
+  public/protected/recursive forms) round-trip; the visitor now
+  dispatches `importRule` in every body and `DefinitionBodyItem`
+  handles the Import relationship.
+- **`satisfy` valueparts** — `satisfy s1 : R = 3;` keeps `= 3` (the
+  emitter now uses the shared `_visit_value_part` helper; the
+  expression sat one level below where it probed).
+- **`accept` members** — `accept msg : M;` keeps name + typing
+  (was `accept ;`); multiplicities render in re-parsable source
+  order (`: M[1]`).
+- **Metadata usages navigable** — `metadata m1 : MD;` / `@m1 : MD;`
+  / `about` forms surface as Metadata children with name +
+  typed_by_name (`find('m1')` works).
+- **Nested rendering usages** — `part w { rendering r2 : E; }`
+  creates a Rendering child with name + typed_by_name.
 
 ### Round-Trip Fidelity Close-Out + View Body Members (v0.87.0)
 

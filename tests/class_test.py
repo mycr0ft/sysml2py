@@ -1007,3 +1007,46 @@ def test_typed_by_name_nested_connection():
     conns = [c for c in veh.children if type(c).__name__ == "Connection"]
     assert len(conns) == 1
     assert conns[0].typed_by_name == "CD"
+
+
+def test_nested_rendering_api_object():
+    """v0.88.0: nested ``rendering r2 : E;`` inside a part body now
+    surfaces as a Rendering child (dump always worked via the grammar
+    tree)."""
+    import sysmlpy
+    text = """package P {
+        part def E;
+        part w {
+            rendering r2 : E;
+        }
+    }"""
+    m = sysmlpy.loads(text)
+    el = _find_by_name(m, "r2")
+    assert el is not None, "nested rendering missing from model tree"
+    assert type(el).__name__ == "Rendering"
+    assert el.typed_by_name == "E"
+    # dump unchanged
+    assert "rendering" in m.dump()
+
+
+def test_metadata_usage_api_object():
+    """v0.88.0: package-level ``metadata m1 : MD;`` (and the ``@`` /
+    ``about`` spellings) surface as a navigable Metadata child with
+    typed_by_name — previously silently skipped (find('m1') failed)."""
+    import sysmlpy
+    for src in ("metadata m1 : MD;", "@m1 : MD;"):
+        text = "package P {{ metadata def MD; {} }}".format(src)
+        m = sysmlpy.loads(text)
+        el = _find_by_name(m, "m1")
+        assert el is not None, f"{src!r}: metadata usage missing from model tree"
+        assert type(el).__name__ == "Metadata"
+        assert el.name == "m1"
+        assert el.typed_by_name == "MD"
+        # dump preserved (canonical @ form)
+        assert "@ m1 : MD" in m.dump()
+    # about form annotating a sibling
+    text = "package P { part def W; metadata m1 : MD about W; }"
+    m = sysmlpy.loads(text)
+    el = _find_by_name(m, "m1")
+    assert el is not None and el.name == "m1"
+    assert "@ m1 : MD about W" in m.dump()

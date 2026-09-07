@@ -2492,14 +2492,15 @@ def _make_satisfy_requirement_usage_dict(sru_ctx, prefix=None):
                 }
             }
     
-    # Extract valuePart
+    # Extract valuePart (``satisfy s1 : R = 3;``)
+    # valuePart : featureValue ; featureValue : (EQ | COLON_EQ |
+    # DEFAULT …) ownedExpression — use the shared extractor, which
+    # handles the featureValue wrapper and the EQ/COLON_EQ/DEFAULT
+    # flags (v0.88.0 — previously read vp.ownedExpression() directly,
+    # which is one level too high, so the value was dropped).
     valuepart = None
     if hasattr(sru_ctx, 'valuePart') and sru_ctx.valuePart():
-        vp = sru_ctx.valuePart()
-        if hasattr(vp, 'ownedExpression') and vp.ownedExpression():
-            expr = _visit_owned_expression(vp.ownedExpression())
-            if expr:
-                valuepart = {"name": "ValuePart", "ownedRelationship": expr}
+        valuepart = _visit_value_part(sru_ctx.valuePart())
     
     # Extract satisfactionSubjectMember (after 'by')
     ssm = None
@@ -5566,6 +5567,8 @@ def _visit_payload_feature(ctx):
     PayloadFeature class expects:
       identification, valuepart, multiplicity1, multiplicity2, ownedRelationship (OwnedFeatureTyping), pfsp
     For 'accept VehicleStartSignal': ownedRelationship contains the type name.
+    For 'accept msg : M': identification + pfsp (v0.88.0 — previously
+    hardcoded to None, so the member's name and typing were dropped).
     """
     if ctx is None:
         return None
@@ -5598,14 +5601,49 @@ def _visit_payload_feature(ctx):
                     }
                 }
     
+    # identification (``accept msg : M`` — first grammar alternative:
+    # ``identification payloadFeatureSpecializationPart valuePart?``)
+    identification = None
+    if hasattr(ctx, 'identification') and ctx.identification():
+        ident = ctx.identification()
+        if ident:
+            name_list = ident.name() if hasattr(ident, 'name') else None
+            if name_list and isinstance(name_list, list):
+                if len(name_list) == 2:
+                    shortname = name_list[0].getText()
+                    name = name_list[1].getText()
+                elif len(name_list) == 1:
+                    name_text = name_list[0].getText()
+                    name = name_text
+                    shortname = None
+                else:
+                    name = None
+                    shortname = None
+                identification = {
+                    "name": "Identification",
+                    "declaredShortName": shortname,
+                    "declaredName": name
+                }
+    
+    # pfsp (the ``: M[1]`` specializations after the name)
+    pfsp = None
+    if hasattr(ctx, 'payloadFeatureSpecializationPart') and ctx.payloadFeatureSpecializationPart():
+        pfsp = _build_pfsp_from_ctx(ctx.payloadFeatureSpecializationPart())
+    
+    # valuePart (``accept msg = 3`` — ``identification valuePart``
+    # alternative)
+    valuepart = None
+    if hasattr(ctx, 'valuePart') and ctx.valuePart():
+        valuepart = _visit_value_part(ctx.valuePart())
+    
     return {
         "name": "PayloadFeature",
-        "identification": None,
-        "valuepart": None,
+        "identification": identification,
+        "valuepart": valuepart,
         "multiplicity1": None,
         "multiplicity2": None,
         "ownedRelationship": owned_rel,
-        "pfsp": None
+        "pfsp": pfsp
     }
 
 
@@ -10008,6 +10046,21 @@ def _visit_definition_body_item_dict(item_ctx, is_interface=False):
     inner_element = None
     wrapper = None
     
+    # Check for importRule first (first grammar alternative).
+    # Imports are legal in every body — usage bodies included
+    # (``part p1 { private import Q::*; }``).  Reuse the package-body
+    # Import dict shape and wrap it directly as the body item's
+    # relationship (DefinitionBodyItem dispatches on item["name"],
+    # same convention as RootNamespace) — previously silently
+    # dropped (v0.88.0).
+    if hasattr(item_ctx, 'importRule') and item_ctx.importRule():
+        import_dict = _visit_import_rule_dict(item_ctx.importRule())
+        if import_dict is not None:
+            return {
+                "name": "InterfaceBodyItem" if is_interface else "DefinitionBodyItem",
+                "ownedRelationship": [import_dict],
+            }
+    
     # Check for occurrenceUsageElement (part, item, port, action, etc.)
     if hasattr(item_ctx, 'occurrenceUsageElement') and item_ctx.occurrenceUsageElement():
         occ_elem = item_ctx.occurrenceUsageElement()
@@ -14168,6 +14221,24 @@ def _build_full_specialization_from_ud(ud):
     if not specs and multiplicity is None:
         return None
     
+    specialization_list = _feature_specialization_dicts(specs)
+
+    return {
+        "name": "FeatureSpecializationPart",
+        "specialization": specialization_list,
+        "multiplicity": multiplicity,
+        "specialization2": [],
+        "multiplicity2": None,
+    }
+
+
+def _feature_specialization_dicts(specs):
+    """Build FeatureSpecialization dicts from featureSpecialization ctxs.
+
+    Shared core for the FeatureSpecializationPart (usages) and
+    PayloadFeatureSpecializationPart (payload features, e.g. accept
+    members) builders.  Handles typings, redefinitions, subsettings and
+    references."""
     specialization_list = []
     
     for spec in specs:
@@ -14292,12 +14363,43 @@ def _build_full_specialization_from_ud(ud):
                     }
                 })
 
+    return specialization_list
+
+
+def _build_pfsp_from_ctx(psp_ctx):
+    """Build a PayloadFeatureSpecializationPart dict from a
+    payloadFeatureSpecializationPart context.
+
+    Grammar: ``featureSpecialization+ multiplicityPart?
+    featureSpecialization* | multiplicityPart featureSpecialization+``.
+    Used by payload features (e.g. ``accept msg : M[1]``) — v0.88.0,
+    previously hardcoded to None so the member's typing was dropped.
+    """
+    if psp_ctx is None:
+        return None
+
+    first_group = []
+    second_group = []
+    seen_multiplicity = False
+    for child in psp_ctx.children or []:
+        child_name = type(child).__name__
+        if child_name == 'MultiplicityPartContext':
+            seen_multiplicity = True
+        elif child_name == 'FeatureSpecializationContext':
+            (second_group if seen_multiplicity else first_group).append(child)
+
+    specs = first_group + second_group
+    specialization_list = _feature_specialization_dicts(specs)
+    mp = _get_multiplicity_part(psp_ctx)
+
+    if not specialization_list and mp is None:
+        return None
+
     return {
-        "name": "FeatureSpecializationPart",
-        "specialization": specialization_list,
-        "multiplicity": multiplicity,
-        "specialization2": [],
-        "multiplicity2": None,
+        "name": "PayloadFeatureSpecializationPart",
+        "ownedRelationship": _feature_specialization_dicts(first_group),
+        "ownedRelationship2": _feature_specialization_dicts(second_group),
+        "mp": mp,
     }
 
 

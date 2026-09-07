@@ -1098,6 +1098,14 @@ class Usage(Searchable):
                         a.grammar = inner
                         a.parent = self
                         self.children.append(a)
+                    elif inner.__class__.__name__ == "RenderingUsage":
+                        # v0.88.0: nested ``rendering r2 : E;`` inside a
+                        # part/item body was dumped (via the grammar
+                        # tree) but never surfaced as a public-API
+                        # Rendering child.
+                        r = Rendering().load_from_grammar(inner)
+                        r.parent = self
+                        self.children.append(r)
                     elif inner.__class__.__name__ == "PortionUsage":
                         c = Part().load_from_grammar(inner)
                         c.parent = self

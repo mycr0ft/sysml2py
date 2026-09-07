@@ -5098,6 +5098,12 @@ class DefinitionBodyItem:
                         self.children.append(NonOccurrenceUsageMember(item))
                     elif item["name"] == "DefinitionMember":
                         self.children.append(DefinitionMember(item))
+                    elif item["name"] == "Import":
+                        # Imports are legal in usage bodies too
+                        # (``part p1 { private import Q::*; }``) —
+                        # same dict shape as package-body imports
+                        # (v0.88.0).
+                        self.children.append(Import(item))
                     else:
                         print(f"DefinitionBodyItem: unknown relationship {definition}")  # pragma: no cover
 
@@ -5255,6 +5261,13 @@ class NonOccurrenceUsageElement:
                 self.children = CalculationUsage(definition["ownedRelatedElement"])
             elif name == "MetadataUsage":
                 self.children = MetadataUsage(definition["ownedRelatedElement"])
+            elif name == "MetadataFeature":
+                # v0.88.0: a Metadata public-API child re-serializes its
+                # MetadataFeature grammar through NonOccurrenceUsageElement
+                # (the _NonOccurrenceUsage wrapping) — accept it here so
+                # the rebuild round-trips instead of crashing on
+                # children=None.
+                self.children = MetadataFeature(definition["ownedRelatedElement"])
             elif name == "EndFeatureUsage":
                 self.children = EndFeatureUsage(definition["ownedRelatedElement"])
             elif name == "AssertConstraintUsage":
@@ -7318,17 +7331,22 @@ class PayloadFeatureSpecializationPart:
         if self.mp is None:
             for child in self.children:
                 output.append(child.dump())
+        elif len(self.children) == 0:
+            # multiplicityPart featureSpecialization+ alternative —
+            # multiplicity genuinely comes first (``[1] : M``).
+            output.append(self.mp.dump())
+            for child in self.children2:
+                output.append(child.dump())
         else:
-            if len(self.children2) == 0:
-                output.append(self.mp.dump())
-                for child in self.children:
-                    output.append(child.dump())
-            else:
-                for child in self.children:
-                    output.append(child.dump())
-                output.append(self.mp.dump())
-                for child in self.children2:
-                    output.append(child.dump())
+            # featureSpecialization+ multiplicityPart? featureSpecialization*
+            # — natural source order (``: M[1]``).  The previous
+            # mp-first rendering produced ``[1] : M`` for the first
+            # alternative, which does not re-parse (v0.88.0).
+            for child in self.children:
+                output.append(child.dump())
+            output.append(self.mp.dump())
+            for child in self.children2:
+                output.append(child.dump())
         return "".join(output)
 
     def get_definition(self):

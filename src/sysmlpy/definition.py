@@ -970,6 +970,26 @@ class Package(Searchable):
         """
         return list(self._imports)
 
+    def _add_metadata_child(self, mf):
+        """Surface a MetadataFeature grammar object as a Metadata child.
+
+        Package-level ``metadata m1 : MD;`` members parse into a
+        MetadataFeature (the ``@``-annotation form) which the public-API
+        tree previously dropped (v0.88.0)."""
+        md_obj = Metadata()
+        md_obj.grammar = mf
+        ident = getattr(mf, 'identification', None)
+        declared = getattr(ident, 'declaredName', None)
+        if declared:
+            md_obj.name = declared
+        typing = getattr(mf, 'typing', None)
+        qn = getattr(getattr(getattr(typing, 'type', None), 'type', None), 'names', None)
+        if qn:
+            md_obj._typed_by_name = '::'.join(qn)
+        md_obj.parent = self
+        self.children.append(md_obj)
+        return md_obj
+
     def load_from_grammar(self, grammar):
         """Load package structure from a parsed grammar object.
 
@@ -1295,6 +1315,30 @@ class Package(Searchable):
                             m.name = feat_decl.identification.declaredName
                 m.parent = self
                 self.children.append(m)
+            elif inner_class == "AnnotatingElement":
+                # v0.88.0: a package-level ``metadata m1 : MD;`` member
+                # parses as DefinitionElement -> AnnotatingElement ->
+                # MetadataFeature (the ``@``-annotation form). Surface it
+                # as a navigable Metadata public-API object — previously
+                # it was silently skipped and find('m1') failed. The
+                # dump path already round-trips it through the grammar
+                # tree, so this is purely API-side. Other annotating
+                # elements (Documentation, CommentSysML,
+                # TextualRepresentation) keep their existing handling.
+                mf = getattr(inner_element, 'children', None)
+                if mf is not None and mf.__class__.__name__ == "MetadataFeature":
+                    self._add_metadata_child(mf)
+                else:
+                    print(f"[Package.load_from_grammar] Unknown class: {inner_class} - skipping")  # pragma: no cover
+            elif inner_class == "NonOccurrenceUsageElement":
+                # v0.88.0: the rebuilt shape after _ensure_body wraps a
+                # MetadataFeature the same way attribute usages are
+                # wrapped — surface it like the AnnotatingElement form.
+                mf = getattr(inner_element, 'children', None)
+                if mf is not None and mf.__class__.__name__ == "MetadataFeature":
+                    self._add_metadata_child(mf)
+                else:
+                    print(f"[Package.load_from_grammar] Unknown class: {inner_class} - skipping")  # pragma: no cover
             elif inner_class == "RenderingDefinition":
                 r = Rendering()
                 r.grammar = inner_element

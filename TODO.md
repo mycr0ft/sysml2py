@@ -218,6 +218,57 @@ are complete.  Follow-up work is organized under the
 
 ---
 
+## Next Batch — v0.88.0: control-flow member fidelity + usage-body imports
+
+Follow-ups surfaced by the v0.87.0 fidelity sweep, all verified against
+the v0.87.0 tree on 2026-09-06 (fast suite 1484 passed / 2 skipped,
+conformance 123/123).
+
+- [x] **A1 — `accept` member name + typing silently dropped**
+  (`action a1 { accept msg : M; }` dumps as `accept ;` — same silent-drop
+  class as v0.79.1 `ref` / v0.87.0 filter-expose).  `_visit_payload_feature`
+  (antlr_visitor.py) hardcodes `identification`/`pfsp` to None and only
+  handles the `ownedFeatureTyping` alternative, but
+  `payloadFeature : identification payloadFeatureSpecializationPart
+  valuePart? | identification valuePart | ownedFeatureTyping …` —
+  `accept msg : M` parses via the first alternative.  Add a
+  `_build_pfsp_from_ctx` helper (PayloadFeatureSpecializationPart dict:
+  ownedRelationship/ownedRelationship2/mp, reusing the per-spec
+  FeatureSpecialization dict builders) and extract identification +
+  pfsp + valuePart.  Grammar classes are already complete
+  (`PayloadFeature`, `PayloadFeatureSpecializationPart` at
+  classes.py:7225/7301).
+- [x] **A2 — `satisfy` valuepart dropped on dump**
+  (`satisfy s1 : R = 3;` dumps as `satisfy s1 : R ;`).  The satisfy
+  emitter (antlr_visitor.py ~:2495) reads `vp.ownedExpression()` off the
+  ValuePartContext, but `valuePart : featureValue` and
+  `featureValue : (EQ | COLON_EQ | DEFAULT …) ownedExpression` — the
+  expression sits one level down.  Replace the inline extraction with
+  the existing `_visit_value_part()` helper (handles EQ/COLON_EQ/DEFAULT
+  flags).  `SatisfyRequirementUsage` grammar class already parses +
+  dumps `valuepart` (classes.py:5353).
+- [x] **A3 — usage-body imports dropped**
+  (`part p1 { private import Q::*; }` dumps as `part p1;` — imports are
+  legal in every body per `definitionBodyItem : importRule | …`).
+  `_visit_definition_body_item_dict` (antlr_visitor.py:9983) never
+  checks `item_ctx.importRule()`; `DefinitionBodyItem` (classes.py:5089)
+  has no `"Import"` dispatch.  Mirror the package-body handling
+  (`_visit_import_rule_dict` at antlr_visitor.py:893).
+- [x] **A4 — `metadata` usage not surfaced as a public-API object**
+  (`metadata m1 : MD;` parses as a MetadataFeature annotating element;
+  the model tree wraps the *definition* as a Metadata object and the
+  usage vanishes — `find('m1')` fails).  Size the wiring during
+  implementation; at minimum document the annotation semantics and make
+  the usage navigable.
+- [x] **A5 — nested `rendering` usage has no public-API object**
+  (`part w { rendering r2 : E; }` dumps correctly — v0.87.0 visitor fix —
+  but usage.py's nested walk never creates a `Rendering` child).
+  Add a RenderingUsage dispatch to the nested usage walk.
+- [x] Round-trip / API tests for each fix in `tests/grammar_test.py` /
+      `tests/class_test.py`.
+
+---
+
 ## Next Batch — v0.87.0: round-trip fidelity close-out
 
 Theme: close the last known silent-drop round-trip gaps (the v0.79.1

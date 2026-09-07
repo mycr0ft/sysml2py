@@ -1,5 +1,49 @@
 # CHANGELOG
 
+## v0.88.0 (2026-09-06)
+
+**Control-flow member fidelity + usage-body imports.**
+
+All four follow-ups surfaced by the v0.87.0 fidelity sweep, plus one
+bonus API gap:
+
+1. *Usage-body imports* (A3) — `part p1 { private import Q::*; }`
+   dumped as `part p1;`.  `_visit_definition_body_item_dict` now
+   dispatches `importRule` (the first `definitionBodyItem`
+   alternative) and `DefinitionBodyItem` handles the `Import`
+   relationship — the same dict shape package bodies use.  public /
+   protected / recursive (`::*::**`) forms all round-trip.
+2. *`satisfy` valuepart* (A2) — `satisfy s1 : R = 3;` dumped as
+   `satisfy s1 : R ;`.  The emitter read `vp.ownedExpression()` off
+   the ValuePartContext, but `valuePart : featureValue` puts the
+   expression one level down; it now uses the shared
+   `_visit_value_part()` helper (EQ / COLON_EQ / DEFAULT flags
+   preserved).  The `by` subject form keeps working.
+3. *`accept` member name + typing* (A1) — `action a1 { accept msg
+   : M; }` dumped as `accept ;`.  `_visit_payload_feature`
+   hardcoded `identification`/`pfsp` to None and only handled the
+   `ownedFeatureTyping` alternative; it now extracts the
+   identification, the payloadFeatureSpecializationPart (new
+   `_build_pfsp_from_ctx`, sharing the
+   `_feature_specialization_dicts` core extracted from the usage
+   builder) and the valuePart.  Multiplicity placement fixed in
+   `PayloadFeatureSpecializationPart.dump()` (natural source order
+   `: M[1]` — the previous mp-first rendering produced `[1] : M`,
+   which does not re-parse).
+4. *Metadata usages navigable* (A4) — package-level
+   `metadata m1 : MD;` (and `@m1 : MD` / `about` forms) parses into a
+   MetadataFeature annotation the public-API tree silently dropped
+   (`find('m1')` failed).  Package.load_from_grammar now surfaces it
+   as a Metadata child with name + typed_by_name; `MetadataFeature`
+   is also accepted by `NonOccurrenceUsageElement` so the
+   `_ensure_body` rebuild round-trips.
+5. *Nested `rendering` usages* (A5) — `part w { rendering r2 : E; }`
+   dumped correctly but produced no public-API object; the nested
+   usage walk now creates a `Rendering` child (name + typed_by_name
+   wired).
+
+Fast suite 1493 passed / 2 skipped; conformance 123/123.
+
 ## v0.87.0 (2026-09-06)
 
 **Round-trip fidelity close-out + view body members.**

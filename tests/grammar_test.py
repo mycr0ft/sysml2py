@@ -3901,3 +3901,106 @@ def test_prefixed_usage_typings_roundtrip():
     a = model_loads(text)
     b = classtree(a)
     assert strip_ws(text) == strip_ws(b.dump())
+
+
+# ---------------------------------------------------------------------------
+# v0.88.0: control-flow member fidelity + usage-body imports
+# ---------------------------------------------------------------------------
+
+def test_usage_body_import_roundtrip():
+    """Imports are legal in usage bodies (``part p1 { private import
+    Q::*; }``) — previously silently dropped on dump."""
+    text = """package Q {
+        part def E;
+    }
+    package P {
+        part p1 {
+            private import Q::*;
+        }
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_usage_body_import_visibilities_roundtrip():
+    """public/protected/recursive import forms round-trip in usage
+    bodies."""
+    for body in ("public import Q::*;", "protected import Q::E;",
+                 "private import Q::*::**;"):
+        text = "package Q { part def E; } package P { part p1 { %s } }" % body
+        a = model_loads(text)
+        b = classtree(a)
+        assert body in b.dump(), f"{body!r} lost on dump: {b.dump()!r}"
+
+
+def test_satisfy_valuepart_roundtrip():
+    """``satisfy s1 : R = 3;`` must keep the value part on dump
+    (previously dropped — the emitter read ownedExpression() off the
+    ValuePartContext instead of descending into featureValue)."""
+    text = """package P {
+        requirement def R;
+        satisfy s1 : R = 3;
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_satisfy_by_member_roundtrip():
+    """``satisfy s1 : R by p1;`` keeps working alongside the valuepart
+    fix."""
+    text = """package P {
+        requirement def R;
+        part p1;
+        satisfy s1 : R by p1;
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_accept_member_typing_roundtrip():
+    """``accept msg : M;`` must keep the member name and typing on dump
+    (previously ``accept ;`` — _visit_payload_feature hardcoded
+    identification/pfsp to None)."""
+    text = """package P {
+        item def M;
+        action a1 {
+            accept msg : M;
+        }
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_accept_member_multiplicity_roundtrip():
+    """``accept msg2 : M[1];`` multiplicity must stay attached to the
+    typing (``: M[1]``, re-parsable) — not move next to the name."""
+    text = """package P {
+        item def M;
+        action a1 {
+            accept msg : M;
+            accept msg2 : M[1];
+            accept m3 : M[2..*];
+        }
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+    # dump must re-parse to the identical text (canonicalization check)
+    assert strip_ws(classtree(model_loads(b.dump())).dump()) == strip_ws(b.dump())
+
+
+def test_accept_member_type_only_roundtrip():
+    """``accept : M;`` (ownedFeatureTyping alternative) keeps working."""
+    text = """package P {
+        item def M;
+        action a1 {
+            accept : M;
+        }
+    }"""
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
