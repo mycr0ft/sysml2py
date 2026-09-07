@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.88.0** (2026-09-06)
+Current version: **v0.88.1** (2026-09-06)
 
 ---
 
@@ -168,14 +168,15 @@ These classes are fully implemented, have programmatic construction, `dump()` se
 
 ### Grammar Round-Trip Coverage (parse → dump)
 
-**160 / 160 tests passing (100%)** as of v0.88.0.
+**165 / 165 tests passing (100%)** as of v0.88.1.
 
-The suite grew from 96 to 160 cases (full-model round-trips drawn from the
+The suite grew from 96 to 165 cases (full-model round-trips drawn from the
 OMG spec corpus, including ActionTest / ControlNodeTest / DecisionTest
 action-body successions; v0.87.0 added view filter/expose members, guarded
 entry transitions, typed-nameless connections, and typed prefixed-usage
 round-trips; v0.88.0 added usage-body imports, satisfy valueparts, and
-accept-member name/typing/multiplicity round-trips). Earlier corpus-level
+accept-member name/typing/multiplicity round-trips; v0.88.1 added
+nested-definition and typed-transition round-trips). Earlier corpus-level
 fixes: implicit-package wrap vs trailing
 line comments, MetadataFeature /
 TextualRepresentation annotating elements, missing succession-member
@@ -301,15 +302,15 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 
 ### Test Coverage
 
-Counts from `pytest --collect-only` at v0.88.0 (1618 total).
+Counts from `pytest --collect-only` at v0.88.1 (1626 total).
 
 | Test file | Tests | Status |
 |---|---|---|
-| `tests/grammar_test.py` | 160 | ✅ All pass (100%) |
+| `tests/grammar_test.py` | 165 | ✅ All pass (100%) |
 | `tests/semantic_test.py` | 179 | ✅ All pass |
 | `tests/plantuml_test.py` | 151 | ✅ All pass (incl. official-notation tests) |
 | `tests/store_test.py` | 121 | Pass (optional deps skipped if not installed) |
-| `tests/class_test.py` | 81 | ✅ All pass |
+| `tests/class_test.py` | 84 | ✅ All pass |
 | `tests/traceability_test.py` | 46 | ✅ All pass |
 | `tests/interchange_test.py` | 38 | ✅ All pass |
 | `tests/evaluator_test.py` | 44 | ✅ All pass |
@@ -334,7 +335,7 @@ Counts from `pytest --collect-only` at v0.88.0 (1618 total).
 | `tests/partial_test.py` | 7 | ✅ All pass |
 | `tests/palette_test.py` | 6 | ✅ All pass |
 | `tests/conformance_test.py` | 123 | ✅ All pass (100%) |
-| **Total** | **1618** | **1495 fast + 123 conformance pass (2 skipped: optional deps)** |
+| **Total** | **1626** | **1501 fast + 123 conformance pass (2 skipped: optional deps)** |
 
 ### Documentation
 
@@ -350,6 +351,24 @@ Counts from `pytest --collect-only` at v0.88.0 (1618 total).
 ---
 
 ## Completed Since v0.27.0
+
+### Dead-Code Removal + Nested-Definition Fidelity (v0.88.1)
+
+- **410 dead lines deleted** — `_visit_nested_usage` and 11 more
+  zero-reference visitor helpers; the remaining `specialization: None`
+  node-declaration slots verified unreachable (grammar rejects typed
+  declarations there).
+- **Nested definitions round-trip** — `part p { state def X; }` and 16
+  sibling kinds were silently dropped even at the grammar-dump level;
+  the nested dispatcher now covers all package-level kinds.
+- **Nested usages in state bodies surface** — `state s1 { action a1 : A; }`
+  now yields an Action child with name + typed_by_name; nested states
+  keep their children.
+- **Typed transitions** — `transition t1 : T first e1;` keeps `: T`
+  (round-trips, typed_by_name on the Transition object).
+- **Satisfy typing** — members carry typed_by_name; semantic finding:
+  ors is the requirement reference, not the member name (anonymous by
+  design).
 
 ### Control-Flow Member Fidelity + Usage-Body Imports (v0.88.0)
 

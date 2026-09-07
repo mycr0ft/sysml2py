@@ -1203,8 +1203,16 @@ class Usage(Searchable):
                     break
                 node = getattr(node, 'declaration', None)
             spec = getattr(node, 'specialization', None) if node is not None else None
+        # v0.88.1: satisfy members use a different layout — the
+        # ``satisfy s1 : R`` form is the ors+fsp alternative of
+        # SatisfyRequirementUsage (no UsageDeclaration), with the typing
+        # sitting directly on ``fsp`` (FeatureSpecializationPart, which
+        # exposes the same ``specializations`` list).  Fall back to it
+        # when the generic navigation finds nothing.
         if spec is None:
-            return
+            spec = getattr(g, 'fsp', None)
+            if spec is None:
+                return
         for fs in getattr(spec, 'specializations', None) or []:
             rel = getattr(fs, 'relationship', None)
             kind = rel.__class__.__name__ if rel is not None else None
@@ -1375,10 +1383,14 @@ def _load_behavior_child(parent, inner, inner_name):
         c.name = _name_from_declaration(inner)
         c._extract_specialization_info(inner)
         return c
-    if inner_name == "StateUsage":
-        c = State()
-        c.grammar = inner
-        c.name = _name_from_declaration(inner)
+    if inner_name in ("StateUsage", "StateDefinition"):
+        is_def = inner_name == "StateDefinition"
+        c = State(definition=is_def)
+        # v0.88.1: full load path — the manual grammar assignment
+        # skipped the body walk, so nested states/actions inside a
+        # state never surfaced in the API tree
+        # (``part p { state s1 { action a1 : A; } }``).
+        c.load_from_grammar(inner)
         c._extract_specialization_info(inner)
         return c
     if inner_name == "ActionUsage":
@@ -1394,6 +1406,9 @@ def _load_behavior_child(parent, inner, inner_name):
         c = Requirement()
         c.grammar = inner
         c.name = _name_from_declaration(inner)
+        # v0.88.1: the ors+fsp form (``satisfy s1 : R``) has no
+        # UsageDeclaration — the member is anonymous by design (``ors``
+        # is the requirement reference, not the member name).
         c._extract_specialization_info(inner)
         return c
     if inner_name == "VerificationCaseUsage":
@@ -3639,6 +3654,7 @@ class Transition:
         self.is_entry = False
         self.grammar = None
         self.parent = None
+        self.typed_by_name = None
     
     def load_from_grammar(self, grammar, is_entry=False):
         """Load transition from grammar element.
@@ -3937,12 +3953,41 @@ class State(_BehaviorUsage):
                         nested_state.parent = self
                         nested_state.load_from_grammar(usage)
                         self.children.append(nested_state)
+                    else:
+                        # v0.88.1: non-state usages inside a state body
+                        # (``state s1 { action a1 : A; }``) were silently
+                        # dropped from the API tree — route through the
+                        # shared helper like definition bodies do.
+                        nested = _load_behavior_child(self, usage, usage_type)
+                        if nested is not None:
+                            nested.parent = self
+                            self.children.append(nested)
     
     def _extract_transition(self, target_member):
         """Extract transition from TargetTransitionUsageMember."""
         transition = Transition()
         transition.parent = self
         transition.load_from_grammar(target_member)
+        # v0.88.1: typed transitions (``transition t1 : T first ...``)
+        # — Transition is not a Usage subclass, so extract the typing
+        # inline from the declaration chain
+        # (TransitionUsage -> declaration -> FeatureDeclaration).
+        inner = getattr(target_member, 'children', None)
+        if inner is not None:
+            fd = getattr(getattr(inner, 'declaration', None), 'declaration', None)
+            fsp = getattr(fd, 'specialization', None)
+            for fs in getattr(fsp, 'specializations', None) or []:
+                rel = getattr(fs, 'relationship', None)
+                if rel is not None and rel.__class__.__name__ == 'Typings':
+                    tb = getattr(rel, 'typing', None)
+                    for ft in getattr(tb, 'relationships', []) or []:
+                        ftype = getattr(getattr(ft, 'relationship', None), 'type', None)
+                        names = getattr(getattr(ftype, 'type', None), 'names', None)
+                        if names:
+                            transition.typed_by_name = '::'.join(names)
+                            break
+                if transition.typed_by_name is not None:
+                    break
         self.transitions.append(transition)
     
     def _extract_entry_transition(self, entry_member):

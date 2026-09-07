@@ -4004,3 +4004,66 @@ def test_accept_member_type_only_roundtrip():
     a = model_loads(text)
     b = classtree(a)
     assert strip_ws(text) == strip_ws(b.dump())
+
+
+# --- v0.88.1: nested-definition dispatch + typed transitions ---
+
+
+def test_nested_state_definition_roundtrip():
+    """``part p { state def X; }`` was silently dropped — the nested
+    definition dispatcher covered only 7 kinds (v0.88.1)."""
+    text = "package P { part p { state def X; } }"
+    a = model_loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_nested_definition_kinds_roundtrip():
+    """Sibling nested definition kinds were dropped the same way."""
+    for frag in (
+        "action def A;",
+        "requirement def R;",
+        "use case def U;",
+        "enum def E;",
+        "view def V;",
+        "viewpoint def W;",
+        "concern def C;",
+        "metadata def M;",
+        "verification def G;",
+        "individual def I;",
+        "calc def F;",
+    ):
+        text = "package P {{ part p {{ {} }} }}".format(frag)
+        a = model_loads(text)
+        b = classtree(a)
+        assert strip_ws(text) == strip_ws(b.dump()), frag
+
+
+def test_typed_transition_roundtrip():
+    """``transition t1 : T first e1;`` — the usageDeclaration typing was
+    hardcoded to None and silently dropped (v0.88.1)."""
+    text = "package P { state s1 { transition t1 : T first e1 then s2; } }"
+    a = model_loads(text)
+    d = a.dump()
+    assert ": T" in d
+    b = model_loads(d)
+    assert strip_ws(text) == strip_ws(classtree(b).dump())
+
+
+def test_nested_usage_in_state_body_roundtrip():
+    """Nested usages inside a state body were dumped but absent from the
+    API tree; the full load path also keeps nested state children."""
+    text = "package P { part def A; part p { state s1 { action a1 : A; } } }"
+    a = model_loads(text)
+    assert strip_ws(text) == strip_ws(classtree(a).dump())
+    s1 = a.find("s1")[0]
+    assert [(type(c).__name__, c.name) for c in s1.children] == [("Action", "a1")]
+
+
+def test_nested_state_children_survive_nesting():
+    """``part p { state s1 { state s2; } }`` — nested states lost their
+    children because the nested walk skipped the body walk (v0.88.1)."""
+    text = "package P { part p { state s1 { state s2; } } }"
+    a = model_loads(text)
+    s1 = a.find("s1")[0]
+    assert [(type(c).__name__, c.name) for c in s1.children] == [("State", "s2")]

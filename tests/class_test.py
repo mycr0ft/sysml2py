@@ -1050,3 +1050,56 @@ def test_metadata_usage_api_object():
     el = _find_by_name(m, "m1")
     assert el is not None and el.name == "m1"
     assert "@ m1 : MD about W" in m.dump()
+
+
+def test_satisfy_usage_api_object():
+    """v0.88.1: satisfy members carry typed_by_name (the fsp requirement
+    typing) on the API object.  The ors+fsp form (``satisfy s1 : R``)
+    is *anonymous* by design — ``ors`` is the requirement being
+    satisfied (the trace target), NOT the member's name, so naming the
+    member after it was reverted (it made satisfy targets self-resolve
+    in the validator and double-match find_one)."""
+    import sysmlpy
+    for src in ("satisfy s1 : R = 3;", "satisfy s1 : R by p1;"):
+        text = "package P {{ requirement def R; part p1; {} }}".format(src)
+        m = sysmlpy.loads(text)
+        sat = [c for c in m.children[0].children
+               if type(c).__name__ == "Requirement" and c.name != "R"
+               and c.name != "p1"]
+        assert sat, src
+        assert sat[0].typed_by_name == "R"
+        assert sat[0].name != "s1"  # ors is the requirement reference
+    # declaration form keeps its declared name
+    m = sysmlpy.loads("package P { requirement def R; satisfy requirement r1 { doc /* d */; } }")
+    el = _find_by_name(m, "r1")
+    assert el is not None and el.name == "r1"
+    # nested inside a part body surfaces with the typing too
+    m = sysmlpy.loads("package P { requirement def R; part p { satisfy s1 : R by p; } }")
+    sat = [c for c in m.find("p")[0].children
+           if type(c).__name__ == "Requirement"]
+    assert sat and sat[0].typed_by_name == "R"
+
+
+def test_typed_transition_api_object():
+    """v0.88.1: typed transitions carry typed_by_name on the Transition
+    object (was None; the typing lived only on the grammar)."""
+    import sysmlpy
+    m = sysmlpy.loads("package P { state s1 { transition t1 : T first e1 then s2; } }")
+    s1 = m.find("s1")[0]
+    assert s1.transitions and s1.transitions[0].name == "t1"
+    assert s1.transitions[0].typed_by_name == "T"
+    # untyped transitions stay None
+    m = sysmlpy.loads("package P { state s1 { transition t2 then s2; } }")
+    s1 = m.find("s1")[0]
+    assert s1.transitions[0].typed_by_name is None
+
+
+def test_nested_action_in_state_body_api_object():
+    """v0.88.1: ``state s1 { action a1 : A; }`` inside a part — the
+    nested action surfaced with no API object at all."""
+    import sysmlpy
+    m = sysmlpy.loads("package P { part def A; part p { state s1 { action a1 : A; } } }")
+    el = _find_by_name(m, "a1")
+    assert el is not None
+    assert type(el).__name__ == "Action"
+    assert el.typed_by_name == "A"

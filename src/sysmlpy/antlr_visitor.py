@@ -4622,7 +4622,10 @@ def _visit_transition_usage(ctx):
                         "declaredShortName": shortname,
                         "declaredName": decl_name
                     },
-                    "specialization": None
+                    # v0.88.1: ``transition t1 : T first e1;`` — the
+                    # usageDeclaration can carry a typing; it was
+                    # hardcoded to None and silently dropped.
+                    "specialization": _build_full_specialization_from_ud(ud)
                 }
             }
     
@@ -5433,24 +5436,6 @@ def _visit_trigger_action_member(ctx):
     }
 
 
-def _visit_accept_action_usage(ctx):
-    """Visit an acceptActionUsage (trigger in transition) and return a TriggerAction dict."""
-    if ctx is None:
-        return None
-    
-    # Get accept parameter part
-    part = None
-    if hasattr(ctx, 'acceptParameterPart') and ctx.acceptParameterPart():
-        app = ctx.acceptParameterPart()
-        if isinstance(app, list):
-            app = app[0]
-        if app:
-            part = _visit_accept_parameter_part(app)
-    
-    return {
-        "name": "TriggerAction",
-        "part": part
-    }
 
 
 def _visit_accept_parameter_part(ctx):
@@ -11255,68 +11240,10 @@ def _is_binary_operator_token(text):
     return text in _PRECEDENCE_RANK
 
 
-def _is_unary_prefix_token(text):
-    """True if the token text is a recognized unary prefix operator."""
-    return text in _UNARY_PREFIX_TOKENS
 
 
-def _find_split_index(children, left_assoc=True):
-    """Find the index of the operator that should be the TOP of the tree.
-
-    Walks ``children`` (the ANTLR children list of an ownedExpression
-    context, alternating OwnedExpr/TerminalNode) and finds the operator
-    with the LOWEST precedence rank. For left-associative operators
-    at the same rank, returns the RIGHTMOST index (so ``a - b - c``
-    becomes ``(a - b) - c``). For right-associative (``**``/``^``),
-    returns the LEFTMOST index.
-
-    Returns (op_index, op_text) or (None, None) if no binary operator
-    is found.
-    """
-    best_idx = None
-    best_text = None
-    best_rank = None
-    for i, c in enumerate(children):
-        type_name = type(c).__name__
-        if type_name != "TerminalNodeImpl":
-            continue
-        text = c.getText().strip()
-        if text in _FIELD_ACCESS_TOKENS:
-            continue
-        if not _is_binary_operator_token(text):
-            continue
-        rank = _PRECEDENCE_RANK[text]
-        right_assoc = text in ("**", "^")
-        if best_idx is None:
-            best_idx, best_text, best_rank = i, text, rank
-            continue
-        if rank < best_rank:
-            # Lower precedence → becomes the new top
-            best_idx, best_text, best_rank = i, text, rank
-        elif rank == best_rank:
-            # Same precedence: prefer the rightmost for left-assoc,
-            # leftmost for right-assoc
-            if right_assoc:
-                if i < best_idx:
-                    best_idx, best_text = i, text
-            else:
-                if i > best_idx:
-                    best_idx, best_text = i, text
-    return best_idx, best_text
 
 
-def _build_binary_chain(op_text, lhs_owned_ctx, rhs_owned_ctx):
-    """Build a chain for ``lhs OP rhs`` by recursing on each side and
-    splicing the operator at the right layer.
-
-    The lhs and rhs are ANTLR ownedExpression contexts. We recursively
-    emit each, then splice ``op_text`` at the layer corresponding to
-    its precedence. The result is a single OwnedExpression chain
-    with the operator populated at the right layer.
-    """
-    lhs_chain = _emit_structured_expression(lhs_owned_ctx)
-    rhs_chain = _emit_structured_expression(rhs_owned_ctx)
-    return _splice_operator(lhs_chain, _OPERATOR_TO_LAYER[op_text], op_text, rhs_chain)
 
 
 def _splice_operator(lhs_chain, layer_name, op_text, rhs_chain):
@@ -12218,62 +12145,10 @@ def _emit_structured_expression(oe_ctx):
     }
 
 
-def _layer_rank(layer_name):
-    """Return the precedence rank of a layer (using one of its operators)."""
-    ops = _LAYER_TO_OPERATORS.get(layer_name, [])
-    if not ops:
-        return -1
-    return _PRECEDENCE_RANK.get(ops[0], -1)
 
 
-def _get_top_op_text(chain):
-    """Return the operator text at the top op layer of a chain, or None."""
-    top = _rhs_top_op_layer(chain)
-    if top is None:
-        return None
-    path = _LAYER_PATHS.get(top)
-    if not path:
-        return None
-    node = _walk_chain(chain, path)
-    if not isinstance(node, dict):
-        return None
-    op_field = _LAYER_OP_FIELDS.get(top)
-    if op_field == "operation":
-        ops = node.get("operation", [])
-        if ops:
-            return ops[0].get("operator")
-    elif op_field == "operator":
-        op_val = node.get("operator")
-        if isinstance(op_val, list) and op_val:
-            return op_val[0]
-        if isinstance(op_val, str) and op_val:
-            return op_val
-    return None
 
 
-def _get_top_op_rhs_chain(chain):
-    """Return the rhs chain at the top op layer of a chain, or None."""
-    top = _rhs_top_op_layer(chain)
-    if top is None:
-        return None
-    path = _LAYER_PATHS.get(top)
-    if not path:
-        return None
-    node = _walk_chain(chain, path)
-    if not isinstance(node, dict):
-        return None
-    op_field = _LAYER_OP_FIELDS.get(top)
-    if op_field == "operation":
-        ops = node.get("operation", [])
-        if ops:
-            return ops[0].get("operand")
-    elif op_field == "operator":
-        op_val = node.get("operand")
-        if isinstance(op_val, list) and op_val:
-            return op_val[0]
-        if isinstance(op_val, dict):
-            return op_val
-    return None
 
 
 def _add_op_to_layer(sub_dict, layer_name, op_text, rhs_ctx):
@@ -12352,16 +12227,6 @@ def _make_op_dict(layer_name, op_text, operand_dict):
     return {"name": "Operand", "operator": op_text, "operand": operand_dict}
 
 
-def _embed_layer_at_path(lhs_chain, rhs_chain, layer_name):
-    """Copy the operator-bearing fields from ``rhs_chain`` at
-    ``layer_name`` into ``lhs_chain`` at the same layer."""
-    lhs_node = _walk_chain(lhs_chain, _LAYER_PATHS.get(layer_name, []))
-    rhs_node = _walk_chain(rhs_chain, _LAYER_PATHS.get(layer_name, []))
-    if not isinstance(lhs_node, dict) or not isinstance(rhs_node, dict):
-        return
-    op_field = _LAYER_OP_FIELDS.get(layer_name, "operation")
-    if op_field in rhs_node:
-        lhs_node[op_field] = rhs_node[op_field]
 
 
 _LAYER_PATHS = {
@@ -12398,54 +12263,8 @@ def _emit_unary_chain(operand_chain, op_text):
     return operand_chain
 
 
-def _splice_unary(operand_chain, op_text):
-    """Build a chain with the unary operator applied. The unary operator
-    is at the UnaryExpression layer in the chain."""
-    return _emit_unary_chain(operand_chain, op_text)
 
 
-def _emit_base_expression(oe_ctx):
-    """Emit a base expression (no binary operators). This handles
-    literal values, feature references, invocations, and the
-    field-access chains (a.b.c)."""
-    # Try literal first
-    if hasattr(oe_ctx, "baseExpression") and oe_ctx.baseExpression():
-        be_ctx = oe_ctx.baseExpression()
-        text = be_ctx.getText().strip() if hasattr(be_ctx, "getText") else ""
-        # Literal?
-        if hasattr(be_ctx, "literalExpression") and be_ctx.literalExpression():
-            lit_ctx = be_ctx.literalExpression()
-            lit_text = lit_ctx.getText().strip() if hasattr(lit_ctx, "getText") else ""
-            try:
-                value = int(lit_text)
-                primary = _make_literal_integer_primary(value)
-                return _wrap_expression_layers(primary)
-            except ValueError:
-                pass
-            try:
-                value = float(lit_text)
-                primary = _make_literal_real_primary(value)
-                return _wrap_expression_layers(primary)
-            except ValueError:
-                pass
-            if lit_text.startswith('"') and lit_text.endswith('"'):
-                primary = _make_literal_string_primary(lit_text)
-                return _wrap_expression_layers(primary)
-        # Invocation: base has qualifiedName AND argumentList
-        has_args = hasattr(be_ctx, "argumentList") and be_ctx.argumentList()
-        if has_args and hasattr(be_ctx, "qualifiedName") and be_ctx.qualifiedName():
-            qn_ctx = be_ctx.qualifiedName()
-            names = _extract_qualified_name_parts(qn_ctx)
-            primary = _build_invocation_primary(names, be_ctx.argumentList())
-            return _wrap_expression_layers(primary)
-        # Feature reference (possibly with field access)
-        if hasattr(be_ctx, "qualifiedName") and be_ctx.qualifiedName():
-            # Extract qualified name parts
-            qn_ctx = be_ctx.qualifiedName()
-            names = _extract_qualified_name_parts(qn_ctx)
-            primary = _make_feature_reference_chain(names)
-            return _wrap_expression_layers(primary)
-    return _fallback_to_text(oe_ctx)
 
 
 def _build_invocation_primary(names, arg_list_ctx):
@@ -13110,6 +12929,48 @@ def _visit_nested_definition_element(def_elem):
         return _make_constraint_definition_dict(
             def_elem.constraintDefinition(), None
         )
+    elif hasattr(def_elem, 'actionDefinition') and def_elem.actionDefinition():
+        # v0.88.1: ``part p { action def A; }`` (and the sibling
+        # definition kinds below) was silently dropped — the nested
+        # dispatcher only covered 7 kinds while the package-level one
+        # covers ~25. All makers exist and are exercised at package
+        # level, so these are safe reuses.
+        return _make_action_definition_dict(def_elem.actionDefinition(), None)
+    elif hasattr(def_elem, 'stateDefinition') and def_elem.stateDefinition():
+        return _make_state_definition_dict(def_elem.stateDefinition(), None)
+    elif hasattr(def_elem, 'requirementDefinition') and def_elem.requirementDefinition():
+        return _make_requirement_definition_dict(def_elem.requirementDefinition(), None)
+    elif hasattr(def_elem, 'useCaseDefinition') and def_elem.useCaseDefinition():
+        return _make_use_case_definition_dict(def_elem.useCaseDefinition(), None)
+    elif hasattr(def_elem, 'enumerationDefinition') and def_elem.enumerationDefinition():
+        return _make_enumeration_definition_dict(def_elem.enumerationDefinition(), None)
+    elif hasattr(def_elem, 'viewDefinition') and def_elem.viewDefinition():
+        return _make_view_definition_dict(def_elem.viewDefinition(), None)
+    elif hasattr(def_elem, 'viewpointDefinition') and def_elem.viewpointDefinition():
+        return _make_viewpoint_definition_dict(def_elem.viewpointDefinition(), None)
+    elif hasattr(def_elem, 'concernDefinition') and def_elem.concernDefinition():
+        return _make_concern_definition_dict(def_elem.concernDefinition(), None)
+    elif hasattr(def_elem, 'verificationCaseDefinition') and def_elem.verificationCaseDefinition():
+        return _make_verification_case_definition_dict(def_elem.verificationCaseDefinition(), None)
+    elif hasattr(def_elem, 'analysisCaseDefinition') and def_elem.analysisCaseDefinition():
+        return _make_analysis_case_definition_dict(def_elem.analysisCaseDefinition(), None)
+    elif hasattr(def_elem, 'caseDefinition') and def_elem.caseDefinition():
+        return _make_case_definition_dict(def_elem.caseDefinition(), None)
+    elif hasattr(def_elem, 'individualDefinition') and def_elem.individualDefinition():
+        return _make_individual_definition_dict(def_elem.individualDefinition(), None)
+    elif hasattr(def_elem, 'renderingDefinition') and def_elem.renderingDefinition():
+        return _make_rendering_definition_dict(def_elem.renderingDefinition(), None)
+    elif hasattr(def_elem, 'allocationDefinition') and def_elem.allocationDefinition():
+        return _make_allocation_definition_dict(def_elem.allocationDefinition(), None)
+    elif hasattr(def_elem, 'connectionDefinition') and def_elem.connectionDefinition():
+        return _make_connection_definition_dict(def_elem.connectionDefinition(), None)
+    elif hasattr(def_elem, 'flowDefinition') and def_elem.flowDefinition():
+        return _make_flow_connection_definition_dict(def_elem.flowDefinition(), None)
+    elif hasattr(def_elem, 'metadataDefinition') and def_elem.metadataDefinition():
+        return _make_metadata_definition_dict(def_elem.metadataDefinition(), None)
+    elif hasattr(def_elem, 'dependency') and def_elem.dependency():
+        # Issue #4 sibling: nested dependency statements dropped too
+        return _make_dependency_dict(def_elem.dependency(), None)
     elif hasattr(def_elem, 'annotatingElement') and def_elem.annotatingElement():
         ann_ctx = def_elem.annotatingElement()
         ann_dict = _visit_annotating_element_dict(ann_ctx)
@@ -13183,198 +13044,8 @@ def _make_nested_usage_element(usage_type, name, shortname, prefix, body_items=N
     }
 
 
-def _visit_nested_definition(def_elem_ctx):
-    """Visit a nested definition within a body."""
-    if hasattr(def_elem_ctx, 'partDefinition') and def_elem_ctx.partDefinition():
-        ctx = def_elem_ctx.partDefinition()
-        return _make_part_definition_dict(ctx)
-    elif hasattr(def_elem_ctx, 'attributeDefinition') and def_elem_ctx.attributeDefinition():
-        ctx = def_elem_ctx.attributeDefinition()
-        return _make_attribute_definition_dict(ctx)
-    elif hasattr(def_elem_ctx, 'portDefinition') and def_elem_ctx.portDefinition():
-        ctx = def_elem_ctx.portDefinition()
-        return _make_port_definition_dict(ctx)
-    # Add more types as needed
-    
-    return None
 
 
-def _visit_nested_usage(usage_elem_ctx):
-    """Visit a nested usage within a body."""
-    # Check for occurrence usage (part, item, port)
-    if hasattr(usage_elem_ctx, 'occurrenceUsageElement') and usage_elem_ctx.occurrenceUsageElement():
-        occ_elem = usage_elem_ctx.occurrenceUsageElement()
-        
-        # Check structure usage elements
-        if hasattr(occ_elem, 'structureUsageElement') and occ_elem.structureUsageElement():
-            struct_elem = occ_elem.structureUsageElement()
-            
-            if hasattr(struct_elem, 'partUsage') and struct_elem.partUsage():
-                ctx = struct_elem.partUsage()
-                name, shortname = _get_usage_identification(ctx)
-                body_items = _get_usage_body_items(ctx)
-                occ_prefix = _get_occurrence_usage_prefix(ctx)
-                specialization = _build_full_specialization_from_ctx(ctx)
-                valuepart = _get_usage_value_part(ctx)
-                return _make_nested_usage_element("PartUsage", name, shortname, occ_prefix, body_items, specialization, valuepart)
-            elif hasattr(struct_elem, 'itemUsage') and struct_elem.itemUsage():
-                ctx = struct_elem.itemUsage()
-                name, shortname = _get_usage_identification(ctx)
-                body_items = _get_usage_body_items(ctx)
-                occ_prefix = _get_occurrence_usage_prefix(ctx)
-                specialization = _build_full_specialization_from_ctx(ctx)
-                valuepart = _get_usage_value_part(ctx)
-                return _make_nested_usage_element("ItemUsage", name, shortname, occ_prefix, body_items, specialization, valuepart)
-            elif hasattr(struct_elem, 'portUsage') and struct_elem.portUsage():
-                ctx = struct_elem.portUsage()
-                name, shortname = _get_usage_identification(ctx)
-                body_items = _get_usage_body_items(ctx)
-                occ_prefix = _get_occurrence_usage_prefix(ctx)
-                specialization = _build_full_specialization_from_ctx(ctx)
-                valuepart = _get_usage_value_part(ctx)
-                return _make_nested_usage_element("PortUsage", name, shortname, occ_prefix, body_items, specialization, valuepart)
-            elif hasattr(struct_elem, 'portionUsage') and struct_elem.portionUsage():
-                ctx = struct_elem.portionUsage()
-                name, shortname = _get_usage_identification(ctx)
-                body_items = _get_usage_body_items(ctx)
-                occ_prefix = _make_portion_usage_prefix(ctx)
-                specialization = _build_full_specialization_from_ctx(ctx)
-                valuepart = _get_usage_value_part(ctx)
-                return _make_nested_usage_element("PortionUsage", name, shortname, occ_prefix, body_items, specialization, valuepart)
-            elif hasattr(struct_elem, 'individualUsage') and struct_elem.individualUsage():
-                ctx = struct_elem.individualUsage()
-                name, shortname = _get_usage_identification(ctx)
-                body_items = _get_usage_body_items(ctx)
-                occ_prefix = _make_portion_usage_prefix(ctx)
-                specialization = _build_full_specialization_from_ctx(ctx)
-                valuepart = _get_usage_value_part(ctx)
-                return _make_nested_usage_element("PortionUsage", name, shortname, occ_prefix, body_items, specialization, valuepart)
-        
-        # Check behavior usage elements (action)
-        if hasattr(occ_elem, 'behaviorUsageElement') and occ_elem.behaviorUsageElement():
-            behav_elem = occ_elem.behaviorUsageElement()
-            
-            if hasattr(behav_elem, 'actionUsage') and behav_elem.actionUsage():
-                ctx = behav_elem.actionUsage()
-                name = None
-                if ctx.actionUsageDeclaration():
-                    aud = ctx.actionUsageDeclaration()
-                    if hasattr(aud, 'usageDeclaration') and aud.usageDeclaration():
-                        ud = aud.usageDeclaration()
-                        if hasattr(ud, 'getText'):
-                            text = ud.getText().strip()
-                            if text and text != 'ACTION':
-                                name = text
-                return {
-                    "name": "UsageElement",
-                    "ownedRelatedElement": {
-                        "name": "OccurrenceUsageElement",
-                        "ownedRelatedElement": {
-                            "name": "BehaviorUsageElement",
-                            "ownedRelationship": {
-                                "name": "ActionUsage",
-                                "prefix": None,
-                                "declaration": {
-                                    "name": "ActionUsageDeclaration",
-                                    "declaration": {
-                                        "name": "UsageDeclaration",
-                                        "declaration": {
-                                            "name": "FeatureDeclaration",
-                                            "identification": {
-                                                "name": "Identification",
-                                                "declaredShortName": None,
-                                                "declaredName": name
-                                            },
-                                            "specialization": None
-                                        }
-                                    },
-                                    "valuepart": None
-                                },
-                                "body": {
-                                    "name": "ActionBody",
-                                    "items": []
-                                }
-                            }
-                        }
-                    }
-                }
-            
-            if hasattr(behav_elem, 'assertConstraintUsage') and behav_elem.assertConstraintUsage():
-                ctx = behav_elem.assertConstraintUsage()
-                result = _make_assert_constraint_usage_dict(ctx, None)
-                if result:
-                    return {
-                        "name": "UsageElement",
-                        "ownedRelatedElement": {
-                            "name": "OccurrenceUsageElement",
-                            "ownedRelatedElement": {
-                                "name": "BehaviorUsageElement",
-                                "ownedRelationship": result
-                            }
-                        }
-                    }
-                return None
-            
-            if hasattr(behav_elem, 'calculationUsage') and behav_elem.calculationUsage():
-                ctx = behav_elem.calculationUsage()
-                result = _make_calculation_usage_dict(ctx, None)
-                if result and result.get("name") == "PackageMember":
-                    return result.get("ownedRelatedElement")
-                return result
-            
-            if hasattr(behav_elem, 'constraintUsage') and behav_elem.constraintUsage():
-                ctx = behav_elem.constraintUsage()
-                result = _make_constraint_usage_dict(ctx, None)
-                if result and result.get("name") == "PackageMember":
-                    return result.get("ownedRelatedElement")
-                return result
-    
-    # Check for non-occurrence usage (attribute, calculation)
-    if hasattr(usage_elem_ctx, 'nonOccurrenceUsageElement') and usage_elem_ctx.nonOccurrenceUsageElement():
-        non_occ = usage_elem_ctx.nonOccurrenceUsageElement()
-        
-        if hasattr(non_occ, 'attributeUsage') and non_occ.attributeUsage():
-            ctx = non_occ.attributeUsage()
-            name = None
-            if hasattr(ctx, 'identifier'):
-                ids = ctx.identifier()
-                if isinstance(ids, list) and ids:
-                    name = ids[0].getText()
-            return {
-                "name": "UsageElement",
-                "ownedRelatedElement": {
-                    "name": "AttributeUsage",
-                    "prefix": None,
-                    "usage": {
-                        "name": "Usage",
-                        "declaration": {
-                            "name": "UsageDeclaration",
-                            "declaration": {
-                                "name": "FeatureDeclaration",
-                                "identification": {
-                                    "name": "Identification",
-                                    "declaredShortName": None,
-                                    "declaredName": name
-                                },
-                                "specialization": None
-                            }
-                        },
-                        "completion": {
-                            "name": "UsageCompletion",
-                            "valuepart": None,
-                            "body": {
-                                "name": "UsageBody",
-                                "body": {
-                                    "name": "DefinitionBody",
-                                    "ownedRelatedElement": []
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-    
-    return None
 
 
 def _visit_usage_element_dict(usage_elem_ctx, prefix=None):
@@ -14453,42 +14124,6 @@ def _extract_body_from_usage_ctx(ctx):
     return []
 
 
-def _get_usage_typed_by(ctx):
-    """Extract the typed-by reference from a usage context.
-    
-    Returns the qualified name of the type, or None.
-    """
-    if ctx is None:
-        return None
-    
-    # Get usage -> usageDeclaration -> featureSpecializationPart
-    usage = None
-    if hasattr(ctx, 'usage') and ctx.usage():
-        usage = ctx.usage()
-    
-    ud = None
-    if usage and hasattr(usage, 'usageDeclaration') and usage.usageDeclaration():
-        ud = usage.usageDeclaration()
-    
-    if ud and hasattr(ud, 'featureSpecializationPart') and ud.featureSpecializationPart():
-        fsp = ud.featureSpecializationPart()
-        # Only look for Typings (': TypeName'), not subsets/redefines/specializes
-        if hasattr(fsp, 'featureSpecialization') and fsp.featureSpecialization():
-            specs = fsp.featureSpecialization()
-            if not isinstance(specs, list):
-                specs = [specs]
-            for spec in specs:
-                if hasattr(spec, 'typings') and spec.typings():
-                    typings = spec.typings()
-                    if hasattr(typings, 'getText'):
-                        text = typings.getText()
-                        if text.startswith(':'):
-                            text = text[1:].strip()
-                        return text
-        # NOTE: Do NOT fall back to fsp.getText() — that would return
-        # 'redefines X', 'subsets X', or ':> X' which are NOT types.
-    
-    return None
 
 
 def _get_usage_subsetted_by(ctx):

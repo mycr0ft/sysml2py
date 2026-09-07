@@ -1,5 +1,47 @@
 # CHANGELOG
 
+## v0.88.1 (2026-09-06)
+
+**Visitor dead-code removal + nested-definition fidelity + API typing
+cosmetics.**
+
+1. *Dead code deleted* — `_visit_nested_usage` (zero call sites) plus 11
+   more zero-reference helpers (`_visit_accept_action_usage`,
+   `_get_usage_typed_by`, `_visit_nested_definition`, and the
+   `_build_binary_chain`/`_splice_unary`/`_layer_rank`/... expression
+   family): 410 lines.  The remaining 12 `"specialization": None` slots
+   in the node-declaration emitters were verified empirically to be
+   unreachable — the grammar rejects typed declarations on send /
+   terminate / accept / assignment / message / binding / succession
+   forms, so they are correct as written (kept, not deleted).
+2. *Nested definitions no longer dropped* — `part p { state def X; }`
+   (and 16 sibling kinds: action / requirement / use case / enum / view /
+   viewpoint / concern / metadata / verification / case / analysis case /
+   individual / rendering / allocation / connection / flow defs, plus
+   nested dependencies) were silently dropped by the nested-definition
+   dispatcher (7 of ~25 kinds covered); the dump lost them entirely.
+   `_visit_nested_definition_element` now dispatches all the kinds the
+   package-level dispatcher handles.
+3. *Nested usages in state bodies surface* — `state s1 { action a1 : A; }`
+   inside a part had no API object (State body walk only knew nested
+   states); the full load path now runs, so nested actions carry name +
+   typed_by_name and nested states keep their children
+   (`part p { state s1 { state s2; } }` previously lost s2).
+4. *Typed transitions* — `transition t1 : T first e1;` dropped `: T`
+   on dump (hardcoded `specialization: None`); the typing now round-trips
+   and carries on the Transition object as typed_by_name.
+5. *Satisfy API typing* — satisfy members now carry typed_by_name from
+   the fsp requirement typing.  Important semantic note discovered here:
+   in the ors+fsp form (`satisfy s1 : R`) the member is **anonymous** —
+   `s1` (ors) is the *requirement being satisfied* (the trace target),
+   not the member's name.  An initial attempt to name the member from
+   the ors was reverted: it made satisfy targets self-resolve in the
+   validator (UNRESOLVED_TRACE_TARGET silently vanished) and produced
+   double matches in find_one.  The declaration form
+   (`satisfy requirement r1 { ... }`) keeps its declared name.
+
+Fast suite 1501 passed / 2 skipped; conformance 123/123.
+
 ## v0.88.0 (2026-09-06)
 
 **Control-flow member fidelity + usage-body imports.**

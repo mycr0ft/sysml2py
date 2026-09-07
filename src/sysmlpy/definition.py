@@ -1170,6 +1170,20 @@ class Package(Searchable):
                 self.children.append(child)
             elif inner_class == "SatisfyRequirementUsage":
                 child = Requirement().load_from_grammar(inner_element)
+                # v0.88.1: the ``satisfy s1 : R`` form is the ors+fsp
+                # alternative (no UsageDeclaration) — the member is
+                # *anonymous* by design: ``ors`` is the requirement
+                # being satisfied (the trace target), not the member's
+                # name, so it stays UUID-named (reverting the initial
+                # ors-as-name wiring, which broke resolve/trace
+                # semantics).  The declaration form
+                # (``satisfy requirement r1 { ... }``) carries a real
+                # declared name — extract it.  The typing on ``fsp`` is
+                # extracted by load_from_grammar
+                # (_extract_specialization_info).
+                ident = getattr(getattr(getattr(inner_element, 'declaration', None), 'declaration', None), 'identification', None)
+                if ident is not None and getattr(ident, 'declaredName', None):
+                    child.name = ident.declaredName
                 child.parent = self
                 self.children.append(child)
             elif inner_class == "ConstraintDefinition":
@@ -1538,6 +1552,9 @@ class Package(Searchable):
                         feat_decl = decl.declaration
                         if hasattr(feat_decl, 'identification') and feat_decl.identification:
                             r.name = feat_decl.identification.declaredName
+                # v0.88.1: the ors+fsp form carries no member name
+                # (``ors`` is the requirement reference — see the
+                # package-level branch above).
                 r.parent = self
                 self.children.append(r)
             elif inner_class == "Dependency":

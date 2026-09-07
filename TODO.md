@@ -329,14 +329,17 @@ against the v0.86.0 tree on 2026-09-06 (fast suite 1472 passed,
 
 **Discovered during A1–A4 implementation (follow-ups, not this batch):**
 
-- [ ] Nested behavior-usage typings: `part p { action a1 : A; }` and
+- [x] Nested behavior-usage typings: `part p { action a1 : A; }` and
       friends — the nested behavior dispatch emitters
       (`_visit_nested_occurrence_usage`, `_visit_nested_usage`) still
       hardcode `specialization: None`; top-level and grammar-class dump
-      paths are fixed (v0.87.0).  Verified 2026-09-06: common shapes
-      (`action a1 : A;`, `state`, `entry`, `do`) already round-trip via
-      other paths, and `_visit_nested_usage` has **zero call sites** —
-      candidate for dead-code cleanup rather than emitter fixes.
+      paths are fixed (v0.87.0).  *(→ v0.88.1: verified empirically that
+      the grammar rejects typed declarations on send/terminate/accept/
+      assignment/message/binding/succession, so the None slots are
+      unreachable — the one reachable case (transition usage typing) is
+      fixed; `_visit_nested_usage` + 11 zero-call-site helpers deleted
+      (410 lines).  Nested usages inside state bodies now surface via
+      the full load path.)*
 - [x] Nested `rendering r2 : E;` inside a part body dumps correctly but
       produces no public-API object; `metadata m1` also not findable
       via `find()` *(→ v0.88.0: Rendering child + Metadata child with
