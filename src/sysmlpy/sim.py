@@ -43,7 +43,14 @@ Scope of this MVP (deliberate cuts, tracked in TODO.md):
   Substates referenced by bare name from outside their region are
   still flattened implicitly
 - one machine per simulator (``focus`` picks which); parallel regions
-  — top-level or inside a composite — raise :class:`SimulationError`
+  (``state def C parallel { ... }`` — root-level or inside a
+  composite) simulate as co-active regions (v0.89.0): entering the
+  composite activates every region at its default entry, each region
+  fires its own transitions independently (the event is dispatched to
+  each region in declaration order), and a transition out of the
+  composite (or to another region) exits/re-enters all regions;
+  ``sim.state`` is a tuple of the active leaves while regions are
+  co-active
 - assignment effects (``do x := 5``) execute against the simulator's
   values (:meth:`StateSimulator.set_value`), so guards evaluated later
   see the new value; other effects (``do <action>``, ``send``) are
@@ -200,6 +207,14 @@ class TransitionSpec(NamedTuple):
     #: of the region whose history the target remembers (``""`` =
     #: machine root).  None for ordinary transitions.
     history_region: Optional[str] = None
+    #: For transitions whose target is a parallel composite: the flat
+    #: name of the composite whose regions all activate on entry
+    #: (v0.89.0).  None otherwise.
+    enters_parallel: Optional[str] = None
+    #: For transitions whose source lies inside a parallel composite
+    #: but whose target is outside it: firing exits every region of
+    #: that composite (v0.89.0).  None otherwise.
+    exits_parallel: Optional[str] = None
 
 
 #: Assignment-effect shape: ``name := expression`` (SysML assignment
@@ -233,6 +248,16 @@ class MachineDescriptor(NamedTuple):
     #: includes ``""`` -> machine initial.  Fallback when no history
     #: has been recorded yet.
     region_defaults: Dict[str, str] = {}
+    #: Parallel composite flat name (``""`` = machine root) -> the
+    #: flat names of its direct regions, in declaration order (v0.89.0).
+    #: All of these are active simultaneously while the composite is
+    #: entered; the tracked leaf per region is its default entry
+    #: (``region_defaults``).
+    parallel_regions: Dict[str, Tuple[str, ...]] = {}
+    #: Parallel composite -> its enclosing parallel composite (or
+    #: ``""`` when at the machine root) — the cascade order for
+    #: enter/exit bookkeeping (v0.89.0).
+    parallel_parent: Dict[str, str] = {}
 
 
 def build_state_machine(model, focus: Optional[str] = None,
@@ -262,10 +287,16 @@ def build_state_machine(model, focus: Optional[str] = None,
     sm = machines[0]
     notes: List[str] = []
 
+    # Parallel composites are supported (v0.89.0): ``state def C
+    # parallel { ... }`` (or ``state c parallel { ... }``) makes the
+    # direct substates co-active regions.  ``parallel_regions`` maps
+    # the composite's flat name (``""`` = machine root) to the default
+    # entry leaf of each region, in declaration order.
+    parallel_regions: Dict[str, Tuple[str, ...]] = {}
     if sm.get("parallel"):
-        raise SimulationError(
-            f"State machine {sm.get('name')!r} declares parallel "
-            "regions; parallel simulation is beyond this MVP.")
+        notes.append(
+            f"machine {sm.get('name')!r} declares parallel regions; "
+            "the top-level states are co-active")
 
     def _state_name(s):
         return s["name"] if isinstance(s, dict) else s
@@ -282,7 +313,8 @@ def build_state_machine(model, focus: Optional[str] = None,
     #     substate (UML composite transition), emitted after the
     #     region's own transitions so deeper transitions win the
     #     fall-through,
-    #   - a region declaring parallel raises (MVP cut).
+    #   - a composite declaring ``parallel`` activates all of its
+    #     direct regions simultaneously (v0.89.0).
     states: List[str] = []
     raw: List[dict] = []
     # history pseudostate markers: flat marker name -> region flat name
@@ -300,11 +332,6 @@ def build_state_machine(model, focus: Optional[str] = None,
             nm = _state_name(s)
             if nm is None:
                 continue
-            if isinstance(s, dict) and s.get("parallel"):
-                raise SimulationError(
-                    f"Composite state {nm!r} in "
-                    f"{sm.get('name')!r} declares parallel regions; "
-                    "parallel simulation is beyond this MVP.")
             if _has_region(s):
                 flat_prefix = prefix + nm + "."
                 inner_flat, inner_entry, inner_subs = _expand_region(
@@ -319,6 +346,13 @@ def build_state_machine(model, focus: Optional[str] = None,
                             "found; entering at the first substate")
                 if entry is None:
                     entry = next(iter(inner_flat.values()), None)
+                    if entry is None:
+                        # v0.89.0: every direct child is itself a
+                        # composite (e.g. parallel regions) — fall back
+                        # to the first child composite's default entry
+                        # instead of demoting the whole composite to a
+                        # leaf
+                        entry = next(iter(inner_entry.values()), None)
                 if entry is None:
                     # region without simulating states: a leaf
                     flat = prefix + nm
@@ -328,8 +362,43 @@ def build_state_machine(model, focus: Optional[str] = None,
                     continue
                 entry_of[nm] = entry
                 region_defaults_flat[prefix + nm] = entry
-                substates_of[nm] = (list(inner_flat.values()) +
-                                    list(inner_entry.values()))
+                if isinstance(s, dict) and s.get("parallel"):
+                    # v0.89.0: all direct regions co-active — the
+                    # descriptor records the region FLAT NAMES (the
+                    # tracked leaf per region is its default entry,
+                    # resolved via region_defaults at activation time)
+                    region_leaves = []
+                    region_names = []
+                    for child in s.get("states", []):
+                        cn = _state_name(child)
+                        if cn is None:
+                            continue
+                        region_flat = prefix + nm + "." + cn
+                        if _has_region(child):
+                            cl = region_defaults_flat.get(region_flat)
+                            if cn in inner_entry:
+                                cl = cl or inner_entry.get(cn)
+                            if cl:
+                                region_leaves.append(cl)
+                                region_names.append(region_flat)
+                        elif cn in inner_flat:
+                            region_leaves.append(inner_flat[cn])
+                            region_names.append(region_flat)
+                    if len(region_leaves) > 1:
+                        parallel_regions[prefix + nm] = tuple(region_names)
+                        notes.append(
+                            f"composite {prefix + nm!r} declares parallel "
+                            f"regions; {len(region_leaves)} co-active regions")
+                    # composite-level transitions are available from
+                    # every leaf under the composite (not just the
+                    # direct children) so region exits work from any
+                    # depth
+                    sub_prefix = prefix + nm + "."
+                    substates_of[nm] = [x for x in states
+                                        if x.startswith(sub_prefix)]
+                else:
+                    substates_of[nm] = (list(inner_flat.values()) +
+                                        list(inner_entry.values()))
             else:
                 flat = prefix + nm
                 states.append(flat)
@@ -383,6 +452,36 @@ def build_state_machine(model, focus: Optional[str] = None,
     all_names: Dict[str, str] = {}
     _, entry_of, _ = _expand_region(sm, "", all_names)
 
+    # v0.89.0: the machine root itself may be a parallel region set
+    # (``state def M parallel { ... }``) — every top-level state is a
+    # co-active region.  The tracked leaf per region is its default
+    # entry (its own flat name for leaf regions, the initial substate
+    # for composite regions).
+    if sm.get("parallel") and len(states) > 1:
+        region_leaves = []
+        region_names = []
+        for s in sm.get("states", []):
+            nm = _state_name(s)
+            if nm is None:
+                continue
+            if _has_region(s):
+                cl = region_defaults_flat.get(nm)
+                if nm in entry_of:
+                    cl = cl or entry_of.get(nm)
+                if cl:
+                    region_leaves.append(cl)
+                    region_names.append(nm)
+            elif nm in all_names:
+                cl = all_names.get(nm)
+                if cl in states:
+                    region_leaves.append(cl)
+                    region_names.append(nm)
+        if len(region_leaves) > 1:
+            parallel_regions[""] = tuple(region_names)
+            notes.append(
+                f"machine {sm.get('name')!r} declares parallel regions; "
+                f"{len(region_leaves)} co-active top-level regions")
+
     transitions: List[TransitionSpec] = []
     skipped: List[TransitionSpec] = []
     for t in raw:
@@ -433,10 +532,39 @@ def build_state_machine(model, focus: Optional[str] = None,
                 trigger=t.get("trigger"), guard=t.get("guard"),
                 effect=t.get("effect")))
             continue
+        # v0.89.0: parallel-region entry/exit markers, resolved against
+        # the region flat names — a transition stays inside its region
+        # when both endpoints belong to the same region; leaving the
+        # region's subtree exits every co-active region of the
+        # composite, and a target inside a parallel composite activates
+        # all of its regions.
+        def _region_in(comp, name):
+            return next((r for r in parallel_regions[comp]
+                         if name == r or name.startswith(r + ".")), None)
+
+        exits_comp = None
+        enters_comp = None
+        for comp, region_names in parallel_regions.items():
+            src_region = _region_in(comp, source)
+            tgt_region = _region_in(comp, target)
+            if src_region is not None and src_region != tgt_region:
+                # leave src_region; keep the OUTERMOST composite whose
+                # region set diverges (exiting only the inner one would
+                # strand the outer)
+                if exits_comp is None or \
+                        exits_comp.startswith(comp + "."):
+                    exits_comp = comp
+                if tgt_region is not None:
+                    enters_comp = comp
+            elif src_region is None and tgt_region is not None:
+                if enters_comp is None or \
+                        comp.startswith(enters_comp + "."):
+                    enters_comp = comp
         transitions.append(TransitionSpec(
             name=t.get("name"), source=source, target=target,
             trigger=t.get("trigger"), guard=t.get("guard"),
-            effect=t.get("effect")))
+            effect=t.get("effect"),
+            enters_parallel=enters_comp, exits_parallel=exits_comp))
 
     if not states:
         raise SimulationError(
@@ -455,12 +583,30 @@ def build_state_machine(model, focus: Optional[str] = None,
             f"no entry transition in the model; starting in "
             f"{fallback!r} (the first declared state)")
         initial = fallback
+    # v0.89.0: a parallel machine root formally starts in the first
+    # region's leaf; the other regions activate at construction time.
+    if "" in parallel_regions:
+        initial = parallel_regions[""][0]
     region_defaults_flat[""] = initial
+    # v0.89.0: containment of parallel composites — the enclosing
+    # parallel composite is the longest other composite whose flat name
+    # prefixes this one (region paths are unique).
+    parallel_parent_flat: Dict[str, str] = {}
+    for comp in parallel_regions:
+        best = ""
+        for other in parallel_regions:
+            if other != comp and other != "" and \
+                    comp.startswith(other + "."):
+                if other.startswith(best + ".") or not best:
+                    best = other
+        parallel_parent_flat[comp] = best
     return MachineDescriptor(name=sm.get("name"), states=states,
                              initial=initial, transitions=transitions,
                              notes=notes, skipped=tuple(skipped),
                              history_markers=markers_flat,
-                             region_defaults=region_defaults_flat)
+                             region_defaults=region_defaults_flat,
+                             parallel_regions=parallel_regions,
+                             parallel_parent=parallel_parent_flat)
 
 
 def load_model_grammar(model) -> dict:
@@ -578,13 +724,69 @@ class StateSimulator:
         #: region flat name -> last active direct substate of that
         #: region ("" = machine root)
         self._history: Dict[str, str] = {}
+        #: parallel-region flat name -> its currently active leaf
+        #: (v0.89.0).  A parallel composite is entered while all of
+        #: its regions appear here; nested composites expand into
+        #: their own region entries.
+        self._region_state: Dict[str, str] = {}
         self._host = _make_host(
             self, len(self.descriptor.transitions),
             len(self.descriptor.transitions))
         self._build()
-        self._record_history(self.state)
+        self._activate_initial()
+        self._record_all_history()
 
     # -- history ------------------------------------------------------------
+
+    def _record_all_history(self):
+        for leaf in self._all_active_leaves():
+            self._record_history(leaf)
+
+    def _all_active_leaves(self) -> List[str]:
+        """Every currently active leaf, in declaration order.
+
+        Walks the entered parallel composites outermost-first; a
+        region whose tracked leaf heads a nested entered composite
+        expands into that composite's regions (v0.89.0).  For
+        orthogonal machines this is the single pytransitions state.
+        """
+        out: List[str] = []
+
+        def walk(comp: str):
+            for r in self.descriptor.parallel_regions.get(comp, ()):
+                leaf = self._region_state.get(r)
+                if leaf is None:
+                    continue
+                # the leaf may head a nested parallel composite
+                nested = next((c for c in self.descriptor.parallel_regions
+                               if c != comp and c != "" and
+                               c.startswith(r + ".")), None)
+                if nested is not None and all(
+                        nr in self._region_state
+                        for nr in self.descriptor.parallel_regions[nested]):
+                    walk(nested)
+                else:
+                    out.append(leaf)
+
+        entered = [c for c in self.descriptor.parallel_regions
+                   if all(r in self._region_state
+                          for r in self.descriptor.parallel_regions[c])]
+        if not entered:
+            return [self._host.state]
+        # outermost entered composites (parent not entered), plus the
+        # orthogonal host state when nothing covers it
+        covered = False
+        for comp in entered:
+            parent = self.descriptor.parallel_parent.get(comp, "")
+            if parent and parent in entered:
+                continue
+            walk(comp)
+            if any(self._region_state.get(r) == self._host.state
+                   for r in self.descriptor.parallel_regions[comp]):
+                covered = True
+        if not covered and self._host.state not in out:
+            out.insert(0, self._host.state)
+        return [s for s in out if s]
 
     def _record_history(self, state: str):
         """Remember the active direct substate of every enclosing region.
@@ -656,11 +858,124 @@ class StateSimulator:
             transitions=tdefs, auto_transitions=False)
 
     @property
-    def state(self) -> str:
-        """Current state name."""
-        return self._host.state
+    def state(self):
+        """Current state name.
 
-    # -- driving --------------------------------------------------------------
+        A plain string for orthogonal machines; a tuple of leaves in
+        declaration order while co-active parallel regions are live
+        (v0.89.0).
+        """
+        leaves = self._all_active_leaves()
+        if len(leaves) == 1:
+            return leaves[0]
+        return tuple(leaves)
+
+    # -- parallel regions (v0.89.0) -------------------------------------------
+
+    def _entered_set(self) -> set:
+        """Parallel composites currently entered (all regions have a
+        tracked leaf)."""
+        return {c for c in self.descriptor.parallel_regions
+                if all(r in self._region_state
+                       for r in self.descriptor.parallel_regions[c])}
+
+    def _default_leaves(self, comp: str) -> Tuple[str, ...]:
+        """Default-entry leaf of each region of parallel composite
+        *comp*, in declaration order."""
+        return tuple(
+            self.descriptor.region_defaults.get(r, r)
+            for r in self.descriptor.parallel_regions.get(comp, ()))
+
+    def _activate_initial(self):
+        """Activate the initial region set of the root — or, when the
+        initial leaf lies inside a parallel composite, that composite's
+        region set (v0.89.0)."""
+        root_regions = self.descriptor.parallel_regions.get("")
+        if root_regions:
+            self._activate_regions("", self._default_leaves(""))
+            return
+        for comp in self.descriptor.parallel_regions:
+            if self.descriptor.initial in self._default_leaves(comp):
+                self._activate_regions(
+                    comp, self._default_leaves(comp))
+                return
+
+    def _activate_regions(self, comp: str, leaves: Tuple[str, ...],
+                          entered_leaf: Optional[str] = None):
+        """Enter parallel composite *comp* with every region active.
+
+        *leaves* holds the entry leaf per region (declaration order);
+        a region containing a nested parallel composite activates that
+        composite's subregions recursively.  *entered_leaf* is the
+        leaf the fired transition entered at — its region becomes the
+        tracked (pytransitions) primary (v0.89.0)."""
+        regions = self.descriptor.parallel_regions.get(comp, ())
+        primary_region = None
+        for i, r in enumerate(regions):
+            leaf = leaves[i] if i < len(leaves) else r
+            self._region_state[r] = leaf
+            # a nested parallel composite under this region activates
+            # with it; the region's tracked leaf becomes the nested
+            # primary
+            nested = next((c for c in self.descriptor.parallel_regions
+                           if c != "" and c.startswith(r + ".")), None)
+            if nested is not None:
+                self._activate_regions(nested, self._default_leaves(nested),
+                                       entered_leaf=leaf)
+                self._region_state[r] = self._region_state.get(
+                    self.descriptor.parallel_regions[nested][0], leaf)
+            if entered_leaf is not None and \
+                    self._region_state.get(r) == entered_leaf and \
+                    primary_region is None:
+                primary_region = r
+        if primary_region is None:
+            primary_region = next((r for r in regions
+                                   if r in self._region_state), None)
+            if primary_region is None and regions:
+                primary_region = regions[0]
+                if primary_region not in self._region_state:
+                    self._region_state[primary_region] = (
+                        leaves[0] if leaves else primary_region)
+        if primary_region is not None:
+            self._host.state = self._region_state.get(
+                primary_region, self._host.state)
+        for leaf in list(self._region_state.values()):
+            self._record_history(leaf)
+
+    def _deactivate_regions(self, comp: Optional[str]):
+        """Leave parallel composite *comp* — nested composites inside
+        its subtree go with it (v0.89.0).  ``comp`` may be None when
+        the fired transition carried no parallel marker."""
+        if comp is None:
+            return
+        doomed_regions: List[str] = []
+        for other in self.descriptor.parallel_regions:
+            if other == comp:
+                doomed_regions.extend(self.descriptor.parallel_regions[other])
+            else:
+                parent = other
+                while parent:
+                    parent = self.descriptor.parallel_parent.get(parent, "")
+                    if parent == comp:
+                        doomed_regions.extend(
+                            self.descriptor.parallel_regions[other])
+                        break
+        for r in doomed_regions:
+            self._region_state.pop(r, None)
+
+    def _composites_active(self):
+        """Parallel composite flat names currently entered."""
+        return self._entered_set()
+
+    def _region_of_leaf(self, leaf: str) -> Optional[str]:
+        """Region flat whose tracked leaf is *leaf* (deepest match)."""
+        best = None
+        for comp in self.descriptor.parallel_regions:
+            for r in self.descriptor.parallel_regions[comp]:
+                if self._region_state.get(r) == leaf:
+                    if best is None or len(r) > len(best):
+                        best = r
+        return best
 
     def _candidates(self, state: str, trigger: Optional[str] = None):
         """Transition indices from *state* (optionally for *trigger*)."""
@@ -675,44 +990,50 @@ class StateSimulator:
 
         When several transitions carry the same trigger, the first one
         whose guard holds fires (guard fall-through, Cameo-style).
+        With co-active parallel regions (v0.89.0) the trigger is
+        dispatched to each region in declaration order.
         """
-        current = self.state
-        indices = [i for i, t in enumerate(self.descriptor.transitions)
-                   if t.source == current and t.trigger
-                   and _mangle(t.trigger) == _mangle(trigger)]
-        if not indices:
+        for current in self._all_active_leaves():
+            indices = [i for i, t in enumerate(self.descriptor.transitions)
+                       if t.source == current and t.trigger
+                       and _mangle(t.trigger) == _mangle(trigger)]
+            if not indices:
+                continue
+            for i in indices:
+                if self._eval_guard(i):
+                    return self._fire(i)
+            t = self.descriptor.transitions[indices[0]]
             self.log.append(StepRecord(
-                current, trigger, None, None, None, [], False,
-                note=f"'{trigger}' is not a trigger from {current!r}"))
+                current, trigger, t.guard, False, None, [], False,
+                note="guard false"))
             return False
-        for i in indices:
-            if self._eval_guard(i):
-                return self._fire(i)
-        t = self.descriptor.transitions[indices[0]]
         self.log.append(StepRecord(
-            current, trigger, t.guard, False, None, [], False,
-            note="guard false"))
+            self.state, trigger, None, None, None, [], False,
+            note=(f"'{trigger}' is not a trigger from "
+                  f"{self.state!r}")))
         return False
 
     def step(self) -> bool:
         """Fire the first enabled transition from the current state.
 
         Completion transitions (no trigger) are preferred; otherwise
-        the first signal transition whose guard holds fires.
+        the first signal transition whose guard holds fires.  With
+        co-active parallel regions (v0.89.0) each region is offered
+        the step in declaration order.
         """
-        current = self.state
-        indices = [i for i, t in enumerate(self.descriptor.transitions)
-                   if t.source == current]
-        for i in indices:  # completion transitions first (UML RTC)
-            if self.descriptor.transitions[i].trigger is None:
-                if self._eval_guard(i):
+        for current in self._all_active_leaves():
+            indices = [i for i, t in enumerate(self.descriptor.transitions)
+                       if t.source == current]
+            for i in indices:  # completion transitions first (UML RTC)
+                if self.descriptor.transitions[i].trigger is None:
+                    if self._eval_guard(i):
+                        return self._fire(i)
+            for i in indices:
+                t = self.descriptor.transitions[i]
+                if t.trigger and self._eval_guard(i):
                     return self._fire(i)
-        for i in indices:
-            t = self.descriptor.transitions[i]
-            if t.trigger and self._eval_guard(i):
-                return self._fire(i)
         self.log.append(StepRecord(
-            current, None, None, None, None, [], False,
+            self.state, None, None, None, None, [], False,
             note="no enabled transition"))
         return False
 
@@ -727,18 +1048,78 @@ class StateSimulator:
             self, len(self.descriptor.transitions),
             len(self.descriptor.transitions))
         self._build()
+        self._region_state.clear()
+        self._activate_initial()
         self._history.clear()
-        self._record_history(self.state)
+        self._record_all_history()
 
     def _fire(self, index: int) -> bool:
         t = self.descriptor.transitions[index]
         self._pending_effects.clear()
         self._pending_assignments.clear()
-        fired = bool(getattr(self._host, f"fire_{index}")())
+        old_primary = self._host.state
+        co_region = self._region_of_leaf(t.source)
+        manual = co_region is not None and t.source != self._host.state
+        if manual:
+            # v0.89.0: the source lies in a co-active parallel region
+            # that pytransitions does not track — fire manually.
+            if not self._eval_guard(index):
+                self.log.append(StepRecord(
+                    t.source, t.trigger, t.guard, False, None, [], False,
+                    note="guard false"))
+                return False
+            self._do_effect(index)
+            fired = True
+        else:
+            fired = bool(getattr(self._host, f"fire_{index}")())
         if fired:
+            # v0.89.0: parallel-region bookkeeping.
+            if t.enters_parallel is not None and \
+                    t.exits_parallel == t.enters_parallel:
+                # cross-region move inside one composite: the source
+                # region leaves, the target region enters at the target
+                src_region = self._region_containing(
+                    t.exits_parallel, t.source)
+                if src_region is not None:
+                    self._region_state.pop(src_region, None)
+                tgt_region = self._region_containing(
+                    t.enters_parallel, t.target)
+                if tgt_region is not None:
+                    self._region_state[tgt_region] = t.target
+                for r, leaf in list(self._region_state.items()):
+                    if leaf == t.source:
+                        self._region_state[r] = t.target
+                if old_primary == t.source:
+                    self._host.state = t.target
+            elif t.enters_parallel is not None:
+                self._enter_at(t.enters_parallel, t.target)
+            elif t.exits_parallel is not None:
+                self._deactivate_regions(t.exits_parallel)
+                for r, leaf in list(self._region_state.items()):
+                    if leaf == old_primary:
+                        self._region_state[r] = self._host.state
+            else:
+                # region-internal fire: the fired region's leaf moves
+                # to the target, and every slot mirroring it follows
+                # (a nested composite's primary is also its parent's
+                # slot)
+                if co_region is not None:
+                    self._region_state[co_region] = t.target
+                for r, leaf in list(self._region_state.items()):
+                    if leaf == t.source:
+                        self._region_state[r] = t.target
+                self._retrack_parents()
             to_state = self._apply_history(t)
-            self._record_history(self.state)
+            self._record_all_history()
             note = ""
+            if t.enters_parallel is not None:
+                note = (f"parallel: entered "
+                        f"{t.enters_parallel or '(machine root)'!r} "
+                        f"with regions "
+                        f"{tuple(self._region_state.get(r) for r in self.descriptor.parallel_regions.get(t.enters_parallel, ()))!r}")
+            elif t.exits_parallel is not None:
+                note = (f"parallel: exited "
+                        f"{t.exits_parallel or '(machine root)'!r}")
             if t.history_region is not None and to_state != t.target:
                 note = (f"history: resumed {to_state!r} in region "
                         f"{t.history_region or '(machine)'!r}")
@@ -755,33 +1136,63 @@ class StateSimulator:
             note="transition not taken"))
         return False
 
+    def _enter_at(self, comp: str, target: str):
+        """Enter parallel composite *comp*, pinning the region that
+        contains *target* to *target* and making it the tracked
+        primary (v0.89.0)."""
+        leaves = list(self._default_leaves(comp))
+        entered_leaf = None
+        for i, r in enumerate(
+                self.descriptor.parallel_regions.get(comp, ())):
+            if target == r or target.startswith(r + "."):
+                leaves[i] = target
+                entered_leaf = target
+                break
+        self._activate_regions(comp, tuple(leaves),
+                               entered_leaf=entered_leaf)
+
+    def _region_containing(self, comp: str, name: str) -> Optional[str]:
+        """Region of parallel composite *comp* whose subtree contains
+        *name* (v0.89.0)."""
+        for r in self.descriptor.parallel_regions.get(comp, ()):
+            if name == r or name.startswith(r + "."):
+                return r
+        return None
+
+    def _retrack_parents(self):
+        """Point every parent-composite slot that heads a nested
+        entered composite at that composite's primary leaf (v0.89.0)."""
+        for comp, regions in self.descriptor.parallel_regions.items():
+            if comp == "":
+                continue
+            for r in regions:
+                nested = next(
+                    (c for c in self.descriptor.parallel_regions
+                     if c != "" and c.startswith(r + ".")), None)
+                if nested is None:
+                    continue
+                nregions = self.descriptor.parallel_regions[nested]
+                if all(nr in self._region_state for nr in nregions):
+                    self._region_state[r] = self._region_state.get(
+                        nregions[0], self._region_state.get(r))
+
     def _run_completion(self, limit: int = 100):
-        """Fire enabled completion transitions until none remain."""
+        """Fire enabled completion transitions until none remain.
+
+        With co-active parallel regions (v0.89.0) every region is
+        offered its completion transitions each round.
+        """
         for _ in range(limit):
-            current = self.state
             fired_any = False
-            for i, t in enumerate(self.descriptor.transitions):
-                if t.source == current and t.trigger is None:
-                    if self._eval_guard(i):
-                        self._pending_effects.clear()
-                        self._pending_assignments.clear()
-                        getattr(self._host, f"fire_{i}")()
-                        to_state = self._apply_history(t)
-                        self._record_history(self.state)
-                        note = ""
-                        if t.history_region is not None \
-                                and to_state != t.target:
-                            note = (f"history: resumed {to_state!r} "
-                                    f"in region "
-                                    f"{t.history_region or '(machine)'!r}")
-                        self.log.append(StepRecord(
-                            t.source, None, t.guard, True, to_state,
-                            list(self._pending_effects), True, note,
-                            assignments=tuple(self._pending_assignments)))
-                        self._pending_effects.clear()
-                        self._pending_assignments.clear()
-                        fired_any = True
-                        break
+            for current in self._all_active_leaves():
+                for i, t in enumerate(self.descriptor.transitions):
+                    if t.source == current and t.trigger is None:
+                        if self._eval_guard(i):
+                            if self._fire(i):
+                                fired_any = True
+                            break
+                if fired_any:
+                    break
             if not fired_any:
                 return
 
@@ -789,15 +1200,17 @@ class StateSimulator:
 
     def available(self) -> List[Tuple[Optional[str], Optional[str],
                                       Optional[bool]]]:
-        """Transitions from the current state, in declaration order.
+        """Transitions from the current state(s), in declaration order.
 
         Returns ``(trigger, guard_text, passes_now)``; completion
         transitions report the trigger as ``None``, guard-less ones
-        ``passes_now = None``.
+        ``passes_now = None``.  With co-active parallel regions
+        (v0.89.0) every region's transitions are listed, annotated
+        with the region leaf as a fourth element.
         """
         out = []
         for t in self.descriptor.transitions:
-            if t.source != self.state:
+            if t.source not in self._all_active_leaves():
                 continue
             ok = self._eval_guard_quiet(t.guard) if t.guard else None
             out.append((t.trigger, t.guard, ok))
@@ -857,10 +1270,12 @@ class StateSimulator:
 
 def _render(sim: StateSimulator) -> str:
     md = sim.descriptor
+    state = sim.state
+    active = (state if isinstance(state, tuple) else (state,))
     lines = [f"State machine {md.name or '(unnamed)'} — "
-             f"current: {sim.state!r}"]
+             f"current: {state!r}"]
     for s in md.states:
-        marker = "  >" if s == sim.state else "    "
+        marker = "  >" if s in active else "    "
         lines.append(f"{marker} {s}")
     lines.append("transitions from here:")
     avail = sim.available()

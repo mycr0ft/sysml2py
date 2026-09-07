@@ -11,7 +11,7 @@ already knows.
 | Field | Value |
 |-------|-------|
 | Name | sysmlpy |
-| Current version | 0.88.1 |
+| Current version | 0.89.0 |
 | Language | Python 3.9+ |
 | Package manager | **Poetry** (use `poetry run` for all commands) |
 | Test runner | pytest via `poetry run pytest` |
@@ -131,7 +131,7 @@ else:
 
 ## Test File Map
 
-Counts from `pytest --collect-only` at v0.88.1 (1626 total: 1501 + 123 conformance).
+Counts from `pytest --collect-only` at v0.89.0 (1632 total: 1507 + 123 conformance).
 
 | File | Count | What it tests |
 |------|-------|--------------|
@@ -155,7 +155,7 @@ Counts from `pytest --collect-only` at v0.88.1 (1626 total: 1501 + 123 conforman
 | `kuzu_store_test.py` | 32 | KùzuStore against a local database (skipped if `kuzu` is not installed) |
 | `cayley_store_test.py` | 39 | CayleyStore against a live server at localhost:64210 (skipped when the server is down) |
 | `conformance_test.py` | 123 | OMG 2026-03 XPect parse conformance (slow; `-m conformance`) |
-| `sim_test.py` | 52 | State-machine simulation: guards, executing assignment effects, history pseudostates (`sim` extra) |
+| `sim_test.py` | 58 | State-machine simulation: guards, executing assignment effects, history pseudostates (`sim` extra) |
 | `cli_test.py` | 39 | `sysmlpy` CLI commands (`python -m sysmlpy`) |
 | `lsp_test.py` | 37 | Language Server Protocol server (position/completion/hover) |
 | `lsp_batch4_test.py` | 36 | LSP batch-4 features (references, rename, semantic tokens) |

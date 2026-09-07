@@ -105,18 +105,24 @@ class TestExtraction:
         with pytest.raises(SimulationError, match="contains no state"):
             build_state_machine(sysmlpy.loads("package P { part def Q; }"))
 
-    def test_parallel_machine_raises(self, monkeypatch):
-        # The ANTLR grammar does not yet take the textual ``parallel``
-        # keyword (boxes-view precedent), so feed a synthetic parallel
-        # descriptor to pin the guard.
-        def _fake_collect(visit):
-            return [{"name": "P", "parallel": True, "states": ["a"],
-                     "initial": "a", "transitions": [], "composites": []}]
-
-        monkeypatch.setattr(boxes_view, "_collect_state_machine",
-                            _fake_collect)
-        with pytest.raises(SimulationError, match="(?i)parallel"):
-            build_state_machine(sysmlpy.loads("package P { part def Q; }"))
+    def test_parallel_machine_simulates(self):
+        # v0.89.0: the textual ``parallel`` keyword parses
+        # (``state def M parallel { ... }``) and the machine simulates
+        # as co-active top-level regions.
+        model = sysmlpy.loads("""
+            package P {
+                state def M parallel {
+                    state r1 { state a; state b; transition t1 first a accept Go1 then b; }
+                    state r2 { state x; state y; transition t2 first x accept Go2 then y; }
+                }
+            }
+            """)
+        sim = StateSimulator(model)
+        assert sim.state == ("r1.a", "r2.x")
+        assert sim.send("Go2") is True
+        assert sim.state == ("r1.a", "r2.y")
+        assert sim.send("Go1") is True
+        assert sim.state == ("r1.b", "r2.y")
 
 
 class TestFiring:
@@ -458,25 +464,33 @@ class TestCompositeRegions:
         assert sim.send("Flip") is True
         assert sim.state == "comp.c2"
 
-    def test_parallel_region_inside_composite_raises(self, monkeypatch):
-        # The textual ``parallel`` keyword is not parseable yet (grammar
-        # gap, see boxes-view tests) — feed a synthetic composite whose
-        # region declares parallel.
-        def _fake_collect(visit):
-            return [{"name": "M", "parallel": False,
-                     "states": [
-                         {"name": "a"},
-                         {"name": "comp", "parallel": True,
-                          "states": ["p1", "p2"], "initial": "p1",
-                          "transitions": [], "composites": []},
-                     ],
-                     "initial": "a",
-                     "transitions": [], "composites": []}]
-
-        monkeypatch.setattr(boxes_view, "_collect_state_machine",
-                            _fake_collect)
-        with pytest.raises(SimulationError, match="(?i)parallel"):
-            StateSimulator(sysmlpy.loads("package P { part def Q; }"))
+    def test_parallel_region_inside_composite_simulates(self):
+        # v0.89.0: a composite declaring ``parallel`` simulates with
+        # co-active regions — each region transitions independently,
+        # and a transition out of the composite exits all regions.
+        model = sysmlpy.loads("""
+            package P {
+                state def M {
+                    entry; then comp;
+                    state comp parallel {
+                        state r1 { state a; state b;
+                            transition t1 first a accept Go1 then b; }
+                        state r2 { state x; state y;
+                            transition t2 first x accept Go2 then y; }
+                    }
+                    state done;
+                    transition tOut first comp accept Finish then done;
+                }
+            }
+            """)
+        sim = StateSimulator(model)
+        assert sim.state == ("comp.r1.a", "comp.r2.x")
+        assert sim.send("Go2") is True
+        assert sim.state == ("comp.r1.a", "comp.r2.y")
+        assert sim.send("Go1") is True
+        assert sim.state == ("comp.r1.b", "comp.r2.y")
+        assert sim.send("Finish") is True
+        assert sim.state == "done"
 
 
 class TestTUI:
@@ -740,3 +754,107 @@ class TestHistoryPseudostates:
         comp = [s for s in machines[0]["states"] if isinstance(s, dict)]
         assert comp[0]["pseudostates"] == [{"name": "h", "kind": "history"}]
         assert "h" not in [x.get("name") for x in comp[0]["states"]]
+
+
+# --- v0.89.0: parallel regions ---
+
+
+PARALLEL_LIFECYCLE = """
+package P {
+    state def M {
+        entry; then C;
+        state C parallel {
+            state r1 { state a1; state a2; transition t1 first a1 then a2; }
+            state r2 { state b1; state b2; transition t2 first b1 then b2; }
+        }
+        state done;
+        transition tC first C accept Stop then done;
+    }
+}
+"""
+
+
+class TestParallelRegions:
+    """``parallel`` composites: co-active regions (v0.89.0)."""
+
+    def _sim(self):
+        return StateSimulator(sysmlpy.loads(PARALLEL_LIFECYCLE))
+
+    def test_both_regions_active_at_entry(self):
+        sim = self._sim()
+        assert sim.state == ("C.r1.a1", "C.r2.b1")
+
+    def test_regions_run_to_completion_independently(self):
+        sim = self._sim()
+        # t1 (completion) fires in r1; RTC then fires t2 in r2
+        assert sim.step() is True
+        assert sim.state == ("C.r1.a2", "C.r2.b2")
+
+    def test_composite_transition_exits_all_regions(self):
+        sim = self._sim()
+        sim.step()  # both regions RTC to their second states
+        assert sim.send("Stop") is True
+        assert sim.state == "done"
+
+    def test_descriptor_records_region_names(self):
+        md = build_state_machine(sysmlpy.loads(PARALLEL_LIFECYCLE))
+        assert md.parallel_regions == {"C": ("C.r1", "C.r2")}
+
+    def test_trigger_dispatched_to_co_region(self):
+        model = sysmlpy.loads("""
+            package P {
+                state def M {
+                    entry; then C;
+                    state C parallel {
+                        state r1 { state a; transition t1 first a accept Go1 then a; }
+                        state r2 { state b; transition t2 first b accept Go2 then b; }
+                    }
+                    state done;
+                    transition tOut first C accept Finish then done;
+                }
+            }
+            """)
+        sim = StateSimulator(model)
+        # Go2 fires in the co-region while pytransitions tracks r1
+        assert sim.send("Go2") is True
+        assert sim.state == ("C.r1.a", "C.r2.b")
+        assert sim.log[-1].from_state == "C.r2.b"
+        # Go1 fires in the primary region
+        assert sim.send("Go1") is True
+        # an unrelated trigger is rejected
+        assert sim.send("Nope") is False
+
+    def test_nested_parallel_inside_parallel(self):
+        model = sysmlpy.loads("""
+            package P {
+                state def M {
+                    entry; then Outer;
+                    state Outer parallel {
+                        state r1 { state a; state a2;
+                            transition tp first a accept Tick then a2; }
+                        state r2 {
+                            state Inner parallel {
+                                state x;
+                                state y;
+                                transition tx first x accept Tock then y;
+                            }
+                        }
+                    }
+                    state done;
+                    transition tOut first Outer accept Finish then done;
+                }
+            }
+            """)
+        sim = StateSimulator(model)
+        # Outer's regions: r1 (leaf a) and r2 (its nested parallel
+        # Inner enters with both x and y co-active; the primary slot
+        # tracks x)
+        assert sim.state == ("Outer.r1.a", "Outer.r2.Inner.x",
+                             "Outer.r2.Inner.y")
+        assert sim.send("Tick") is True
+        assert sim.state == ("Outer.r1.a2", "Outer.r2.Inner.x",
+                             "Outer.r2.Inner.y")
+        assert sim.send("Tock") is True
+        assert sim.state == ("Outer.r1.a2", "Outer.r2.Inner.y")
+        assert sim.send("Finish") is True
+        assert sim.state == "done"

@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.88.1** (2026-09-06)
+Current version: **v0.89.0** (2026-09-06)
 
 ---
 
@@ -168,7 +168,7 @@ These classes are fully implemented, have programmatic construction, `dump()` se
 
 ### Grammar Round-Trip Coverage (parse → dump)
 
-**165 / 165 tests passing (100%)** as of v0.88.1.
+**165 / 165 tests passing (100%)** as of v0.89.0.
 
 The suite grew from 96 to 165 cases (full-model round-trips drawn from the
 OMG spec corpus, including ActionTest / ControlNodeTest / DecisionTest
@@ -302,7 +302,7 @@ Handles `entry; then X;`, `do`/`exit` actions as state attributes, guarded trans
 
 ### Test Coverage
 
-Counts from `pytest --collect-only` at v0.88.1 (1626 total).
+Counts from `pytest --collect-only` at v0.89.0 (1632 total).
 
 | Test file | Tests | Status |
 |---|---|---|
@@ -335,7 +335,7 @@ Counts from `pytest --collect-only` at v0.88.1 (1626 total).
 | `tests/partial_test.py` | 7 | ✅ All pass |
 | `tests/palette_test.py` | 6 | ✅ All pass |
 | `tests/conformance_test.py` | 123 | ✅ All pass (100%) |
-| **Total** | **1626** | **1501 fast + 123 conformance pass (2 skipped: optional deps)** |
+| **Total** | **1632** | **1507 fast + 123 conformance pass (2 skipped: optional deps)** |
 
 ### Documentation
 
@@ -351,6 +351,19 @@ Counts from `pytest --collect-only` at v0.88.1 (1626 total).
 ---
 
 ## Completed Since v0.27.0
+
+### Parallel Regions in the Simulator (v0.89.0)
+
+- `state def C parallel { ... }` simulates: entering the composite
+  activates all regions at their defaults, regions fire their own
+  transitions independently (events dispatched per region in
+  declaration order), run-to-completion applies per region, and
+  transitions out of the composite exit all regions.  `sim.state` is
+  a tuple of active leaves while regions are co-active.
+- Nested parallel composites (a `parallel` region inside a `parallel`
+  region) activate and cascade on exit.
+- Fixed: composites whose children were all composites were demoted to
+  plain leaves (preventing these shapes from expanding at all).
 
 ### Dead-Code Removal + Nested-Definition Fidelity (v0.88.1)
 

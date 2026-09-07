@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## v0.89.0 (2026-09-06)
+
+**Parallel regions in the state-machine simulator.**
+
+`state def C parallel { ... }` (and `state c parallel { ... }`, at the
+machine root or nested inside a composite) now simulates instead of
+raising:
+
+- entering a parallel composite activates **all** of its regions
+  simultaneously, each at its default entry; `sim.state` becomes a
+  tuple of the active leaves in declaration order while regions are
+  co-active (a plain string otherwise)
+- each region fires its own transitions independently — the event is
+  dispatched to every co-active region in declaration order, and
+  run-to-completion applies per region
+- a transition out of the composite (or into another region) exits or
+  re-enters all regions, with the fired region entering at its target
+  leaf
+- nested parallel composites work (a region that is itself `parallel`
+  activates its own subregions recursively)
+
+Support work uncovered along the way: the composite fallback that
+demoted any composite whose children were all composites to a plain
+leaf is fixed (it previously prevented `C parallel { region1 { ... }
+region2 { ... } }` shapes from expanding at all).  The grammar already
+took the textual `parallel` keyword — the earlier tests fed synthetic
+machines under the assumption it did not.
+
+Fast suite 1507 passed / 2 skipped; conformance 123/123.
+
 ## v0.88.1 (2026-09-06)
 
 **Visitor dead-code removal + nested-definition fidelity + API typing
