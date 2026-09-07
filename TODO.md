@@ -333,18 +333,25 @@ against the v0.86.0 tree on 2026-09-06 (fast suite 1472 passed,
       friends — the nested behavior dispatch emitters
       (`_visit_nested_occurrence_usage`, `_visit_nested_usage`) still
       hardcode `specialization: None`; top-level and grammar-class dump
-      paths are fixed (v0.87.0)
-- [ ] Nested `rendering r2 : E;` inside a part body dumps correctly but
-      produces no public-API object (usage.py nested walk has no
-      RenderingUsage dispatch); `metadata m1` is also not findable via
-      `find()`
-- [ ] Usage-body imports dropped everywhere
+      paths are fixed (v0.87.0).  Verified 2026-09-06: common shapes
+      (`action a1 : A;`, `state`, `entry`, `do`) already round-trip via
+      other paths, and `_visit_nested_usage` has **zero call sites** —
+      candidate for dead-code cleanup rather than emitter fixes.
+- [x] Nested `rendering r2 : E;` inside a part body dumps correctly but
+      produces no public-API object; `metadata m1` also not findable
+      via `find()` *(→ v0.88.0: Rendering child + Metadata child with
+      name/typed_by_name; `MetadataFeature` accepted by
+      `NonOccurrenceUsageElement` for rebuild round-trips)*
+- [x] Usage-body imports dropped everywhere
       (`part p1 : E { private import Q::*; }`) — the visitor never
       dispatches `importRule` in `_visit_definition_body_item_dict` and
-      `DefinitionBodyItem` has no Import branch
-- [ ] `satisfy` valuepart dropped on dump (`satisfy R = 3;` loads, but
+      `DefinitionBodyItem` has no Import branch *(→ v0.88.0: all
+      visibility forms round-trip; bare `import` stays rejected —
+      grammar-correct)*
+- [x] `satisfy` valuepart dropped on dump (`satisfy R = 3;` loads, but
       the visitor emits a `"valuepart"` key ~antlr_visitor.py:2521 that
-      the grammar class ignores)
+      the grammar class ignores) *(→ v0.88.0: emitter now uses the
+      shared `_visit_value_part` helper; EQ/COLON_EQ/DEFAULT preserved)*
 
 ---
 
