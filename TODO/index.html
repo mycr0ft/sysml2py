@@ -521,6 +521,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#next-batch-v0880-control-flow-member-fidelity-usage-body-imports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Batch — v0.88.0: control-flow member fidelity + usage-body imports
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#next-batch-v0870-round-trip-fidelity-close-out" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -592,6 +603,17 @@
     <span class="md-ellipsis">
       
         Active Tasks (Post-Phase-D candidates)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-batch-v0880-control-flow-member-fidelity-usage-body-imports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Batch — v0.88.0: control-flow member fidelity + usage-body imports
       
     </span>
   </a>
@@ -866,6 +888,55 @@ are complete.  Follow-up work is organized under the
     vocabulary IRI); conditional expressions (<code>if c ? a else b</code>) and
     calc <code>in</code> parameters in the evaluator (positional invocation,
     declared defaults, recursion).</li>
+</ul>
+<hr />
+<h2 id="next-batch-v0880-control-flow-member-fidelity-usage-body-imports">Next Batch — v0.88.0: control-flow member fidelity + usage-body imports<a class="headerlink" href="#next-batch-v0880-control-flow-member-fidelity-usage-body-imports" title="Permanent link">&para;</a></h2>
+<p>Follow-ups surfaced by the v0.87.0 fidelity sweep, all verified against
+the v0.87.0 tree on 2026-09-06 (fast suite 1484 passed / 2 skipped,
+conformance 123/123).</p>
+<ul>
+<li>[x] <strong>A1 — <code>accept</code> member name + typing silently dropped</strong>
+  (<code>action a1 { accept msg : M; }</code> dumps as <code>accept ;</code> — same silent-drop
+  class as v0.79.1 <code>ref</code> / v0.87.0 filter-expose).  <code>_visit_payload_feature</code>
+  (antlr_visitor.py) hardcodes <code>identification</code>/<code>pfsp</code> to None and only
+  handles the <code>ownedFeatureTyping</code> alternative, but
+  <code>payloadFeature : identification payloadFeatureSpecializationPart
+  valuePart? | identification valuePart | ownedFeatureTyping …</code> —
+  <code>accept msg : M</code> parses via the first alternative.  Add a
+  <code>_build_pfsp_from_ctx</code> helper (PayloadFeatureSpecializationPart dict:
+  ownedRelationship/ownedRelationship2/mp, reusing the per-spec
+  FeatureSpecialization dict builders) and extract identification +
+  pfsp + valuePart.  Grammar classes are already complete
+  (<code>PayloadFeature</code>, <code>PayloadFeatureSpecializationPart</code> at
+  classes.py:7225/7301).</li>
+<li>[x] <strong>A2 — <code>satisfy</code> valuepart dropped on dump</strong>
+  (<code>satisfy s1 : R = 3;</code> dumps as <code>satisfy s1 : R ;</code>).  The satisfy
+  emitter (antlr_visitor.py ~:2495) reads <code>vp.ownedExpression()</code> off the
+  ValuePartContext, but <code>valuePart : featureValue</code> and
+  <code>featureValue : (EQ | COLON_EQ | DEFAULT …) ownedExpression</code> — the
+  expression sits one level down.  Replace the inline extraction with
+  the existing <code>_visit_value_part()</code> helper (handles EQ/COLON_EQ/DEFAULT
+  flags).  <code>SatisfyRequirementUsage</code> grammar class already parses +
+  dumps <code>valuepart</code> (classes.py:5353).</li>
+<li>[x] <strong>A3 — usage-body imports dropped</strong>
+  (<code>part p1 { private import Q::*; }</code> dumps as <code>part p1;</code> — imports are
+  legal in every body per <code>definitionBodyItem : importRule | …</code>).
+  <code>_visit_definition_body_item_dict</code> (antlr_visitor.py:9983) never
+  checks <code>item_ctx.importRule()</code>; <code>DefinitionBodyItem</code> (classes.py:5089)
+  has no <code>"Import"</code> dispatch.  Mirror the package-body handling
+  (<code>_visit_import_rule_dict</code> at antlr_visitor.py:893).</li>
+<li>[x] <strong>A4 — <code>metadata</code> usage not surfaced as a public-API object</strong>
+  (<code>metadata m1 : MD;</code> parses as a MetadataFeature annotating element;
+  the model tree wraps the <em>definition</em> as a Metadata object and the
+  usage vanishes — <code>find('m1')</code> fails).  Size the wiring during
+  implementation; at minimum document the annotation semantics and make
+  the usage navigable.</li>
+<li>[x] <strong>A5 — nested <code>rendering</code> usage has no public-API object</strong>
+  (<code>part w { rendering r2 : E; }</code> dumps correctly — v0.87.0 visitor fix —
+  but usage.py's nested walk never creates a <code>Rendering</code> child).
+  Add a RenderingUsage dispatch to the nested usage walk.</li>
+<li>[x] Round-trip / API tests for each fix in <code>tests/grammar_test.py</code> /
+      <code>tests/class_test.py</code>.</li>
 </ul>
 <hr />
 <h2 id="next-batch-v0870-round-trip-fidelity-close-out">Next Batch — v0.87.0: round-trip fidelity close-out<a class="headerlink" href="#next-batch-v0870-round-trip-fidelity-close-out" title="Permanent link">&para;</a></h2>

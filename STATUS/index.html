@@ -636,6 +636,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#control-flow-member-fidelity-usage-body-imports-v0880" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Control-Flow Member Fidelity + Usage-Body Imports (v0.88.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#round-trip-fidelity-close-out-view-body-members-v0870" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1150,6 +1161,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#control-flow-member-fidelity-usage-body-imports-v0880" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Control-Flow Member Fidelity + Usage-Body Imports (v0.88.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#round-trip-fidelity-close-out-view-body-members-v0870" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1418,7 +1440,7 @@
 
 
 <h1 id="sysmlpy-project-status">sysmlpy — Project Status<a class="headerlink" href="#sysmlpy-project-status" title="Permanent link">&para;</a></h1>
-<p>Current version: <strong>v0.87.0</strong> (2026-09-06)</p>
+<p>Current version: <strong>v0.88.0</strong> (2026-09-06)</p>
 <hr />
 <h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
 <h3 id="public-api-classes">Public API Classes<a class="headerlink" href="#public-api-classes" title="Permanent link">&para;</a></h3>
@@ -1721,12 +1743,14 @@
 <li>Non-raising <code>parse(text)</code> variant: returns <code>(Model, [])</code> on success, <code>(None, [errors])</code> on syntax error</li>
 </ul>
 <h3 id="grammar-round-trip-coverage-parse-dump">Grammar Round-Trip Coverage (parse → dump)<a class="headerlink" href="#grammar-round-trip-coverage-parse-dump" title="Permanent link">&para;</a></h3>
-<p><strong>153 / 153 tests passing (100%)</strong> as of v0.87.0.</p>
-<p>The suite grew from 96 to 153 cases (full-model round-trips drawn from the
+<p><strong>160 / 160 tests passing (100%)</strong> as of v0.88.0.</p>
+<p>The suite grew from 96 to 160 cases (full-model round-trips drawn from the
 OMG spec corpus, including ActionTest / ControlNodeTest / DecisionTest
 action-body successions; v0.87.0 added view filter/expose members, guarded
 entry transitions, typed-nameless connections, and typed prefixed-usage
-round-trips). Earlier corpus-level fixes: implicit-package wrap vs trailing
+round-trips; v0.88.0 added usage-body imports, satisfy valueparts, and
+accept-member name/typing/multiplicity round-trips). Earlier corpus-level
+fixes: implicit-package wrap vs trailing
 line comments, MetadataFeature /
 TextualRepresentation annotating elements, missing succession-member
 classes, WHEN triggers, and malformed interface ends.</p>
@@ -2106,7 +2130,7 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tbody>
 </table>
 <h3 id="test-coverage">Test Coverage<a class="headerlink" href="#test-coverage" title="Permanent link">&para;</a></h3>
-<p>Counts from <code>pytest --collect-only</code> at v0.87.0 (1609 total).</p>
+<p>Counts from <code>pytest --collect-only</code> at v0.88.0 (1618 total).</p>
 <table>
 <thead>
 <tr>
@@ -2118,7 +2142,7 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 <tbody>
 <tr>
 <td><code>tests/grammar_test.py</code></td>
-<td>153</td>
+<td>160</td>
 <td>✅ All pass (100%)</td>
 </tr>
 <tr>
@@ -2138,7 +2162,7 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><code>tests/class_test.py</code></td>
-<td>79</td>
+<td>81</td>
 <td>✅ All pass</td>
 </tr>
 <tr>
@@ -2263,8 +2287,8 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><strong>Total</strong></td>
-<td><strong>1609</strong></td>
-<td><strong>1486 fast + 123 conformance pass (2 skipped: optional deps)</strong></td>
+<td><strong>1618</strong></td>
+<td><strong>1495 fast + 123 conformance pass (2 skipped: optional deps)</strong></td>
 </tr>
 </tbody>
 </table>
@@ -2281,6 +2305,24 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </ul>
 <hr />
 <h2 id="completed-since-v0270">Completed Since v0.27.0<a class="headerlink" href="#completed-since-v0270" title="Permanent link">&para;</a></h2>
+<h3 id="control-flow-member-fidelity-usage-body-imports-v0880">Control-Flow Member Fidelity + Usage-Body Imports (v0.88.0)<a class="headerlink" href="#control-flow-member-fidelity-usage-body-imports-v0880" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Usage-body imports</strong> — <code>part p1 { private import Q::*; }</code> (and
+  public/protected/recursive forms) round-trip; the visitor now
+  dispatches <code>importRule</code> in every body and <code>DefinitionBodyItem</code>
+  handles the Import relationship.</li>
+<li><strong><code>satisfy</code> valueparts</strong> — <code>satisfy s1 : R = 3;</code> keeps <code>= 3</code> (the
+  emitter now uses the shared <code>_visit_value_part</code> helper; the
+  expression sat one level below where it probed).</li>
+<li><strong><code>accept</code> members</strong> — <code>accept msg : M;</code> keeps name + typing
+  (was <code>accept ;</code>); multiplicities render in re-parsable source
+  order (<code>: M[1]</code>).</li>
+<li><strong>Metadata usages navigable</strong> — <code>metadata m1 : MD;</code> / <code>@m1 : MD;</code>
+  / <code>about</code> forms surface as Metadata children with name +
+  typed_by_name (<code>find('m1')</code> works).</li>
+<li><strong>Nested rendering usages</strong> — <code>part w { rendering r2 : E; }</code>
+  creates a Rendering child with name + typed_by_name.</li>
+</ul>
 <h3 id="round-trip-fidelity-close-out-view-body-members-v0870">Round-Trip Fidelity Close-Out + View Body Members (v0.87.0)<a class="headerlink" href="#round-trip-fidelity-close-out-view-body-members-v0870" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>View <code>filter</code> / <code>expose</code> members</strong> — the last known silent-drop

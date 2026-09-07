@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0880-2026-09-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.88.0 (2026-09-06)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0870-2026-09-06" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3229,6 +3240,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0880-2026-09-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.88.0 (2026-09-06)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0870-2026-09-06" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5932,6 +5954,47 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0880-2026-09-06">v0.88.0 (2026-09-06)<a class="headerlink" href="#v0880-2026-09-06" title="Permanent link">&para;</a></h2>
+<p><strong>Control-flow member fidelity + usage-body imports.</strong></p>
+<p>All four follow-ups surfaced by the v0.87.0 fidelity sweep, plus one
+bonus API gap:</p>
+<ol>
+<li><em>Usage-body imports</em> (A3) — <code>part p1 { private import Q::*; }</code>
+   dumped as <code>part p1;</code>.  <code>_visit_definition_body_item_dict</code> now
+   dispatches <code>importRule</code> (the first <code>definitionBodyItem</code>
+   alternative) and <code>DefinitionBodyItem</code> handles the <code>Import</code>
+   relationship — the same dict shape package bodies use.  public /
+   protected / recursive (<code>::*::**</code>) forms all round-trip.</li>
+<li><em><code>satisfy</code> valuepart</em> (A2) — <code>satisfy s1 : R = 3;</code> dumped as
+   <code>satisfy s1 : R ;</code>.  The emitter read <code>vp.ownedExpression()</code> off
+   the ValuePartContext, but <code>valuePart : featureValue</code> puts the
+   expression one level down; it now uses the shared
+   <code>_visit_value_part()</code> helper (EQ / COLON_EQ / DEFAULT flags
+   preserved).  The <code>by</code> subject form keeps working.</li>
+<li><em><code>accept</code> member name + typing</em> (A1) — <code>action a1 { accept msg
+   : M; }</code> dumped as <code>accept ;</code>.  <code>_visit_payload_feature</code>
+   hardcoded <code>identification</code>/<code>pfsp</code> to None and only handled the
+   <code>ownedFeatureTyping</code> alternative; it now extracts the
+   identification, the payloadFeatureSpecializationPart (new
+   <code>_build_pfsp_from_ctx</code>, sharing the
+   <code>_feature_specialization_dicts</code> core extracted from the usage
+   builder) and the valuePart.  Multiplicity placement fixed in
+   <code>PayloadFeatureSpecializationPart.dump()</code> (natural source order
+   <code>: M[1]</code> — the previous mp-first rendering produced <code>[1] : M</code>,
+   which does not re-parse).</li>
+<li><em>Metadata usages navigable</em> (A4) — package-level
+   <code>metadata m1 : MD;</code> (and <code>@m1 : MD</code> / <code>about</code> forms) parses into a
+   MetadataFeature annotation the public-API tree silently dropped
+   (<code>find('m1')</code> failed).  Package.load_from_grammar now surfaces it
+   as a Metadata child with name + typed_by_name; <code>MetadataFeature</code>
+   is also accepted by <code>NonOccurrenceUsageElement</code> so the
+   <code>_ensure_body</code> rebuild round-trips.</li>
+<li><em>Nested <code>rendering</code> usages</em> (A5) — <code>part w { rendering r2 : E; }</code>
+   dumped correctly but produced no public-API object; the nested
+   usage walk now creates a <code>Rendering</code> child (name + typed_by_name
+   wired).</li>
+</ol>
+<p>Fast suite 1493 passed / 2 skipped; conformance 123/123.</p>
 <h2 id="v0870-2026-09-06">v0.87.0 (2026-09-06)<a class="headerlink" href="#v0870-2026-09-06" title="Permanent link">&para;</a></h2>
 <p><strong>Round-trip fidelity close-out + view body members.</strong></p>
 <p><em>View <code>filter</code> / <code>expose</code> members (A1)</em> — the last known silent-drop
