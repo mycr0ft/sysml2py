@@ -636,6 +636,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#parallel-regions-in-the-simulator-v0890" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parallel Regions in the Simulator (v0.89.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#dead-code-removal-nested-definition-fidelity-v0881" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1172,6 +1183,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#parallel-regions-in-the-simulator-v0890" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parallel Regions in the Simulator (v0.89.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#dead-code-removal-nested-definition-fidelity-v0881" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1462,7 +1484,7 @@
 
 
 <h1 id="sysmlpy-project-status">sysmlpy — Project Status<a class="headerlink" href="#sysmlpy-project-status" title="Permanent link">&para;</a></h1>
-<p>Current version: <strong>v0.88.1</strong> (2026-09-06)</p>
+<p>Current version: <strong>v0.89.0</strong> (2026-09-06)</p>
 <hr />
 <h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
 <h3 id="public-api-classes">Public API Classes<a class="headerlink" href="#public-api-classes" title="Permanent link">&para;</a></h3>
@@ -1765,7 +1787,7 @@
 <li>Non-raising <code>parse(text)</code> variant: returns <code>(Model, [])</code> on success, <code>(None, [errors])</code> on syntax error</li>
 </ul>
 <h3 id="grammar-round-trip-coverage-parse-dump">Grammar Round-Trip Coverage (parse → dump)<a class="headerlink" href="#grammar-round-trip-coverage-parse-dump" title="Permanent link">&para;</a></h3>
-<p><strong>165 / 165 tests passing (100%)</strong> as of v0.88.1.</p>
+<p><strong>165 / 165 tests passing (100%)</strong> as of v0.89.0.</p>
 <p>The suite grew from 96 to 165 cases (full-model round-trips drawn from the
 OMG spec corpus, including ActionTest / ControlNodeTest / DecisionTest
 action-body successions; v0.87.0 added view filter/expose members, guarded
@@ -2153,7 +2175,7 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tbody>
 </table>
 <h3 id="test-coverage">Test Coverage<a class="headerlink" href="#test-coverage" title="Permanent link">&para;</a></h3>
-<p>Counts from <code>pytest --collect-only</code> at v0.88.1 (1626 total).</p>
+<p>Counts from <code>pytest --collect-only</code> at v0.89.0 (1632 total).</p>
 <table>
 <thead>
 <tr>
@@ -2310,8 +2332,8 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><strong>Total</strong></td>
-<td><strong>1626</strong></td>
-<td><strong>1501 fast + 123 conformance pass (2 skipped: optional deps)</strong></td>
+<td><strong>1632</strong></td>
+<td><strong>1507 fast + 123 conformance pass (2 skipped: optional deps)</strong></td>
 </tr>
 </tbody>
 </table>
@@ -2328,6 +2350,19 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </ul>
 <hr />
 <h2 id="completed-since-v0270">Completed Since v0.27.0<a class="headerlink" href="#completed-since-v0270" title="Permanent link">&para;</a></h2>
+<h3 id="parallel-regions-in-the-simulator-v0890">Parallel Regions in the Simulator (v0.89.0)<a class="headerlink" href="#parallel-regions-in-the-simulator-v0890" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>state def C parallel { ... }</code> simulates: entering the composite
+  activates all regions at their defaults, regions fire their own
+  transitions independently (events dispatched per region in
+  declaration order), run-to-completion applies per region, and
+  transitions out of the composite exit all regions.  <code>sim.state</code> is
+  a tuple of active leaves while regions are co-active.</li>
+<li>Nested parallel composites (a <code>parallel</code> region inside a <code>parallel</code>
+  region) activate and cascade on exit.</li>
+<li>Fixed: composites whose children were all composites were demoted to
+  plain leaves (preventing these shapes from expanding at all).</li>
+</ul>
 <h3 id="dead-code-removal-nested-definition-fidelity-v0881">Dead-Code Removal + Nested-Definition Fidelity (v0.88.1)<a class="headerlink" href="#dead-code-removal-nested-definition-fidelity-v0881" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>410 dead lines deleted</strong> — <code>_visit_nested_usage</code> and 11 more

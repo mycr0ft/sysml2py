@@ -712,10 +712,12 @@ are complete.  Follow-up work is organized under the
 <li>[x] <strong>Goal 6: colorblind-safe palette</strong> — <code>set_stereotype_palette("okabe-ito")</code>
     switches <code>style="color"</code> views to the Okabe-Ito palette; <code>bw</code>
     default unchanged.</li>
-<li>[ ] <strong>sim follow-ups</strong> — parallel regions (raise, by design, for
-    now), history/deep-history pseudostates, and <em>executing</em>
-    assignment effects via <code>set_value</code> (the text <code>x := 5</code> is now
-    available — parse and apply).</li>
+<li>[x] <strong>sim follow-ups</strong> — history/deep-history pseudostates and
+    executing assignment effects via <code>set_value</code> shipped in v0.81.0;
+    parallel regions (<code>state def C parallel { ... }</code>, root-level or
+    nested) shipped in v0.89.0 — co-active regions with per-region
+    transition dispatch, cross-region moves, and composite exits
+    (<code>sim.state</code> becomes a tuple of active leaves).</li>
 <li>[x] <strong>Phase 2d (unreleased)</strong> — package view namespace enclosure
     (pilot <code>VStructure.casePackage</code>): packages render as
     <code>package "Name" { members }</code> with owned members nested inside;

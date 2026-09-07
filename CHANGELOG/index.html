@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0890-2026-09-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.89.0 (2026-09-06)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0881-2026-09-06" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3251,6 +3262,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0890-2026-09-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.89.0 (2026-09-06)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0881-2026-09-06" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5976,6 +5998,32 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0890-2026-09-06">v0.89.0 (2026-09-06)<a class="headerlink" href="#v0890-2026-09-06" title="Permanent link">&para;</a></h2>
+<p><strong>Parallel regions in the state-machine simulator.</strong></p>
+<p><code>state def C parallel { ... }</code> (and <code>state c parallel { ... }</code>, at the
+machine root or nested inside a composite) now simulates instead of
+raising:</p>
+<ul>
+<li>entering a parallel composite activates <strong>all</strong> of its regions
+  simultaneously, each at its default entry; <code>sim.state</code> becomes a
+  tuple of the active leaves in declaration order while regions are
+  co-active (a plain string otherwise)</li>
+<li>each region fires its own transitions independently — the event is
+  dispatched to every co-active region in declaration order, and
+  run-to-completion applies per region</li>
+<li>a transition out of the composite (or into another region) exits or
+  re-enters all regions, with the fired region entering at its target
+  leaf</li>
+<li>nested parallel composites work (a region that is itself <code>parallel</code>
+  activates its own subregions recursively)</li>
+</ul>
+<p>Support work uncovered along the way: the composite fallback that
+demoted any composite whose children were all composites to a plain
+leaf is fixed (it previously prevented <code>C parallel { region1 { ... }
+region2 { ... } }</code> shapes from expanding at all).  The grammar already
+took the textual <code>parallel</code> keyword — the earlier tests fed synthetic
+machines under the assumption it did not.</p>
+<p>Fast suite 1507 passed / 2 skipped; conformance 123/123.</p>
 <h2 id="v0881-2026-09-06">v0.88.1 (2026-09-06)<a class="headerlink" href="#v0881-2026-09-06" title="Permanent link">&para;</a></h2>
 <p><strong>Visitor dead-code removal + nested-definition fidelity + API typing
 cosmetics.</strong></p>
