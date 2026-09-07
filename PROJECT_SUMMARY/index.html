@@ -1182,9 +1182,9 @@
 <blockquote>
 <p><strong>For:</strong> Future agents and team members
 <strong>Last Updated:</strong> September 5, 2026
-<strong>Current Version:</strong> v0.86.0
+<strong>Current Version:</strong> v0.87.0
 <strong>Repository:</strong> https://github.com/mycr0ft/sysmlpy
-<strong>Roadmap:</strong> the 10-goal Adoption Roadmap (docs/DEVELOPMENT_PLAN.md,
+<strong>Roadmap:</strong> the 10-goal Adoption Roadmap (docs/archive/DEVELOPMENT_PLAN.md,
 now archived) is <strong>complete</strong> as of v0.77.0 — see CHANGELOG.md</p>
 </blockquote>
 <hr />
@@ -1863,7 +1863,15 @@ backs the <code>sysmlpy diff</code> CLI. 16 tests (<code>tests/diff_test.py</cod
 </tr>
 <tr>
 <td><strong>Typed-by not preserved in load_from_grammar</strong></td>
-<td>v0.57.0 — <code>_extract_specialization_info()</code> hoisted to base <code>Usage</code> (both grammar layouts); new <code>Usage.typed_by_name</code> property populated for all usage kinds.</td>
+<td>v0.57.0 — <code>_extract_specialization_info()</code> hoisted to base <code>Usage</code> (both grammar layouts); new <code>Usage.typed_by_name</code> property populated for all usage kinds. v0.87.0 — post-pass covers the manually-wired dispatch kinds; visitor emits <code>specialization</code> for view/viewpoint/concern/allocation/rendering/connection/individual.</td>
+</tr>
+<tr>
+<td><strong>View <code>filter</code> / <code>expose</code> members silently dropped</strong></td>
+<td>v0.87.0 — visitor emits <code>ElementFilterMember</code> / <code>Expose</code> dicts; grammar classes implemented (<code>view v { filter @e1; expose e1; }</code> round-trips).</td>
+</tr>
+<tr>
+<td><strong>Guarded entry transitions crash on load</strong></td>
+<td>v0.87.0 — <code>_visit_guarded_target_succession</code> rewritten (<code>entry a1; if x &gt; 0 then s2;</code> round-trips).</td>
 </tr>
 </tbody>
 </table>
@@ -1878,34 +1886,24 @@ backs the <code>sysmlpy diff</code> CLI. 16 tests (<code>tests/diff_test.py</cod
 </thead>
 <tbody>
 <tr>
-<td><strong>Action control-flow node classes missing</strong></td>
-<td><code>grammar/classes.py</code></td>
-<td><code>IfNode</code>, <code>WhileLoopNode</code>, <code>ForLoopNode</code>, <code>ControlNode</code>, <code>SendNode</code>, <code>AcceptNode</code>, <code>TerminateNode</code>, etc. exist in the visitor but not in <code>grammar/classes.py</code>. 16 grammar tests fail with <code>KeyError</code>.</td>
-</tr>
-<tr>
-<td>~<strong>Top-level attribute multiplicity not captured</strong>~</td>
-<td>Resolved — v0.40.0 fixed bounds capture (docs were stale); v0.59.0 fixed the remaining <code>ordered</code>/<code>nonunique</code> flags hardcoded <code>False</code> in the visitor + a <code>MultiplicityPart.dump()</code> XOR-guard bug.</td>
-<td></td>
-</tr>
-<tr>
 <td><strong>Typing resolved to name only</strong></td>
 <td><code>usage.py</code></td>
-<td>v0.57.0 preserves the declared type <em>name</em> (<code>typed_by_name</code>) on usages loaded from grammar; resolving <code>typedby</code> to the definition <em>object</em> via a model pass is still open.</td>
+<td>v0.57.0 preserves the declared type <em>name</em> (<code>typed_by_name</code>) on usages loaded from grammar; v0.87.0 extended name capture to every dispatch kind (view/viewpoint/concern/allocation/rendering/connection/individual/metadata/satisfy/…) and made the visitor emit <code>specialization</code> so <code>view v : Engine</code> round-trips; resolving <code>typedby</code> to the definition <em>object</em> via a model pass is still open.</td>
 </tr>
 <tr>
-<td><strong>Duplicate ActionUsage block</strong></td>
-<td><code>definition.py</code></td>
-<td>Dead code — duplicate <code>elif inner_class == "ActionUsage"</code> block.</td>
+<td><strong>Nested behavior-usage typings</strong></td>
+<td><code>antlr_visitor.py</code></td>
+<td>Nested dispatch emitters (<code>_visit_nested_occurrence_usage</code>, <code>_visit_nested_usage</code>) hardcode <code>specialization: None</code> — top-level kinds and the grammar-class dump chain are fixed (v0.87.0).</td>
 </tr>
 <tr>
-<td><strong>PackageBodyElement name hardcoded</strong></td>
-<td><code>grammar/classes.py</code></td>
-<td>Comment says <code class="highlight">This isn't always the case</code>.</td>
+<td><strong>Usage-body imports dropped</strong></td>
+<td><code>antlr_visitor.py</code> / <code>grammar/classes.py</code></td>
+<td><code>part p1 : E { private import Q::*; }</code> — the visitor never dispatches <code>importRule</code> in <code>_visit_definition_body_item_dict</code>; <code>DefinitionBodyItem</code> has no Import branch.</td>
 </tr>
 <tr>
-<td><strong>RootNamespace doesn't handle AliasMember/Import</strong></td>
-<td><code>definition.py</code></td>
-<td>~~<code>load_package_body()</code> raises <code>NotImplementedError</code>~~ <strong>Resolved v0.58.0</strong> — node types already dispatched; serialization-order gap fixed.</td>
+<td><strong><code>satisfy</code> valuepart dropped on dump</strong></td>
+<td><code>antlr_visitor.py</code> ~:2521 / <code>grammar/classes.py</code></td>
+<td><code>satisfy R = 3;</code> loads but the value part is ignored by the grammar class on dump.</td>
 </tr>
 </tbody>
 </table>

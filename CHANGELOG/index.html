@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0870-2026-09-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.87.0 (2026-09-06)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0860-2026-09-06" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3218,6 +3229,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0870-2026-09-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.87.0 (2026-09-06)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0860-2026-09-06" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5910,6 +5932,66 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0870-2026-09-06">v0.87.0 (2026-09-06)<a class="headerlink" href="#v0870-2026-09-06" title="Permanent link">&para;</a></h2>
+<p><strong>Round-trip fidelity close-out + view body members.</strong></p>
+<p><em>View <code>filter</code> / <code>expose</code> members (A1)</em> — the last known silent-drop
+TODOs in the visitor (same class as the v0.79.1 <code>ref</code> fix):</p>
+<ol>
+<li><em>Visitor</em>: <code>_visit_view_definition_body_dict</code> and
+   <code>_visit_view_body_dict</code> now emit <code>ElementFilterMember</code> dicts
+   (<code>filter @e1;</code>) and <code>Expose</code> dicts (<code>expose e;</code> /
+   <code>expose P::*;</code>) via new <code>_make_element_filter_member_dict</code> /
+   <code>_make_expose_dict</code> helpers — previously a <code>pass  # TODO</code> stub,
+   so views dumped as <code>view v ;</code>.</li>
+<li><em>Grammar classes</em>: <code>ElementFilterMember</code>, <code>Expose</code>,
+   <code>MembershipExpose</code>, <code>NamespaceExpose</code> implemented (were empty
+   stubs); <code>ViewDefinitionBody</code> gains the missing <code>"Expose"</code>
+   dispatch; usage.py's View body walk tolerates payload-carrying
+   members without their own model children.</li>
+</ol>
+<p><em>Other fixes:</em></p>
+<ul>
+<li><strong>Guarded entry transitions</strong> — <code>_visit_guarded_target_succession</code>
+  probed nonexistent ctx attributes and emitted a dict shape the
+  grammar class could not load (KeyError crash on
+  <code>entry a1; if x &gt; 0 then s2;</code>). Rewritten to emit
+  GuardExpressionMember + TransitionSuccessionMember; guarded entry
+  now round-trips. Also fixed the two remaining undefined
+  <code>_visit_expression</code> call sites (constraint member, satisfy visit).</li>
+<li><strong><code>ConnectionUsage.dump()</code></strong> — bare <code>connect a to b;</code> no longer
+  dumps as <code>connection  connect\n...</code>; typed-but-nameless
+  connections (<code>connection : PressureSeat connect ...</code>) keep their
+  typing.</li>
+<li><strong><code>RootNamespace</code></strong> — KerML <code>NamespaceBodyElement</code> roots load their
+  members (were silently dropped); a root-level <code>ElementFilterMember</code>
+  warns + skips instead of raising <code>UnboundLocalError</code>.</li>
+<li><strong>Typing round-trip on prefixed usages</strong> — the visitor emitters for
+  view / viewpoint / concern / allocation / rendering / connection /
+  individual hardcoded <code>specialization: None</code>, so
+  <code>view v : Engine</code> dumped as <code>view v ;</code>. All now extract the
+  feature specialization (shared <code>_build_full_specialization_from_ud</code>
+  core; <code>_build_full_specialization_from_ctx</code> falls back to a direct
+  <code>usageDeclaration</code> child).</li>
+<li><strong><code>typed_by_name</code> wiring</strong> — the dispatch branches that assign
+  grammar manually (viewpoint, concern, allocation, rendering,
+  metadata, individual, constraint, calculation, connection, flow,
+  satisfy, dependency, ...) never ran <code>_extract_specialization_info</code>; a
+  post-pass in <code>Package.load_from_grammar</code> now covers them.
+  <code>_extract_specialization_info</code> is idempotent (re-running would
+  append duplicate subsetting names).</li>
+<li><strong>Registered the <code>conformance</code> pytest mark</strong> (no more
+  <code>PytestUnknownMarkWarning</code>).</li>
+</ul>
+<p><em>Docs/hygiene:</em> fixed stale <code>docs/DEVELOPMENT_PLAN.md</code> links (→
+<code>docs/archive/</code>); refreshed AGENTS.md (version, 153-test grammar
+status, complete test-file map), STATUS.md Known Issues / Remaining
+Work tables, and TODO.md stale Goal-8/palette/next-release bits;
+removed tracked debug artifacts (<code>temp.txt</code>, <code>tests/temp.txt</code>,
+<code>test_puml/*</code>)</p>
+<p><em>Known remaining gaps recorded in TODO.md:</em> nested behavior-usage
+typings (<code>part p { action a1 : A; }</code>), nested <code>rendering</code> public-API
+objects, usage-body imports, <code>satisfy</code> valuepart.</p>
+<p>Fast suite 1484 passed / 2 skipped, conformance 123/123.</p>
 <h2 id="v0860-2026-09-06">v0.86.0 (2026-09-06)<a class="headerlink" href="#v0860-2026-09-06" title="Permanent link">&para;</a></h2>
 <p><strong>Goal 10 close-out — storage backend query parity.</strong></p>
 <p>The last open Goal 10 item ("CayleyStore query extensions — parity

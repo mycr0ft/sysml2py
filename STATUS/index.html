@@ -636,6 +636,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#round-trip-fidelity-close-out-view-body-members-v0870" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Round-Trip Fidelity Close-Out + View Body Members (v0.87.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#storage-query-parity-across-backends-v0860" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1139,6 +1150,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#round-trip-fidelity-close-out-view-body-members-v0870" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Round-Trip Fidelity Close-Out + View Body Members (v0.87.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#storage-query-parity-across-backends-v0860" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1396,7 +1418,7 @@
 
 
 <h1 id="sysmlpy-project-status">sysmlpy — Project Status<a class="headerlink" href="#sysmlpy-project-status" title="Permanent link">&para;</a></h1>
-<p>Current version: <strong>v0.86.0</strong> (2026-09-06)</p>
+<p>Current version: <strong>v0.87.0</strong> (2026-09-06)</p>
 <hr />
 <h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
 <h3 id="public-api-classes">Public API Classes<a class="headerlink" href="#public-api-classes" title="Permanent link">&para;</a></h3>
@@ -1699,11 +1721,13 @@
 <li>Non-raising <code>parse(text)</code> variant: returns <code>(Model, [])</code> on success, <code>(None, [errors])</code> on syntax error</li>
 </ul>
 <h3 id="grammar-round-trip-coverage-parse-dump">Grammar Round-Trip Coverage (parse → dump)<a class="headerlink" href="#grammar-round-trip-coverage-parse-dump" title="Permanent link">&para;</a></h3>
-<p><strong>97 / 97 tests passing (100%)</strong> as of v0.40.0.</p>
-<p>The suite grew from 79 to 96 cases (full-model round-trips drawn from the
+<p><strong>153 / 153 tests passing (100%)</strong> as of v0.87.0.</p>
+<p>The suite grew from 96 to 153 cases (full-model round-trips drawn from the
 OMG spec corpus, including ActionTest / ControlNodeTest / DecisionTest
-action-body successions). v0.37.0 additionally fixed corpus-level load
-crashes: implicit-package wrap vs trailing line comments, MetadataFeature /
+action-body successions; v0.87.0 added view filter/expose members, guarded
+entry transitions, typed-nameless connections, and typed prefixed-usage
+round-trips). Earlier corpus-level fixes: implicit-package wrap vs trailing
+line comments, MetadataFeature /
 TextualRepresentation annotating elements, missing succession-member
 classes, WHEN triggers, and malformed interface ends.</p>
 <p>All categories pass, including the 14 control flow node tests (IfNode,
@@ -2082,6 +2106,7 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tbody>
 </table>
 <h3 id="test-coverage">Test Coverage<a class="headerlink" href="#test-coverage" title="Permanent link">&para;</a></h3>
+<p>Counts from <code>pytest --collect-only</code> at v0.87.0 (1609 total).</p>
 <table>
 <thead>
 <tr>
@@ -2093,27 +2118,27 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 <tbody>
 <tr>
 <td><code>tests/grammar_test.py</code></td>
-<td>143</td>
+<td>153</td>
 <td>✅ All pass (100%)</td>
 </tr>
 <tr>
 <td><code>tests/semantic_test.py</code></td>
-<td>170</td>
+<td>179</td>
 <td>✅ All pass</td>
 </tr>
 <tr>
 <td><code>tests/plantuml_test.py</code></td>
-<td>131</td>
+<td>151</td>
 <td>✅ All pass (incl. official-notation tests)</td>
 </tr>
 <tr>
 <td><code>tests/store_test.py</code></td>
-<td>97</td>
+<td>121</td>
 <td>Pass (optional deps skipped if not installed)</td>
 </tr>
 <tr>
 <td><code>tests/class_test.py</code></td>
-<td>75</td>
+<td>79</td>
 <td>✅ All pass</td>
 </tr>
 <tr>
@@ -2133,8 +2158,8 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><code>tests/lsp_test.py</code></td>
-<td>56</td>
-<td>✅ All pass (batch 4: 17 more in <code>tests/lsp_batch4_test.py</code>)</td>
+<td>37</td>
+<td>✅ All pass (batch 4: 36 more in <code>tests/lsp_batch4_test.py</code>)</td>
 </tr>
 <tr>
 <td><code>tests/spreadsheet_test.py</code></td>
@@ -2153,7 +2178,7 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><code>tests/validator_test.py</code></td>
-<td>34</td>
+<td>84</td>
 <td>✅ All pass</td>
 </tr>
 <tr>
@@ -2173,17 +2198,17 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><code>tests/cayley_store_test.py</code></td>
-<td>22</td>
+<td>39</td>
 <td>Pass (skipped if cayley not installed)</td>
 </tr>
 <tr>
 <td><code>tests/boxes_view_test.py</code></td>
-<td>48</td>
+<td>54</td>
 <td>Pass (skipped if diagramboxes not installed)</td>
 </tr>
 <tr>
 <td><code>tests/project_test.py</code></td>
-<td>17</td>
+<td>21</td>
 <td>✅ All pass</td>
 </tr>
 <tr>
@@ -2192,8 +2217,28 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 <td>✅ All pass (100%)</td>
 </tr>
 <tr>
+<td><code>tests/dfa_cache_test.py</code></td>
+<td>14</td>
+<td>✅ All pass</td>
+</tr>
+<tr>
+<td><code>tests/resolve_test.py</code></td>
+<td>12</td>
+<td>✅ All pass</td>
+</tr>
+<tr>
+<td><code>tests/reference_parse_test.py</code></td>
+<td>12</td>
+<td>✅ All pass</td>
+</tr>
+<tr>
+<td><code>tests/constraint_text_test.py</code></td>
+<td>12</td>
+<td>✅ All pass</td>
+</tr>
+<tr>
 <td><code>tests/two_stage_parse_test.py</code></td>
-<td>7</td>
+<td>12</td>
 <td>✅ All pass</td>
 </tr>
 <tr>
@@ -2203,6 +2248,11 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><code>tests/partial_test.py</code></td>
+<td>7</td>
+<td>✅ All pass</td>
+</tr>
+<tr>
+<td><code>tests/palette_test.py</code></td>
 <td>6</td>
 <td>✅ All pass</td>
 </tr>
@@ -2213,8 +2263,8 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><strong>Total</strong></td>
-<td><strong>1274</strong></td>
-<td><strong>1151 fast + 123 conformance pass (24 skipped: optional deps)</strong></td>
+<td><strong>1609</strong></td>
+<td><strong>1486 fast + 123 conformance pass (2 skipped: optional deps)</strong></td>
 </tr>
 </tbody>
 </table>
@@ -2231,6 +2281,31 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </ul>
 <hr />
 <h2 id="completed-since-v0270">Completed Since v0.27.0<a class="headerlink" href="#completed-since-v0270" title="Permanent link">&para;</a></h2>
+<h3 id="round-trip-fidelity-close-out-view-body-members-v0870">Round-Trip Fidelity Close-Out + View Body Members (v0.87.0)<a class="headerlink" href="#round-trip-fidelity-close-out-view-body-members-v0870" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>View <code>filter</code> / <code>expose</code> members</strong> — the last known silent-drop
+  TODOs in the visitor: <code>view v { filter @e1; expose e1; }</code> now
+  parses into grammar classes and dumps back losslessly (was
+  <code>view v ;</code>).  Grammar classes <code>ElementFilterMember</code> / <code>Expose</code> /
+  <code>MembershipExpose</code> / <code>NamespaceExpose</code> implemented.</li>
+<li><strong>Guarded entry transitions</strong> — <code>entry a1; if x &gt; 0 then s2;</code>
+  round-trips (the visitor handler probed nonexistent ctx attributes
+  and the dict shape crashed the grammar class).</li>
+<li><strong>Typing round-trip on prefixed usages</strong> — <code>view v : Engine</code>,
+  <code>viewpoint</code>, <code>concern</code>, <code>allocation</code>, <code>rendering</code>, <code>connection</code>,
+  <code>individual</code> usages keep their typing on dump (visitor emitters
+  previously hardcoded <code>specialization: None</code>).</li>
+<li><strong><code>typed_by_name</code> for all dispatch kinds</strong> — viewpoint, concern,
+  allocation, rendering, metadata, individual, constraint,
+  calculation, connection, flow, satisfy, dependency now populate
+  typing names (post-pass over <code>Package.load_from_grammar</code>
+  children; extraction made idempotent).</li>
+<li><strong><code>ConnectionUsage.dump()</code> canonicalization</strong> — bare <code>connect a to
+  b;</code> no longer renders <code>connection  connect\n…</code>; typed-nameless
+  connections keep the <code>connection</code> keyword + typing.</li>
+<li><strong><code>RootNamespace</code></strong> — KerML roots load members; root-level
+  <code>ElementFilterMember</code> warns + skips (no <code>UnboundLocalError</code>).</li>
+</ul>
 <h3 id="storage-query-parity-across-backends-v0860">Storage Query Parity Across Backends (v0.86.0)<a class="headerlink" href="#storage-query-parity-across-backends-v0860" title="Permanent link">&para;</a></h3>
 <ul>
 <li>NetworkXStore gains <code>siblings</code> / <code>hub_elements</code> /
@@ -2353,24 +2428,16 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>grammar/classes.py</code></td>
-<td><code>PackageBodyElement</code> name is hardcoded; <code class="highlight">This isn't always the case</code></td>
+<td><code>antlr_visitor.py</code></td>
+<td>~~Top-level attribute multiplicity not captured~~ <strong>Resolved</strong> — bounds since v0.40.0, <code>ordered</code>/<code>nonunique</code> flags since v0.59.0 (note: <code>nonunique ordered</code> canonicalizes to <code>ordered nonunique</code> on dump; grammatically identical).</td>
 </tr>
 <tr>
 <td><code>definition.py</code> (<code>RootNamespace</code>)</td>
-<td>~~<code>load_package_body()</code> raises <code>NotImplementedError</code> for <code>AliasMember</code> and <code>Import</code> nodes~~ <strong>Resolved in v0.58.0</strong> — node types were already dispatched; the real gap (imports/aliases moved to the end of the package body on public-API dump) is fixed.</td>
-</tr>
-<tr>
-<td><code>antlr_visitor.py</code> ~line 9558</td>
-<td>Top-level attribute multiplicity not captured (nested attributes work)</td>
-</tr>
-<tr>
-<td><code>definition.py</code></td>
-<td>Dead code — duplicate <code>elif inner_class == "ActionUsage"</code> block</td>
+<td>~~<code>load_package_body()</code> raises <code>NotImplementedError</code> for <code>AliasMember</code> and <code>Import</code> nodes~~ <strong>Resolved in v0.58.0</strong> — node types were already dispatched; the real gap (imports/aliases moved to the end of the package body on public-API dump) is fixed. KerML <code>NamespaceBodyElement</code> roots load their members since v0.87.0.</td>
 </tr>
 <tr>
 <td><code>usage.py</code></td>
-<td>~~Type relationships (<code>: TypeName</code>) not preserved in <code>load_from_grammar()</code>~~ <strong>Fixed in v0.57.0</strong> — <code>_extract_specialization_info()</code> hoisted to base <code>Usage</code>; new <code>Usage.typed_by_name</code> populates on all usage kinds. <code>typedby</code> object resolution is a follow-up.</td>
+<td>~~Type relationships (<code>: TypeName</code>) not preserved in <code>load_from_grammar()</code>~~ <strong>Fixed in v0.57.0</strong> — <code>_extract_specialization_info()</code> hoisted to base <code>Usage</code>; <code>typed_by_name</code> now populates on all usage kinds, including the prefixed kinds (<code>view</code>, <code>viewpoint</code>, <code>concern</code>, <code>allocation</code>, <code>rendering</code>, <code>constraint</code>, <code>connection</code>) whose dispatch branches skipped it — wired via a post-pass in v0.87.0. <code>typedby</code> object resolution is a follow-up.</td>
 </tr>
 <tr>
 <td><code>semantic.py</code></td>
@@ -2395,7 +2462,7 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 <tbody>
 <tr>
 <td>~Typed-by preservation~</td>
-<td><strong>Done in v0.57.0</strong> — <code>_typed_by_name</code> / <code>typed_by_name</code> preserved for all usage kinds loaded from grammar (<code>Part</code>, <code>Attribute</code>, <code>Item</code>, <code>Port</code>, <code>Action</code>, <code>Interface</code>, <code>UseCase</code>, <code>Requirement</code>, <code>State</code>, behavior children). Resolving <code>typedby</code> to the definition <em>object</em> via a model pass remains a follow-up.</td>
+<td><strong>Done in v0.57.0, extended in v0.87.0</strong> — <code>_typed_by_name</code> / <code>typed_by_name</code> preserved for all usage kinds loaded from grammar. v0.57.0 covered <code>Part</code>, <code>Attribute</code>, <code>Item</code>, <code>Port</code>, <code>Action</code>, <code>Interface</code>, <code>UseCase</code>, <code>Requirement</code>, <code>State</code>, behavior children; v0.87.0 wired the prefixed kinds (<code>view</code>, <code>viewpoint</code>, <code>concern</code>, <code>allocation</code>, <code>rendering</code>, <code>constraint</code>, <code>connection</code>, <code>individual</code>, <code>metadata</code>, <code>satisfy</code>) whose dispatch branches assigned grammar manually, and made the <em>visitor</em> emit <code>specialization</code> for view/viewpoint/concern/allocation/rendering/connection/individual so <code>view v : Engine</code> round-trips its typing. Resolving <code>typedby</code> to the definition <em>object</em> via a model pass remains a follow-up.</td>
 </tr>
 <tr>
 <td>~Fix top-level attribute multiplicity~</td>
@@ -2421,16 +2488,16 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 <td><strong>Done in v0.60.0</strong> — <code>ReferenceCollector</code> tags reference kind (<code>typing</code>/<code>subsetting</code>/<code>redefinition</code>/<code>subclassification</code>); chain check applies only to genuine feature chains (fixes false <code>INCOMPATIBLE_FEATURE_CHAIN</code> on every qualified type name like <code>ScalarValues::Real</code>). Dotted expression chains (<code>wheels.hub.mass</code>) resolve through the declared <em>type</em> of each feature, following <code>:&gt;</code> inheritance; members of an enclosing usage's declared type (<code>part myCar : Car { attribute x :&gt; engine::power; }</code>) resolve for <code>::</code>, <code>.</code>, and single-member references (<code>_resolve_through_context</code>); inherited chain features advance to their declared type in the compatibility check. 17 tests.</td>
 </tr>
 <tr>
-<td>Connection multiplicity ends</td>
-<td><code>connect X[0..1] to Y[1]</code> multiplicity in connector ends</td>
+<td>~Connection multiplicity ends~</td>
+<td><strong>Verified fixed (v0.87.0)</strong> — <code>connect c1[0..1] to c2[1];</code> parses and the multiplicity ends survive the round-trip (round-trip test <code>test_bare_connect_dump_canonical</code>).</td>
 </tr>
 <tr>
-<td>Nested <code>:&gt;&gt;</code> redefines in return</td>
-<td><code>return attribute X : Type { :&gt;&gt; feature = expr; }</code></td>
+<td>~Nested <code>:&gt;&gt;</code> redefines in return~</td>
+<td><strong>Verified working (v0.87.0)</strong> — <code>return attribute X : Type { :&gt;&gt; feature = expr; }</code> parses and round-trips.</td>
 </tr>
 <tr>
-<td>Connector end compatibility</td>
-<td>Full type-assignability check in <code>_check_connector_ends_compatible()</code></td>
+<td>~Connector end compatibility~</td>
+<td><strong>Done in v0.76.0</strong> — full type-assignability check in <code>_check_connector_ends_compatible()</code> flags <code>CONNECTOR_END_TYPE_MISMATCH</code> (warning).</td>
 </tr>
 </tbody>
 </table>
