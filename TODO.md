@@ -360,6 +360,76 @@ against the v0.86.0 tree on 2026-09-06 (fast suite 1472 passed,
 
 ---
 
+## Open Items — candidates for v0.90.x (investigate before committing)
+
+Verified against the v0.89.0 tree on 2026-09-06 (fast suite 1507 passed /
+2 skipped, conformance 123/123).  Not yet a committed batch — size each
+before scheduling.
+
+- [ ] **F1 — `LibrarySymbolIndex` regex → parser extraction** —
+  the bundled-library symbol index scans `.kerml`/`.sysml` library files
+  with regex (`_PACKAGE_RE`/`_DEFINITION_RE`, semantic.py:69–85):
+  captures only package/definition *names* (no members, no signatures),
+  misses quoted names, and can false-positive inside comments/strings.
+  Investigate parsing library files with the real ANTLR parser (KerML
+  subset) with the regex as fallback for unparsable files; keep the
+  caches.  Watch cold-start cost — the DFA cache (v0.84.0) may absorb it.
+- [ ] **F2 — `resolve_types()` extensions** — library typings stay
+  name-only (`attribute x : ScalarValues::Real` is never linked to a
+  library definition object — AGENTS.md pitfall 6); resolve them via
+  the bundled library index.  Also consider an opt-in auto-resolve flag
+  on `loads()`/`load_files()` so callers don't need the extra pass.
+- [ ] **F3 — live visitor TODO: `featureSpecializationPart` on
+  view-rendering members** — `pass  # TODO: handle
+  featureSpecializationPart` (antlr_visitor.py:9038, in the
+  view-rendering-member dict builder): a rendering member with a
+  specialization part (`rendering r : T :>> f;` shape inside a view
+  body) silently loses the specialization.  Check grammar reachability
+  (`ownedReferenceSubsetting featureSpecializationPart?` alternative)
+  and implement, or confirm unreachable like the v0.88.1 sweep.
+- [ ] **F4 — bare succession shorthand in usage bodies** —
+  `state s { s1 then s2; }` fails to parse (`mismatched input 'then'`;
+  confirmed pre-existing via git stash during v0.89.0).  Explicit
+  `succession s1 to s2;` works.  Check the OMG grammar for the
+  member-shorthand form — may be a parser grammar gap rather than
+  semantics; if the standard really rejects it, document that.
+- [ ] **F5 — nested `state def` inside a `state def` body dropped by
+  the boxes collector** — `_collect_state_machine` (boxes_view.py:744)
+  only expands usage-form nesting (`state C parallel { ... }` works);
+  `state def M { state def C parallel { ... } }` yields `composites: []`
+  so the def-form composite never simulates.  Fix the collector (or
+  share the expansion with `build_state_machine`) and add def-form
+  parallel tests — current parallel tests all use the usage form.
+- [ ] **F6 — sim: one event → all matching regions** — `send`/
+  `step` dispatch a trigger to the *first* co-active region that can
+  handle it; UML semantics give each active region its own event copy,
+  so a trigger two regions both accept should advance both.  Also:
+  `do <action>` / `send` effects are logged only (sim.py scope note) —
+  consider an action-invocation hook for callers.
+- [ ] **F7 — LSP: parser-side token positions for semantic
+  diagnostics** — position-tracked semantic issues still locate via
+  the source-order pairing heuristic (element ↔ *n*-th declaration
+  occurrence, Goal 11 Batch 4); exact ranges need the visitor to emit
+  token positions (same future work as Batch 4 noted).
+- [ ] **F8 — satisfy API-level dump cosmetics** — the public-API
+  object `dump()` does not re-emit the valuepart (`satisfy s1 : R = 3;`
+  → grammar dump keeps `= 3`, API dump drops it); the anonymous
+  ors+fsp member form also carries a UUID name (by design — see
+  v0.88.1 notes).  Cosmetic only; batch with the next fidelity pass.
+- [ ] **F9 — STATUS.md stale typedby notes** — the Known Issues row
+  (usage.py) and the High Priority row still say "resolving `typedby`
+  to the definition *object* via a model pass remains a follow-up" —
+  shipped as the opt-in `Model.resolve_types()` in v0.79.0; refresh the
+  wording (opt-in + library typings stay name-only, → F2).
+- [ ] **F10 — grammar-class `dump()` coverage audit** — v0.89.0
+  expanded the machine builder against the *collector* path; do a
+  systematic `dump()` round-trip audit over the ~354 grammar classes
+  (reflection-driven, like the Phase-A `get_definition()` audit) to
+  find any remaining silent `""` dumpers before they surface as
+  v0.79.1-class bugs.
+
+---
+
 Legacy candidate follow-up work:
 
 - [x] `*`/`/` unit-dimension derivation (`mass * speed` vs `ForceValue`) *(→ Goal 10, v0.75.0)*
@@ -392,7 +462,9 @@ Legacy candidate follow-up work:
   - [x] `_extract_specialization_info()` hoisted from `Action` to base `Usage`; handles both grammar layouts
   - [x] New `Usage.typed_by_name` property populated on `loads()` for all usage kinds (Part, Item, Attribute, Port, Connection, Action, Interface, UseCase, Requirement, State, behavior children)
   - [x] 7 regression tests in `tests/class_test.py`
-  - [ ] Follow-up: resolve `typedby` to the definition *object* via a model pass
+  - [x] Follow-up: resolve `typedby` to the definition *object* via a
+        model pass *(→ v0.79.0: opt-in `Model.resolve_types()`;
+        library typings name-only — see F2)*
 
 - [x] **Phase D (v0.56.0):** High-performance parsing & graph store queries
   - [x] Two-stage SLL → LL parse with single-build fast path (38% faster parse)
