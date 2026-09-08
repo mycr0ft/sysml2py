@@ -1,5 +1,37 @@
 # CHANGELOG
 
+## v0.90.1 (2026-09-08)
+
+**Dead-code removal and lint hygiene.**
+
+Silently-shadowed duplicate method definitions removed — in each pair
+the *later* definition won at runtime, so the dead earlier one was a
+trap for future editors:
+
+- `class Action` (`usage.py`) defined `_get_definition()` twice
+  (L2264 built the decl dict from scratch; the surviving L2658 syncs
+  the name into the grammar object and delegates to
+  `grammar.get_definition()`), plus a dead `parts` local in
+  `Action.dump()`.
+- `evaluator.py` defined `_evaluate_glued()` twice (the surviving
+  version handles bracket units and guards glue recursion); a dead
+  `value =` local whose result was discarded by the next raise.
+- `Model` / `Package` (`definition.py`) each had a `return self`
+  `_get_child()` stub shadowing the real implementation.
+- Unused imports removed (`antlr_parser.py`, `project.py`,
+  `semantic.py`, `traceability.py`, `dfa_cache.py`, `spreadsheet.py`,
+  `store.py`, `boxes_view.py`, `plantuml.py`, `definition.py` local
+  import) and the never-read `sll_errors` local in the parser's SLL
+  bail-out path; 3 bare `except:` in example scripts now
+  `except Exception:`.
+- Stale `requirements.txt` (advertised mypy, omitted
+  `antlr4-python3-runtime`/`arrow`) rewritten in sync with
+  `pyproject.toml`; scratch `temp.txt` deleted.
+
+Fast suite 1510 passed / 2 skipped; conformance 123/123; functional
+smoke (parse → analyze → view → diff → store → programmatic
+Action round-trip) exercised every touched module.
+
 ## v0.90.0 (2026-09-06)
 
 **View rendering member specializations round-trip.**

@@ -12,7 +12,7 @@ identity while UUIDs provide persistence and graph connectivity.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Iterator
+from typing import Optional, Iterator
 import uuid
 
 

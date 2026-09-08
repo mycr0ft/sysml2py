@@ -306,21 +306,6 @@ class Model(Searchable):
         element or None
             The matching child element, or None if not found.
         """
-        return self
-
-    def _get_child(self, featurechain):
-        """Retrieve a nested child by dot-separated name path.
-
-        Parameters
-        ----------
-        featurechain : str
-            Dot-separated path like "pkg.element".
-
-        Returns
-        -------
-        element or None
-            The matching child element, or None if not found.
-        """
         if isinstance(featurechain, str):
             fc = featurechain.split(".")
         else:
@@ -684,21 +669,6 @@ class Package(Searchable):
         element or None
             The matching child element, or None if not found.
         """
-        return self
-
-    def _get_child(self, featurechain):
-        """Retrieve a nested child by dot-separated name path.
-
-        Parameters
-        ----------
-        featurechain : str
-            Dot-separated path like "pkg.element".
-
-        Returns
-        -------
-        element or None
-            The matching child element, or None if not found.
-        """
         if isinstance(featurechain, str):
             fc = featurechain.split(".")
         else:
@@ -853,7 +823,7 @@ class Package(Searchable):
         """
         from sysmlpy.grammar.classes import (
             Import, NamespaceImport, MembershipImport, ImportPrefix,
-            ImportedNamespace, ImportedMembership, VisibilityIndicator,
+            ImportedNamespace, ImportedMembership,
             RelationshipBody, QualifiedName
         )
 
@@ -882,7 +852,6 @@ class Package(Searchable):
             "protected": "protected" if visibility == "protected" else "",
             "public": "public" if visibility == "public" else "",
         }
-        vis = VisibilityIndicator(vis_def)
 
         # Create import prefix
         prefix_def = {
@@ -1720,7 +1689,7 @@ class Package(Searchable):
             A graph store with elements as nodes and parent-child
             relationships as edges.
         """
-        from sysmlpy.store import NetworkXStore, new_id, REL_PARENT_CHILD
+        from sysmlpy.store import NetworkXStore, new_id
 
         store = NetworkXStore()
         id_map = {}
@@ -1736,7 +1705,7 @@ class Package(Searchable):
             store.put(eid, data, parent_id=parent_id)
             if hasattr(elem, "children"):
                 for child in elem.children:
-                    child_id = _add_element(child, eid)
+                    _add_element(child, eid)
             return eid
 
         _add_element(self)

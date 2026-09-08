@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import csv
 import io
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List
 
 __all__ = [
     "tabular_view_to_csv", "data_value_tabular_to_csv",

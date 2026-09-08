@@ -1,6 +1,6 @@
 # sysmlpy — Project Status
 
-Current version: **v0.90.0** (2026-09-06)
+Current version: **v0.90.1** (2026-09-08)
 
 ---
 
@@ -351,6 +351,19 @@ Counts from `pytest --collect-only` at v0.90.0 (1635 total).
 ---
 
 ## Completed Since v0.27.0
+
+### Dead-Code Removal + Lint Hygiene (v0.90.1)
+
+- **~120 dead lines deleted** — silently-shadowed duplicate methods
+  (`Action._get_definition`, `_evaluate_glued`, two `_get_child`
+  stubs), unused imports across 10 modules, the never-read
+  `sll_errors` local, dead locals in `Action.dump`/`_descend`/
+  `to_networkx_store`.
+- Bare `except:` → `except Exception:` in the example scripts;
+  stale `requirements.txt` rewritten in sync with `pyproject.toml`.
+- No behavior change: fast suite 1510 passed / 2 skipped and
+  conformance 123/123 before and after; functional smoke over every
+  touched module.
 
 ### View Rendering Member Specializations (v0.90.0)
 

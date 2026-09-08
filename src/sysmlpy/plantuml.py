@@ -15,7 +15,6 @@ Supports multiple rendering styles per SysML v2 View semantics:
 - Textual notation: structured text representation
 """
 
-from sysmlpy.usage import Usage
 from sysmlpy.definition import Model, Package
 
 

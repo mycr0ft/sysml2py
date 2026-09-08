@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 from typing import Any, Optional
 
-from sysmlpy.definition import Model, Package
+from sysmlpy.definition import Package
 
 
 @dataclasses.dataclass

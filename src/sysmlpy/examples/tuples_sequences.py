@@ -5,7 +5,6 @@ the syntax and current status in sysmlpy.
 """
 
 from sysmlpy import loads, Part, Attribute
-from sysmlpy.usage import ureg
 
 # =============================================================================
 # 1. Tuple Syntax in SysML v2
@@ -123,7 +122,7 @@ if vehicle:
                 if isinstance(subchild, Attribute):
                     try:
                         print(f"    {subchild.name} = {subchild.get_value()}")
-                    except:
+                    except Exception:
                         pass
 
 # =============================================================================
@@ -158,7 +157,7 @@ if sensor:
         if isinstance(attr, Attribute):
             try:
                 print(f"  {attr.name} = {attr.get_value()}")
-            except:
+            except Exception:
                 pass
 
 # =============================================================================

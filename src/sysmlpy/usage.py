@@ -2261,53 +2261,6 @@ class Action(Usage):
         self.action_outputs.append((name, type_name))
         return self
 
-    def _get_definition(self, child=None):
-        if self.is_definition:
-            keyword = "action def"
-        else:
-            keyword = "action"
-        
-        decl = {
-            "name": "UsageDeclaration",
-            "identification": {
-                "name": "Identification",
-                "declaredName": self.name if self.name else "",
-                "declaredShortName": None
-            }
-        }
-        
-        # Build action body with in/out parameters
-        body_items = []
-        
-        # Add inputs
-        for inp_name, inp_type in self.action_inputs:
-            if inp_type:
-                item = f"in {inp_name} : {inp_type};"
-            else:
-                item = f"in {inp_name};"
-            body_items.append(item)
-        
-        # Add outputs  
-        for out_name, out_type in self.action_outputs:
-            if out_type:
-                item = f"out {out_name} : {out_type};"
-            else:
-                item = f"out {out_name};"
-            body_items.append(item)
-        
-        body = {"name": "ActionBody", "items": body_items}
-        
-        if self.is_definition:
-            grammar_type = "ActionDefinition"
-        else:
-            grammar_type = "ActionUsage"
-        
-        return {
-            "name": grammar_type,
-            "declaration": decl,
-            "body": body
-        }
-
     def load_from_grammar(self, grammar):
         # Set the grammar
         self.grammar = grammar
@@ -2715,9 +2668,6 @@ class Action(Usage):
         keyword = getattr(self, 'keyword', 'action')
         
         # Build output with in/out parameters
-        parts = [keyword, name_str]
-        
-        # Add in/out parameters
         params = []
         for inp_name, inp_type in self.action_inputs:
             if inp_type:

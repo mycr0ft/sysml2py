@@ -22,7 +22,6 @@ CLI command (see ``sysmlpy.__main__``).
 
 from __future__ import annotations
 
-import json as _json
 from dataclasses import dataclass, field
 
 __all__ = [

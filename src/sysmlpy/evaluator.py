@@ -528,17 +528,6 @@ class _Evaluator:
             f"{sorted(self._available_names())}"
         )
 
-    def _evaluate_glued(self, text):
-        """Re-parse a glued expression text and evaluate it in scope."""
-        try:
-            expr_dict = _parse_expression_text(text)
-        except EvaluationError:
-            return None
-        try:
-            return self.evaluate(expr_dict)
-        except EvaluationError:
-            return None
-
     def _all_namespaces(self):
         seen = set()
         stack = [ns for ns in self.scope]
@@ -557,7 +546,7 @@ class _Evaluator:
             if seg in current.values:
                 if i == len(rest) - 1:
                     return self._materialize(current.values[seg], full_names)
-                value = self._materialize(current.values[seg], names=None)  # noqa
+                self._materialize(current.values[seg], names=None)  # noqa
                 raise UnknownNameError(
                     f"Cannot chain into value '{seg}' "
                     f"({'.'.join(str(n) for n in full_names)})"

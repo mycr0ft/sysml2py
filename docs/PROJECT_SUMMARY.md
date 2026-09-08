@@ -1,8 +1,8 @@
 # sysmlpy — Project Work Summary
 
 > **For:** Future agents and team members
-> **Last Updated:** September 5, 2026
-> **Current Version:** v0.89.0
+> **Last Updated:** September 8, 2026
+> **Current Version:** v0.90.1
 > **Repository:** https://github.com/mycr0ft/sysmlpy
 > **Roadmap:** the 10-goal Adoption Roadmap (docs/archive/DEVELOPMENT_PLAN.md,
 > now archived) is **complete** as of v0.77.0 — see CHANGELOG.md

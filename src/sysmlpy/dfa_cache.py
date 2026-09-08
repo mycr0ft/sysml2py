@@ -36,7 +36,6 @@ from __future__ import annotations
 import hashlib
 import os
 import pickle
-import sys
 import threading
 import warnings
 from typing import Any, Dict, Optional, Tuple

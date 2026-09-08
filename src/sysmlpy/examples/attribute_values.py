@@ -99,7 +99,7 @@ for child in vehicle.children:
     if isinstance(child, Attribute):
         try:
             colors.append(child.get_value())
-        except:
+        except Exception:
             pass
 print(f"\nColors as list: {colors}")
 

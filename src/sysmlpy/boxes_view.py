@@ -36,7 +36,7 @@ from typing import Any, Optional, Union
 
 try:
     from diagramboxes import (
-        Diagram, Node, Edge, Port,
+        Diagram, Node, Edge,
         InitialPseudostate, JunctionPseudostate,
         ChoicePseudostate, ForkPseudostate, JoinPseudostate,
         FinalState, TerminatePseudostate,

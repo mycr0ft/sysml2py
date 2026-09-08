@@ -5,8 +5,6 @@ ANTLR4-based SysML v2.0 parser module.
 This module provides an alternative parser to textX, using ANTLR4 grammar
 generated from the OMG SysML v2 specification (2026-05 release).
 """
-import sys
-import os
 import warnings
 
 from antlr4 import InputStream, CommonTokenStream
@@ -96,9 +94,6 @@ def parse(source, library=None, recover=False, prediction_mode="sll",
         If ``recover`` is False and the source contains syntax errors
         (after both parse stages).
     """
-    from pathlib import Path
-
-    # Handle string or file input
     if hasattr(source, 'read'):
         content = source.read()
     else:
@@ -155,13 +150,11 @@ def _parse_tree(content, recover=False, prediction_mode="sll"):
         # any error means we redo the whole parse in LL mode.
         from antlr4.error.ErrorStrategy import BailErrorStrategy
         tree = None
-        sll_errors = []
         try:
             parser._errHandler = BailErrorStrategy()
             tree = parser.rootNamespace()
         except Exception:
             tree = None
-            sll_errors = ["<sll>"]
         if tree is not None and not error_listener.errors:
             # ── fast path succeeded ──────────────────────────────────
             _maybe_save_dfa_cache()
@@ -226,8 +219,6 @@ def _rescue_constraint_bodies(content, language="English"):
     Constraints whose body contains ``*/`` cannot be wrapped in a comment
     and are left untouched (the original error stands).
     """
-    import re as _re
-
     spans = []
     try:
         lexer = SysMLv2Lexer(InputStream(content))
