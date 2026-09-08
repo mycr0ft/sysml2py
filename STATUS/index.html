@@ -636,6 +636,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#view-rendering-member-specializations-v0900" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        View Rendering Member Specializations (v0.90.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#parallel-regions-in-the-simulator-v0890" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1183,6 +1194,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#view-rendering-member-specializations-v0900" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        View Rendering Member Specializations (v0.90.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#parallel-regions-in-the-simulator-v0890" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1484,7 +1506,7 @@
 
 
 <h1 id="sysmlpy-project-status">sysmlpy — Project Status<a class="headerlink" href="#sysmlpy-project-status" title="Permanent link">&para;</a></h1>
-<p>Current version: <strong>v0.89.0</strong> (2026-09-06)</p>
+<p>Current version: <strong>v0.90.0</strong> (2026-09-06)</p>
 <hr />
 <h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
 <h3 id="public-api-classes">Public API Classes<a class="headerlink" href="#public-api-classes" title="Permanent link">&para;</a></h3>
@@ -1787,7 +1809,7 @@
 <li>Non-raising <code>parse(text)</code> variant: returns <code>(Model, [])</code> on success, <code>(None, [errors])</code> on syntax error</li>
 </ul>
 <h3 id="grammar-round-trip-coverage-parse-dump">Grammar Round-Trip Coverage (parse → dump)<a class="headerlink" href="#grammar-round-trip-coverage-parse-dump" title="Permanent link">&para;</a></h3>
-<p><strong>165 / 165 tests passing (100%)</strong> as of v0.89.0.</p>
+<p><strong>168 / 168 tests passing (100%)</strong> as of v0.90.0.</p>
 <p>The suite grew from 96 to 165 cases (full-model round-trips drawn from the
 OMG spec corpus, including ActionTest / ControlNodeTest / DecisionTest
 action-body successions; v0.87.0 added view filter/expose members, guarded
@@ -2175,7 +2197,7 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tbody>
 </table>
 <h3 id="test-coverage">Test Coverage<a class="headerlink" href="#test-coverage" title="Permanent link">&para;</a></h3>
-<p>Counts from <code>pytest --collect-only</code> at v0.89.0 (1632 total).</p>
+<p>Counts from <code>pytest --collect-only</code> at v0.90.0 (1635 total).</p>
 <table>
 <thead>
 <tr>
@@ -2332,8 +2354,8 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </tr>
 <tr>
 <td><strong>Total</strong></td>
-<td><strong>1632</strong></td>
-<td><strong>1507 fast + 123 conformance pass (2 skipped: optional deps)</strong></td>
+<td><strong>1635</strong></td>
+<td><strong>1510 fast + 123 conformance pass (2 skipped: optional deps)</strong></td>
 </tr>
 </tbody>
 </table>
@@ -2350,6 +2372,14 @@ graceful handling. The parser no longer crashes on any edge-case input.</p>
 </ul>
 <hr />
 <h2 id="completed-since-v0270">Completed Since v0.27.0<a class="headerlink" href="#completed-since-v0270" title="Permanent link">&para;</a></h2>
+<h3 id="view-rendering-member-specializations-v0900">View Rendering Member Specializations (v0.90.0)<a class="headerlink" href="#view-rendering-member-specializations-v0900" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>render eng : Engine;</code> / <code>render eng2 : Engine :&gt;&gt; eng;</code> /
+  <code>render eng3[2];</code> inside a view body no longer drop typing,
+  redefinition and multiplicity on dump (the last live
+  <code>antlr_visitor.py</code> TODO); <code>_build_fsp_from_ctx()</code> builds the
+  <code>FeatureSpecializationPart</code> dict with proper group ordering.</li>
+</ul>
 <h3 id="parallel-regions-in-the-simulator-v0890">Parallel Regions in the Simulator (v0.89.0)<a class="headerlink" href="#parallel-regions-in-the-simulator-v0890" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>state def C parallel { ... }</code> simulates: entering the composite

@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0900-2026-09-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.90.0 (2026-09-06)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0890-2026-09-06" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3262,6 +3273,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0900-2026-09-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.90.0 (2026-09-06)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0890-2026-09-06" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5998,6 +6020,19 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0900-2026-09-06">v0.90.0 (2026-09-06)<a class="headerlink" href="#v0900-2026-09-06" title="Permanent link">&para;</a></h2>
+<p><strong>View rendering member specializations round-trip.</strong></p>
+<p><code>render eng : Engine;</code>, <code>render eng2 : Engine :&gt;&gt; eng;</code> and
+<code>render eng3[2];</code> inside a view body dropped their typing, redefinition
+and multiplicity on dump — the visitor's view-rendering-member builder
+hardcoded the <code>featureSpecializationPart</code> to <code>None</code> (the last live TODO
+in <code>antlr_visitor.py</code>).  The new <code>_build_fsp_from_ctx()</code> helper builds
+a <code>FeatureSpecializationPart</code> dict directly from the parse context
+(proper first/second specialization-group split around an interleaved
+multiplicity), reusing the shared <code>_feature_specialization_dicts()</code> /
+<code>_get_multiplicity_part()</code> cores; <code>ViewRenderingUsage</code> already parsed
+and dumped the <code>specialization</code> slot.  3 round-trip tests; fast suite
+1510 passed / 2 skipped; conformance 123/123.</p>
 <h2 id="v0890-2026-09-06">v0.89.0 (2026-09-06)<a class="headerlink" href="#v0890-2026-09-06" title="Permanent link">&para;</a></h2>
 <p><strong>Parallel regions in the state-machine simulator.</strong></p>
 <p><code>state def C parallel { ... }</code> (and <code>state c parallel { ... }</code>, at the
