@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0901-2026-09-08" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.90.1 (2026-09-08)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0900-2026-09-06" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3273,6 +3284,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0901-2026-09-08" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.90.1 (2026-09-08)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0900-2026-09-06" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -6020,6 +6042,35 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0901-2026-09-08">v0.90.1 (2026-09-08)<a class="headerlink" href="#v0901-2026-09-08" title="Permanent link">&para;</a></h2>
+<p><strong>Dead-code removal and lint hygiene.</strong></p>
+<p>Silently-shadowed duplicate method definitions removed — in each pair
+the <em>later</em> definition won at runtime, so the dead earlier one was a
+trap for future editors:</p>
+<ul>
+<li><code>class Action</code> (<code>usage.py</code>) defined <code>_get_definition()</code> twice
+  (L2264 built the decl dict from scratch; the surviving L2658 syncs
+  the name into the grammar object and delegates to
+  <code>grammar.get_definition()</code>), plus a dead <code>parts</code> local in
+  <code>Action.dump()</code>.</li>
+<li><code>evaluator.py</code> defined <code>_evaluate_glued()</code> twice (the surviving
+  version handles bracket units and guards glue recursion); a dead
+  <code>value =</code> local whose result was discarded by the next raise.</li>
+<li><code>Model</code> / <code>Package</code> (<code>definition.py</code>) each had a <code>return self</code>
+  <code>_get_child()</code> stub shadowing the real implementation.</li>
+<li>Unused imports removed (<code>antlr_parser.py</code>, <code>project.py</code>,
+  <code>semantic.py</code>, <code>traceability.py</code>, <code>dfa_cache.py</code>, <code>spreadsheet.py</code>,
+  <code>store.py</code>, <code>boxes_view.py</code>, <code>plantuml.py</code>, <code>definition.py</code> local
+  import) and the never-read <code>sll_errors</code> local in the parser's SLL
+  bail-out path; 3 bare <code>except:</code> in example scripts now
+  <code>except Exception:</code>.</li>
+<li>Stale <code>requirements.txt</code> (advertised mypy, omitted
+  <code>antlr4-python3-runtime</code>/<code>arrow</code>) rewritten in sync with
+  <code>pyproject.toml</code>; scratch <code>temp.txt</code> deleted.</li>
+</ul>
+<p>Fast suite 1510 passed / 2 skipped; conformance 123/123; functional
+smoke (parse → analyze → view → diff → store → programmatic
+Action round-trip) exercised every touched module.</p>
 <h2 id="v0900-2026-09-06">v0.90.0 (2026-09-06)<a class="headerlink" href="#v0900-2026-09-06" title="Permanent link">&para;</a></h2>
 <p><strong>View rendering member specializations round-trip.</strong></p>
 <p><code>render eng : Engine;</code>, <code>render eng2 : Engine :&gt;&gt; eng;</code> and
