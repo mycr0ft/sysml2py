@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v0.90.0 (2026-09-06)
+
+**View rendering member specializations round-trip.**
+
+`render eng : Engine;`, `render eng2 : Engine :>> eng;` and
+`render eng3[2];` inside a view body dropped their typing, redefinition
+and multiplicity on dump — the visitor's view-rendering-member builder
+hardcoded the `featureSpecializationPart` to `None` (the last live TODO
+in `antlr_visitor.py`).  The new `_build_fsp_from_ctx()` helper builds
+a `FeatureSpecializationPart` dict directly from the parse context
+(proper first/second specialization-group split around an interleaved
+multiplicity), reusing the shared `_feature_specialization_dicts()` /
+`_get_multiplicity_part()` cores; `ViewRenderingUsage` already parsed
+and dumped the `specialization` slot.  3 round-trip tests; fast suite
+1510 passed / 2 skipped; conformance 123/123.
+
 ## v0.89.0 (2026-09-06)
 
 **Parallel regions in the state-machine simulator.**

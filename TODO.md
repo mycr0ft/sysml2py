@@ -379,14 +379,14 @@ before scheduling.
   library definition object — AGENTS.md pitfall 6); resolve them via
   the bundled library index.  Also consider an opt-in auto-resolve flag
   on `loads()`/`load_files()` so callers don't need the extra pass.
-- [ ] **F3 — live visitor TODO: `featureSpecializationPart` on
-  view-rendering members** — `pass  # TODO: handle
-  featureSpecializationPart` (antlr_visitor.py:9038, in the
-  view-rendering-member dict builder): a rendering member with a
-  specialization part (`rendering r : T :>> f;` shape inside a view
-  body) silently loses the specialization.  Check grammar reachability
-  (`ownedReferenceSubsetting featureSpecializationPart?` alternative)
-  and implement, or confirm unreachable like the v0.88.1 sweep.
+- [x] **F3 — live visitor TODO: `featureSpecializationPart` on
+  view-rendering members** — *(shipped v0.90.0)*: fully reachable and
+  dropping typing, redefinition AND multiplicity (`render eng : Engine;`
+  dumped as `render eng ;`).  New `_build_fsp_from_ctx()` helper builds
+  the `FeatureSpecializationPart` dict from the parse context (group
+  split around an interleaved multiplicity), reusing
+  `_feature_specialization_dicts()`/`_get_multiplicity_part()`;
+  `ViewRenderingUsage` already handled the slot.  3 round-trip tests.
 - [ ] **F4 — bare succession shorthand in usage bodies** —
   `state s { s1 then s2; }` fails to parse (`mismatched input 'then'`;
   confirmed pre-existing via git stash during v0.89.0).  Explicit

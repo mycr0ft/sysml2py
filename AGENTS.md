@@ -11,7 +11,7 @@ already knows.
 | Field | Value |
 |-------|-------|
 | Name | sysmlpy |
-| Current version | 0.89.0 |
+| Current version | 0.90.0 |
 | Language | Python 3.9+ |
 | Package manager | **Poetry** (use `poetry run` for all commands) |
 | Test runner | pytest via `poetry run pytest` |
@@ -131,7 +131,7 @@ else:
 
 ## Test File Map
 
-Counts from `pytest --collect-only` at v0.89.0 (1632 total: 1507 + 123 conformance).
+Counts from `pytest --collect-only` at v0.90.0 (1635 total: 1510 + 123 conformance).
 
 | File | Count | What it tests |
 |------|-------|--------------|

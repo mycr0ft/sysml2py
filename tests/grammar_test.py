@@ -2395,6 +2395,47 @@ def test_render_inside_view_def_with_definition_body_item():
     assert strip_ws(text) == strip_ws(b.dump())
 
 
+def test_render_typed_in_view_roundtrip():
+    """render with typing inside view body round-trips (F3, v0.90.0).
+
+    The featureSpecializationPart on a viewRenderingUsage was hardcoded
+    to None, silently dropping the member's typing."""
+    text = """package P {
+    part def Engine;
+    view def MyView {
+        render eng : Engine;
+    }
+}"""
+    a = loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_render_typed_redefined_in_view_roundtrip():
+    """render with typing + redefinition inside view body round-trips."""
+    text = """package P {
+    part def Engine;
+    view def MyView {
+        render eng2 : Engine :>> eng;
+    }
+}"""
+    a = loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
+def test_render_multiplicity_in_view_roundtrip():
+    """render with multiplicity inside view body round-trips."""
+    text = """package P {
+    view def MyView {
+        render eng3[2];
+    }
+}"""
+    a = loads(text)
+    b = classtree(a)
+    assert strip_ws(text) == strip_ws(b.dump())
+
+
 def test_subject_qualified_name_roundtrip():
     """subject with qualified name in requirement def body round-trips."""
     text = """package P {

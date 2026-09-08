@@ -9035,7 +9035,7 @@ def _make_view_rendering_member_dict(ctx, prefix=None):
                         reference = {"name": "QualifiedName", "names": [names.getText()]}
             
             if hasattr(vru, 'featureSpecializationPart') and vru.featureSpecializationPart():
-                pass  # TODO: handle featureSpecializationPart
+                specialization = _build_fsp_from_ctx(vru.featureSpecializationPart())
             
             if hasattr(vru, 'usageBody') and vru.usageBody():
                 ub_ctx = vru.usageBody()
@@ -14071,6 +14071,44 @@ def _build_pfsp_from_ctx(psp_ctx):
         "ownedRelationship": _feature_specialization_dicts(first_group),
         "ownedRelationship2": _feature_specialization_dicts(second_group),
         "mp": mp,
+    }
+
+
+def _build_fsp_from_ctx(fsp_ctx):
+    """Build a FeatureSpecializationPart dict from a
+    featureSpecializationPart context.
+
+    Grammar: ``featureSpecialization+ multiplicityPart?
+    featureSpecialization* | multiplicityPart featureSpecialization*``.
+    Used by view rendering members (``render eng : Engine :>> eng``) —
+    v0.90.0, previously hardcoded to None (the last live antlr_visitor
+    TODO) so the member's typing/redefinition/multiplicity was dropped.
+    """
+    if fsp_ctx is None:
+        return None
+
+    first_group = []
+    second_group = []
+    seen_multiplicity = False
+    for child in fsp_ctx.children or []:
+        child_name = type(child).__name__
+        if child_name == 'MultiplicityPartContext':
+            seen_multiplicity = True
+        elif child_name == 'FeatureSpecializationContext':
+            (second_group if seen_multiplicity else first_group).append(child)
+
+    specs = first_group + second_group
+    mp = _get_multiplicity_part(fsp_ctx)
+
+    if not specs and mp is None:
+        return None
+
+    return {
+        "name": "FeatureSpecializationPart",
+        "specialization": _feature_specialization_dicts(first_group),
+        "multiplicity": mp,
+        "specialization2": _feature_specialization_dicts(second_group),
+        "multiplicity2": None,
     }
 
 
