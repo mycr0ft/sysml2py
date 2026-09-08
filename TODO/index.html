@@ -543,6 +543,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#open-items-candidates-for-v090x-investigate-before-committing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open Items — candidates for v0.90.x (investigate before committing)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#recently-completed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -625,6 +636,17 @@
     <span class="md-ellipsis">
       
         Next Batch — v0.87.0: round-trip fidelity close-out
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-items-candidates-for-v090x-investigate-before-committing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open Items — candidates for v0.90.x (investigate before committing)
       
     </span>
   </a>
@@ -1027,6 +1049,74 @@ against the v0.86.0 tree on 2026-09-06 (fast suite 1472 passed,
       shared <code>_visit_value_part</code> helper; EQ/COLON_EQ/DEFAULT preserved)</em></li>
 </ul>
 <hr />
+<h2 id="open-items-candidates-for-v090x-investigate-before-committing">Open Items — candidates for v0.90.x (investigate before committing)<a class="headerlink" href="#open-items-candidates-for-v090x-investigate-before-committing" title="Permanent link">&para;</a></h2>
+<p>Verified against the v0.89.0 tree on 2026-09-06 (fast suite 1507 passed /
+2 skipped, conformance 123/123).  Not yet a committed batch — size each
+before scheduling.</p>
+<ul>
+<li>[ ] <strong>F1 — <code>LibrarySymbolIndex</code> regex → parser extraction</strong> —
+  the bundled-library symbol index scans <code>.kerml</code>/<code>.sysml</code> library files
+  with regex (<code>_PACKAGE_RE</code>/<code>_DEFINITION_RE</code>, semantic.py:69–85):
+  captures only package/definition <em>names</em> (no members, no signatures),
+  misses quoted names, and can false-positive inside comments/strings.
+  Investigate parsing library files with the real ANTLR parser (KerML
+  subset) with the regex as fallback for unparsable files; keep the
+  caches.  Watch cold-start cost — the DFA cache (v0.84.0) may absorb it.</li>
+<li>[ ] <strong>F2 — <code>resolve_types()</code> extensions</strong> — library typings stay
+  name-only (<code>attribute x : ScalarValues::Real</code> is never linked to a
+  library definition object — AGENTS.md pitfall 6); resolve them via
+  the bundled library index.  Also consider an opt-in auto-resolve flag
+  on <code>loads()</code>/<code>load_files()</code> so callers don't need the extra pass.</li>
+<li>[ ] <strong>F3 — live visitor TODO: <code>featureSpecializationPart</code> on
+  view-rendering members</strong> — <code>pass  # TODO: handle
+  featureSpecializationPart</code> (antlr_visitor.py:9038, in the
+  view-rendering-member dict builder): a rendering member with a
+  specialization part (<code>rendering r : T :&gt;&gt; f;</code> shape inside a view
+  body) silently loses the specialization.  Check grammar reachability
+  (<code>ownedReferenceSubsetting featureSpecializationPart?</code> alternative)
+  and implement, or confirm unreachable like the v0.88.1 sweep.</li>
+<li>[ ] <strong>F4 — bare succession shorthand in usage bodies</strong> —
+  <code>state s { s1 then s2; }</code> fails to parse (<code>mismatched input 'then'</code>;
+  confirmed pre-existing via git stash during v0.89.0).  Explicit
+  <code>succession s1 to s2;</code> works.  Check the OMG grammar for the
+  member-shorthand form — may be a parser grammar gap rather than
+  semantics; if the standard really rejects it, document that.</li>
+<li>[ ] <strong>F5 — nested <code>state def</code> inside a <code>state def</code> body dropped by
+  the boxes collector</strong> — <code>_collect_state_machine</code> (boxes_view.py:744)
+  only expands usage-form nesting (<code>state C parallel { ... }</code> works);
+  <code>state def M { state def C parallel { ... } }</code> yields <code>composites: []</code>
+  so the def-form composite never simulates.  Fix the collector (or
+  share the expansion with <code>build_state_machine</code>) and add def-form
+  parallel tests — current parallel tests all use the usage form.</li>
+<li>[ ] <strong>F6 — sim: one event → all matching regions</strong> — <code>send</code>/
+  <code>step</code> dispatch a trigger to the <em>first</em> co-active region that can
+  handle it; UML semantics give each active region its own event copy,
+  so a trigger two regions both accept should advance both.  Also:
+  <code>do &lt;action&gt;</code> / <code>send</code> effects are logged only (sim.py scope note) —
+  consider an action-invocation hook for callers.</li>
+<li>[ ] <strong>F7 — LSP: parser-side token positions for semantic
+  diagnostics</strong> — position-tracked semantic issues still locate via
+  the source-order pairing heuristic (element ↔ <em>n</em>-th declaration
+  occurrence, Goal 11 Batch 4); exact ranges need the visitor to emit
+  token positions (same future work as Batch 4 noted).</li>
+<li>[ ] <strong>F8 — satisfy API-level dump cosmetics</strong> — the public-API
+  object <code>dump()</code> does not re-emit the valuepart (<code>satisfy s1 : R = 3;</code>
+  → grammar dump keeps <code>= 3</code>, API dump drops it); the anonymous
+  ors+fsp member form also carries a UUID name (by design — see
+  v0.88.1 notes).  Cosmetic only; batch with the next fidelity pass.</li>
+<li>[ ] <strong>F9 — STATUS.md stale typedby notes</strong> — the Known Issues row
+  (usage.py) and the High Priority row still say "resolving <code>typedby</code>
+  to the definition <em>object</em> via a model pass remains a follow-up" —
+  shipped as the opt-in <code>Model.resolve_types()</code> in v0.79.0; refresh the
+  wording (opt-in + library typings stay name-only, → F2).</li>
+<li>[ ] <strong>F10 — grammar-class <code>dump()</code> coverage audit</strong> — v0.89.0
+  expanded the machine builder against the <em>collector</em> path; do a
+  systematic <code>dump()</code> round-trip audit over the ~354 grammar classes
+  (reflection-driven, like the Phase-A <code>get_definition()</code> audit) to
+  find any remaining silent <code>""</code> dumpers before they surface as
+  v0.79.1-class bugs.</li>
+</ul>
+<hr />
 <p>Legacy candidate follow-up work:</p>
 <ul>
 <li>[x] <code>*</code>/<code>/</code> unit-dimension derivation (<code>mass * speed</code> vs <code>ForceValue</code>) <em>(→ Goal 10, v0.75.0)</em></li>
@@ -1065,7 +1155,9 @@ against the v0.86.0 tree on 2026-09-06 (fast suite 1472 passed,
 <li>[x] New <code>Usage.typed_by_name</code> property populated on <code>loads()</code> for all usage kinds (Part, Item, Attribute, Port, Connection, Action, Interface, UseCase, Requirement, State, behavior children)</li>
 <li>[x] 7 regression tests in <code>tests/class_test.py</code></li>
 <li>
-<p>[ ] Follow-up: resolve <code>typedby</code> to the definition <em>object</em> via a model pass</p>
+<p>[x] Follow-up: resolve <code>typedby</code> to the definition <em>object</em> via a
+        model pass <em>(→ v0.79.0: opt-in <code>Model.resolve_types()</code>;
+        library typings name-only — see F2)</em></p>
 </li>
 <li>
 <p>[x] <strong>Phase D (v0.56.0):</strong> High-performance parsing &amp; graph store queries</p>
