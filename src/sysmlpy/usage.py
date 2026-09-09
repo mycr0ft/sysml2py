@@ -883,6 +883,14 @@ class Usage(Searchable):
         """
         self.__init__()
         self.grammar = grammar
+
+        # Issue with Port/PortDefinition:
+        # The call to self.__init__() above reinitializes the Port with
+        # definition=False, so its grammar is PortDefinition but is_definition
+        # becomes false. Consequently, _get_stereotype() selects
+        # USAGE_STEREOTYPES and emits <<port>>.
+        self.is_definition = type(grammar).__name__.endswith("Definition")
+
         children = []
 
         # Check if this is a definition or usage
