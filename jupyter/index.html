@@ -11,10 +11,10 @@
       
       
       
-        <link rel="prev" href="../jupyter/">
+        <link rel="prev" href="../quickstart/">
       
       
-        <link rel="next" href="../LSP/">
+        <link rel="next" href="../sysml-magics/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Jupyter %%sysml magic - sysmlpy</title>
+        <title>Jupyter %%sysml How-to - sysmlpy</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#sysml-v2-jupyter-magic-commands-reference" class="md-skip">
+        <a href="#how-to-sysml-v2-in-jupyter-with-the-sysml-magic" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Jupyter %%sysml magic
+              Jupyter %%sysml How-to
             
           </span>
         </div>
@@ -341,33 +341,6 @@
       
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../jupyter/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Jupyter %%sysml How-to
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
     
   
   
@@ -387,7 +360,7 @@
   <span class="md-ellipsis">
     
   
-    Jupyter %%sysml magic
+    Jupyter %%sysml How-to
   
 
     
@@ -405,7 +378,7 @@
   <span class="md-ellipsis">
     
   
-    Jupyter %%sysml magic
+    Jupyter %%sysml How-to
   
 
     
@@ -431,10 +404,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#official-pilot-implementation-commands" class="md-nav__link">
+  <a href="#1-install" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Official Pilot Implementation commands
+        1. Install
       
     </span>
   </a>
@@ -442,10 +415,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#sysml_magic-support-in-this-template" class="md-nav__link">
+  <a href="#2-load-the-extension" class="md-nav__link">
     <span class="md-ellipsis">
       
-        sysml_magic support in this template
+        2. Load the extension
       
     </span>
   </a>
@@ -453,10 +426,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#session-semantics" class="md-nav__link">
+  <a href="#3-your-first-sysml-cell" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Session semantics
+        3. Your first SysML cell
       
     </span>
   </a>
@@ -464,10 +437,65 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#known-differences-from-the-pilot-kernel" class="md-nav__link">
+  <a href="#4-the-iteration-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Known differences from the Pilot kernel
+        4. The iteration workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-querying-and-visualizing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Querying and visualizing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-semantic-diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Semantic diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-saving-your-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Saving your work
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command reference
       
     </span>
   </a>
@@ -478,6 +506,33 @@
   
 </nav>
       
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sysml-magics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Jupyter %%sysml magic
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -644,10 +699,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#official-pilot-implementation-commands" class="md-nav__link">
+  <a href="#1-install" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Official Pilot Implementation commands
+        1. Install
       
     </span>
   </a>
@@ -655,10 +710,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#sysml_magic-support-in-this-template" class="md-nav__link">
+  <a href="#2-load-the-extension" class="md-nav__link">
     <span class="md-ellipsis">
       
-        sysml_magic support in this template
+        2. Load the extension
       
     </span>
   </a>
@@ -666,10 +721,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#session-semantics" class="md-nav__link">
+  <a href="#3-your-first-sysml-cell" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Session semantics
+        3. Your first SysML cell
       
     </span>
   </a>
@@ -677,10 +732,65 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#known-differences-from-the-pilot-kernel" class="md-nav__link">
+  <a href="#4-the-iteration-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Known differences from the Pilot kernel
+        4. The iteration workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-querying-and-visualizing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Querying and visualizing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-semantic-diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Semantic diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-saving-your-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Saving your work
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command reference
       
     </span>
   </a>
@@ -707,176 +817,183 @@
   
 
 
-<h1 id="sysml-v2-jupyter-magic-commands-reference">SysML v2 Jupyter Magic Commands — Reference<a class="headerlink" href="#sysml-v2-jupyter-magic-commands-reference" title="Permanent link">&para;</a></h1>
-<p>Two implementations of notebook SysML exist in the ecosystem:</p>
-<ol>
-<li><strong>The OMG Pilot Implementation kernel</strong> (<code>org.omg.sysml.jupyter.kernel</code>,
-   Java/Xtext, installed via Miniconda from
-   <a href="https://github.com/Systems-Modeling/SysML-v2-Pilot-Implementation">https://github.com/Systems-Modeling/SysML-v2-Pilot-Implementation</a>) — a
-   full <a href="https://github.com/Systems-Modeling/SysML-v2-Pilot-Implementation/blob/master/org.omg.sysml.jupyter.kernel/README.adoc">Jupyter kernel</a>
-   where SysML is the <em>language of the notebook itself</em>.</li>
-<li><strong><code>sysml_magic.py</code></strong> (this template) — an IPython extension providing a
-   <code>%%sysml</code> cell magic in the ordinary Python kernel, backed by
-   <a href="https://github.com/mycr0ft/sysmlpy">sysmlpy</a>. Pure Python, no JVM.</li>
-</ol>
-<p>This document records the official Pilot Implementation magic commands
-(extracted from <code>SysMLInteractive.java</code> and <code>SysMLInteractiveHelp.java</code>)
-and what this template's magic supports for each.</p>
-<h2 id="official-pilot-implementation-commands">Official Pilot Implementation commands<a class="headerlink" href="#official-pilot-implementation-commands" title="Permanent link">&para;</a></h2>
+<h1 id="how-to-sysml-v2-in-jupyter-with-the-sysml-magic">How-to: SysML v2 in Jupyter with the <code>%%sysml</code> magic<a class="headerlink" href="#how-to-sysml-v2-in-jupyter-with-the-sysml-magic" title="Permanent link">&para;</a></h1>
+<p>Write SysML v2 textual notation directly in notebook cells, keep a live
+model in the session, query it from Python, and render PlantUML views —
+powered by <a href="https://github.com/mycr0ft/sysmlpy">sysmlpy</a>, with no JVM and
+no separate kernel install.</p>
+<h2 id="1-install">1. Install<a class="headerlink" href="#1-install" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"sysmlpy[jupyter]"</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># or, with the Poetry/uv project you are working in:</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1">#   poetry add "sysmlpy[jupyter]"      /      uv add "sysmlpy[jupyter]"</span>
+</code></pre></div>
+<p>The extra pulls in IPython ≥ 8. Everything else (parser, analyzer,
+PlantUML generators) ships in sysmlpy core. JupyterLab/Jupyter Notebook
+itself is assumed present (or install <code>sysmlpy[jupyter]</code> alongside your
+normal <code>jupyterlab</code> install).</p>
+<h2 id="2-load-the-extension">2. Load the extension<a class="headerlink" href="#2-load-the-extension" title="Permanent link">&para;</a></h2>
+<p>In the first cell of a notebook:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="o">%</span><span class="n">load_ext</span> <span class="n">sysmlpy</span><span class="o">.</span><span class="n">ipython_magic</span>
+</code></pre></div>
+<p>Successful load prints nothing. (If it errors with <code>No module named
+IPython</code>, the <code>jupyter</code> extra is missing.)</p>
+<h2 id="3-your-first-sysml-cell">3. Your first SysML cell<a class="headerlink" href="#3-your-first-sysml-cell" title="Permanent link">&para;</a></h2>
+<p>A <code>%%sysml</code> cell contains SysML v2 textual notation, not Python:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>%%sysml
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>package Vehicle {
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    part def Engine {
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        attribute fuelRate : Real;
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    }
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    part def Vehicle {
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        part engine : Vehicle::Engine;
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    }
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>}
+</code></pre></div>
+<p>Output:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>sysml: model updated — 1 package(s) loaded
+</code></pre></div>
+<p>The parsed model is <strong>persistent across cells</strong> and bound into the
+notebook namespace as <code>model</code> (alias <code>_sysml</code>). Verify from a normal
+Python cell:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">packages</span><span class="p">]</span>      <span class="c1"># ['Vehicle']</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">model</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"Engine"</span><span class="p">)</span>             <span class="c1"># exact declared-name search, any depth</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"Engine"</span><span class="p">,</span> <span class="n">sysml_type</span><span class="o">=</span><span class="s2">"part"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">engine</span><span class="o">.</span><span class="n">attributes</span><span class="p">]</span>   <span class="c1"># ['fuelRate']</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">model</span>                                 <span class="c1"># rich collapsible tree display</span>
+</code></pre></div>
+<blockquote>
+<p><strong>Name-lookup note:</strong> <code>find</code>/<code>find_one</code> match an element's <em>declared
+name</em>, exactly, anywhere in the tree — <code>::</code> in a query is <strong>not</strong>
+interpreted as a path. If a package and a part share a name
+(<code>package Vehicle { part def Vehicle; }</code>), disambiguate with the type
+filter (<code>model.find(name="Vehicle", sysml_type="package")</code> vs
+<code>sysml_type="part"</code>), or navigate structurally from a unique anchor
+(<code>model.find_one("Engine").parent</code>), or use
+<code>model.path_between(src, dst)</code> / <code>model.traverse(cb)</code> for path-shaped
+queries. <code>find_one</code> raises <code>LookupError</code> rather than guessing when a
+name is ambiguous — treat that as a feature and narrow the query.</p>
+</blockquote>
+<h2 id="4-the-iteration-workflow">4. The iteration workflow<a class="headerlink" href="#4-the-iteration-workflow" title="Permanent link">&para;</a></h2>
+<p>The natural loop is one <code>%%sysml</code> cell per element you are working on.
+Re-declaring a package merges at <strong>package-member granularity</strong>: an
+element with the same <code>name</code> + <code>sysml_type</code> replaces the prior
+definition; sibling members are preserved.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>%%sysml
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>package Vehicle {
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    part def Vehicle {
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>        part engine : Vehicle::Engine;
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        attribute mass : Real = 1500;
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    }
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>}
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>sysml: model updated — 1 package(s) loaded, 1 redefined
+</code></pre></div>
+<p><code>part def Engine</code> is still in the model — only <code>part def Vehicle</code> was
+replaced. Parse errors are reported to stderr with line/column and
+<strong>never</strong> discard the session model; fix the cell and re-run.</p>
+<p>Options on the <code>%%sysml</code> line:</p>
 <table>
 <thead>
 <tr>
-<th>Magic</th>
-<th>Purpose (per <code>%help &lt;cmd&gt;</code> strings in the Pilot source)</th>
+<th>Option</th>
+<th>Effect</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>%help [&lt;COMMAND&gt;]</code></td>
-<td>List available commands, or detailed help on one.</td>
+<td><code>--reset</code></td>
+<td>Discard the session model before parsing this cell</td>
 </tr>
 <tr>
-<td><code>%eval [--target=&lt;NAME&gt;] &lt;EXPR&gt;</code></td>
-<td>Evaluate an expression, optionally in the scope of a named (fully qualified) element.</td>
+<td><code>--file PATH</code></td>
+<td>Parse SysML from a file instead of the cell body (use <code>-</code> as the cell body)</td>
 </tr>
 <tr>
-<td><code>%list [&lt;QUERY&gt;]</code></td>
-<td>With no argument, list all loaded library packages. With <code>&lt;QUERY&gt;</code> (a legal <code>import</code> name: <code>N</code>, <code>N::*</code>, <code>N::**</code>, optionally followed by a <code>[filter]</code>), list matching elements.</td>
-</tr>
-<tr>
-<td><code>%show [--style=&lt;STYLE&gt;] &lt;NAME&gt;</code></td>
-<td>Print the abstract syntax tree rooted at <code>&lt;NAME&gt;</code>. Styles: <code>TREE</code> (indented), <code>JSON</code>.</td>
-</tr>
-<tr>
-<td><code>%publish [-d] [--project=&lt;P&gt;] [--branch=&lt;B&gt;] &lt;NAME&gt;</code></td>
-<td>Publish the elements rooted at <code>&lt;NAME&gt;</code> to the model repository. <code>-d</code> includes derived properties.</td>
-</tr>
-<tr>
-<td><code>%viz [--view=&lt;VIEW&gt;] [--style=&lt;STYLE&gt;...] &lt;NAME&gt;...</code></td>
-<td>PlantUML visualization. Views: <code>DEFAULT</code>, <code>TREE</code> (≈BDD), <code>INTERCONNECTION</code> (≈IBD), <code>STATE</code>, <code>ACTION</code>, <code>SEQUENCE</code>, <code>MIXED</code>. Styles include <code>LR</code>, <code>ortholine</code>, … (delegated to <code>SysML2PlantUMLStyle</code>).</td>
-</tr>
-<tr>
-<td><code>%view [--render=&lt;RENDERING&gt;] [--style=&lt;STYLE&gt;...] &lt;NAME&gt;</code></td>
-<td>Render a <em>view usage</em> defined in the model itself. Renderings: same set as <code>%viz</code> views.</td>
-</tr>
-<tr>
-<td><code>%export &lt;NAME&gt;</code></td>
-<td>Write a JSON file of the AST rooted at <code>&lt;NAME&gt;</code>.</td>
-</tr>
-<tr>
-<td><code>%load [--id=&lt;ID&gt;] [--name=&lt;N&gt;] [--branch=&lt;B&gt;] [&lt;NAME&gt;]</code></td>
-<td>Download previously published models from the repository.</td>
-</tr>
-<tr>
-<td><code>%projects</code></td>
-<td>List projects in the repository (name + UUID).</td>
-</tr>
-<tr>
-<td><code>%repo [&lt;BASE PATH&gt;]</code></td>
-<td>Set/print the repository API base path used by <code>%publish</code>/<code>%load</code>/<code>%projects</code>.</td>
-</tr>
-<tr>
-<td><code>%exit</code></td>
-<td>(Console/REPL mode only) leave the interactive session.</td>
+<td><code>--show</code></td>
+<td>Print the round-tripped (canonicalized) model text after merging</td>
 </tr>
 </tbody>
 </table>
-<p>The Pilot kernel additionally reads <code>$ISYSML_API_BASE_PATH</code> and
-<code>$ISYSML_GRAPHVIZ_PATH</code> environment variables (also settable via
-<code>--api-base-path</code> / <code>--graphviz-path</code>) to locate the repository API and the
-Graphviz <code>dot</code> binary used by <code>%viz</code>.</p>
-<h2 id="sysml_magic-support-in-this-template"><code>sysml_magic</code> support in this template<a class="headerlink" href="#sysml_magic-support-in-this-template" title="Permanent link">&para;</a></h2>
-<p>The ordinary-Python-kernel magic implements the interaction patterns that
-make sense client-side, backed by sysmlpy instead of the Eclipse/EMF stack.
-Repository-backed commands (<code>%publish</code>, <code>%load</code>, <code>%projects</code>, <code>%repo</code>)
-require the OMG API server and are out of scope; use the Pilot kernel if you
-need them.</p>
+<h2 id="5-querying-and-visualizing">5. Querying and visualizing<a class="headerlink" href="#5-querying-and-visualizing" title="Permanent link">&para;</a></h2>
+<p>Line magics (modeled on the <a href="https://github.com/Systems-Modeling/SysML-v2-Pilot-Implementation/tree/master/org.omg.sysml.jupyter.kernel">OMG Pilot Implementation Jupyter
+kernel</a>
+command set):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>%sysml_reset                 # discard the session model
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>%sysml_list                  # list top-level packages
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>%sysml_list Engine           # elements matching an exact declared name
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>%sysml_show Engine           # AST dump rooted at a named element
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>%sysml_show Engine --json    # JSON representation when the dump parses
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>%sysml_viz Vehicle           # PlantUML view (default: general)
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>%sysml_viz Vehicle --view tree
+</code></pre></div>
+<p><code>%sysml_viz</code> views: <code>general</code>, <code>interconnection</code>, <code>action</code>, <code>package</code>,
+<code>tree</code>. Output is PlantUML text; render it with the PlantUML CLI, the
+VS Code PlantUML extension, or a PlantUML server — e.g. paste into
+<a href="https://www.plantuml.com/plantuml">https://www.plantuml.com/plantuml</a>.</p>
+<p>For anything richer, drop into Python — the model is a live object:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">model</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">sysml_type</span><span class="o">=</span><span class="s2">"part"</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>   <span class="c1"># top-level parts only</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">model</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"Engine"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">attributes</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">pkg</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_one</span><span class="p">(</span><span class="s2">"Vehicle"</span><span class="p">)</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nb">list</span><span class="p">(</span><span class="n">pkg</span><span class="p">)</span>                                        <span class="c1"># children</span>
+</code></pre></div>
+<h2 id="6-semantic-diagnostics">6. Semantic diagnostics<a class="headerlink" href="#6-semantic-diagnostics" title="Permanent link">&para;</a></h2>
+<p>After each successful merge, sysmlpy's semantic analyzer runs
+best-effort over the session model. Issues print to stderr as:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>[semantic] [CODE] message
+</code></pre></div>
+<p>These are advisory (the model is still merged); use
+<code>sysml-style check sysml/models/*.sysml</code> in CI for hard gating.</p>
+<h2 id="7-saving-your-work">7. Saving your work<a class="headerlink" href="#7-saving-your-work" title="Permanent link">&para;</a></h2>
+<p>The magic edits the in-memory model. To persist back to <code>.sysml</code> files,
+use <code>--show</code> to see canonical text and paste it into your model files, or
+run the formatter from the shell:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>sysmlpy<span class="w"> </span>format<span class="w"> </span>sysml/models/*.sysml
+</code></pre></div>
+<p>To package a model directory for interchange, see the
+<code>.kpar</code> packaging how-to in the
+<a href="https://github.com/mycr0ft/sysml-copier">sysml-copier</a> template
+(<code>scripts/make_kpar.py</code> in generated projects).</p>
+<h2 id="8-troubleshooting">8. Troubleshooting<a class="headerlink" href="#8-troubleshooting" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Official command</th>
-<th>This template</th>
-<th>Notes</th>
+<th>Symptom</th>
+<th>Cause / fix</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>(SysML cell)</td>
-<td><code>%%sysml [--reset] [--file PATH] [--show]</code></td>
-<td>Cell body is SysML source. Accumulates into a persistent <code>model</code>. Package members merge by (name, sysml_type): re-declared elements replace, others are preserved.</td>
+<td><code>No module named IPython</code></td>
+<td>Install the extra: <code>pip install "sysmlpy[jupyter]"</code></td>
 </tr>
 <tr>
-<td><code>%help</code></td>
-<td><code>%%sysml?</code> / module docstring</td>
-<td><code>help(sysml_magic)</code> or the docstrings.</td>
+<td><code>%%sysml is a cell magic, but the cell body is empty</code></td>
+<td>IPython requires a body; with <code>--file</code>, put <code>-</code> in the body</td>
 </tr>
 <tr>
-<td><code>%list [&lt;QUERY&gt;]</code></td>
-<td><code>%sysml_list [NAME]</code></td>
-<td>No arg: top-level packages. With a name: exact-name matches at any depth. Richer queries: <code>model.find(sysml_type='part', recursive=False)</code> from Python.</td>
+<td><code>find_one: 2 matches for 'X'</code></td>
+<td>X names both a package and an element — use a qualified name or <code>model.find(name=..., sysml_type=...)</code></td>
 </tr>
 <tr>
-<td><code>%show [--style] &lt;NAME&gt;</code></td>
-<td><code>%sysml_show NAME [--json]</code></td>
-<td><code>dump()</code> tree text, or full JSON with <code>--json</code>.</td>
+<td><code>unknown view '...'</code></td>
+<td><code>%sysml_viz --view</code> accepts general|interconnection|action|package|tree</td>
 </tr>
 <tr>
-<td><code>%viz [--view] [--style] &lt;NAME&gt;</code></td>
-<td><code>%sysml_viz NAME [--view V]</code></td>
-<td>Views: <code>general</code>, <code>interconnection</code>, <code>action</code>, <code>package</code>, <code>tree</code> (sysmlpy PlantUML generators). Output is PlantUML text; render with the PlantUML CLI/extension, or embed via a PlantUML server.</td>
+<td>Session model looks stale/corrupted</td>
+<td><code>%sysml_reset</code>, then re-run your definition cells</td>
 </tr>
 <tr>
-<td><code>%eval &lt;EXPR&gt;</code></td>
-<td>Python cells directly</td>
-<td>The model is a live Python object (<code>model</code>, alias <code>_sysml</code>); evaluate with plain Python.</td>
-</tr>
-<tr>
-<td><code>%view &lt;NAME&gt;</code></td>
-<td>not yet</td>
-<td>Requires sysmlpy View/Viewpoint rendering; planned.</td>
-</tr>
-<tr>
-<td><code>%export &lt;NAME&gt;</code></td>
-<td><code>%sysml_show NAME --json</code></td>
-<td>Prints JSON; redirect to a file if needed.</td>
-</tr>
-<tr>
-<td><code>%publish</code> / <code>%load</code> / <code>%projects</code> / <code>%repo</code></td>
-<td>not supported</td>
-<td>Requires the OMG API repository service.</td>
-</tr>
-<tr>
-<td><code>%exit</code></td>
-<td>n/a</td>
-<td>Jupyter manages the session.</td>
+<td>Diagrams show as raw PlantUML text</td>
+<td>Render with PlantUML (CLI/server/extension); the magic emits text by design</td>
 </tr>
 </tbody>
 </table>
-<h2 id="session-semantics">Session semantics<a class="headerlink" href="#session-semantics" title="Permanent link">&para;</a></h2>
-<ul>
-<li>The first <code>%%sysml</code> cell creates <code>model</code> and binds it into the notebook
-  namespace (as <code>model</code> and <code>_sysml</code>).</li>
-<li>Each subsequent cell is parsed fresh and <strong>merged</strong> into the session model
-  at <em>package-member</em> granularity: a member with the same <code>name</code> and
-  <code>sysml_type</code> replaces the old one; everything else is kept. So you can
-  iterate on a single part definition in one cell without re-stating the
-  rest of the package.</li>
-<li>Parse errors are reported to stderr with line/column and <strong>do not</strong> discard
-  the session model — fix and re-run the cell.</li>
-<li><code>%%sysml --reset</code> (or <code>%sysml_reset</code>) starts over from an empty model.</li>
-<li>Semantic diagnostics from sysmlpy's analyzer run after each merge and
-  surface as <code>[semantic] [code] message</code> on stderr.</li>
-</ul>
-<h2 id="known-differences-from-the-pilot-kernel">Known differences from the Pilot kernel<a class="headerlink" href="#known-differences-from-the-pilot-kernel" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Names must be matched exactly as declared (sysmlpy <code>find</code>); the Pilot
-  kernel additionally supports filter expressions in <code>[]</code> after <code>::*</code>.</li>
-<li><code>%viz</code> styles are limited to sysmlpy's PlantUML generator options
-  (<code>style="bw"</code> etc.), not the full OMG style matrix.</li>
-<li>No repository integration (publish/load/projects/repo).</li>
-<li>Only <code>%%sysml</code> cells are SysML; everything else is Python. The Pilot kernel
-  inverts this (everything is SysML unless it's a <code>%...</code> command).</li>
-</ul>
+<h2 id="command-reference">Command reference<a class="headerlink" href="#command-reference" title="Permanent link">&para;</a></h2>
+<p>The complete magic-command set of the OMG Pilot Implementation Jupyter
+kernel (<code>%eval</code>, <code>%list</code>, <code>%show</code>, <code>%viz</code>, <code>%view</code>, <code>%export</code>, <code>%load</code>,
+<code>%publish</code>, <code>%projects</code>, <code>%repo</code>, <code>%help</code>, <code>%exit</code>) and the mapping to
+this implementation is documented in
+<a href="../sysml-magics/">sysml-magics.md</a>.</p>
 
 
 
