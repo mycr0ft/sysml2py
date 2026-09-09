@@ -32,6 +32,7 @@ nav:
   - Home: index.md
   - Tutorial: TUTORIAL.md
   - Quick Start: quickstart.md
+  - Jupyter %%sysml How-to: jupyter.md
   - Jupyter %%sysml magic: sysml-magics.md
   - LSP Server: LSP.md
   - LSP in Neovim & VS Code: LSP_EDITORS.md
