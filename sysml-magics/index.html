@@ -11,26 +11,28 @@
       
       
       
+        <link rel="prev" href="../quickstart/">
       
-        <link rel="next" href="TUTORIAL/">
+      
+        <link rel="next" href="../LSP/">
       
       
         
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>sysmlpy</title>
+        <title>Jupyter %%sysml magic - sysmlpy</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,7 +51,7 @@
       
     
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#sysmlpy" class="md-skip">
+        <a href="#sysml-v2-jupyter-magic-commands-reference" class="md-skip">
           Skip to content
         </a>
       
@@ -90,7 +92,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="sysmlpy" class="md-header__button md-logo" aria-label="sysmlpy" data-md-component="logo">
+    <a href=".." title="sysmlpy" class="md-header__button md-logo" aria-label="sysmlpy" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -110,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              Jupyter %%sysml magic
             
           </span>
         </div>
@@ -231,7 +233,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="sysmlpy" class="md-nav__button md-logo" aria-label="sysmlpy" data-md-component="logo">
+    <a href=".." title="sysmlpy" class="md-nav__button md-logo" aria-label="sysmlpy" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -258,37 +260,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Home
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
         
   
   
@@ -304,120 +279,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#highlights" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Highlights
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#quick-links" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quick Links
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Quick Links">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Getting started
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Reference
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#tooling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tooling
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#archive" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Archive
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Installation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#basic-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Usage
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -429,7 +290,7 @@
   
   
     <li class="md-nav__item">
-      <a href="TUTORIAL/" class="md-nav__link">
+      <a href="../TUTORIAL/" class="md-nav__link">
         
   
   
@@ -456,7 +317,7 @@
   
   
     <li class="md-nav__item">
-      <a href="quickstart/" class="md-nav__link">
+      <a href="../quickstart/" class="md-nav__link">
         
   
   
@@ -480,10 +341,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="sysml-magics/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Jupyter %%sysml magic
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -499,6 +387,70 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#official-pilot-implementation-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Official Pilot Implementation commands
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sysml_magic-support-in-this-template" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sysml_magic support in this template
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#session-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session semantics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-differences-from-the-pilot-kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known differences from the Pilot kernel
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -510,7 +462,7 @@
   
   
     <li class="md-nav__item">
-      <a href="LSP/" class="md-nav__link">
+      <a href="../LSP/" class="md-nav__link">
         
   
   
@@ -537,7 +489,7 @@
   
   
     <li class="md-nav__item">
-      <a href="LSP_EDITORS/" class="md-nav__link">
+      <a href="../LSP_EDITORS/" class="md-nav__link">
         
   
   
@@ -564,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="STATUS/" class="md-nav__link">
+      <a href="../STATUS/" class="md-nav__link">
         
   
   
@@ -591,7 +543,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CHANGELOG/" class="md-nav__link">
+      <a href="../CHANGELOG/" class="md-nav__link">
         
   
   
@@ -618,7 +570,7 @@
   
   
     <li class="md-nav__item">
-      <a href="TODO/" class="md-nav__link">
+      <a href="../TODO/" class="md-nav__link">
         
   
   
@@ -665,10 +617,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#highlights" class="md-nav__link">
+  <a href="#official-pilot-implementation-commands" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Highlights
+        Official Pilot Implementation commands
       
     </span>
   </a>
@@ -676,71 +628,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#quick-links" class="md-nav__link">
+  <a href="#sysml_magic-support-in-this-template" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Links
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Quick Links">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Getting started
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Reference
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#tooling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tooling
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#archive" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Archive
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Installation
+        sysml_magic support in this template
       
     </span>
   </a>
@@ -748,10 +639,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#basic-usage" class="md-nav__link">
+  <a href="#session-semantics" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Basic Usage
+        Session semantics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-differences-from-the-pilot-kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known differences from the Pilot kernel
       
     </span>
   </a>
@@ -778,87 +680,176 @@
   
 
 
-<h1 id="sysmlpy">sysmlpy<a class="headerlink" href="#sysmlpy" title="Permanent link">&para;</a></h1>
-<p>A pure Python implementation for parsing, analyzing, and rendering
-SysML v2.0 models. Uses the ANTLR4 parser for full SysML v2 grammar
-support.</p>
-<p><strong>Current release:</strong> v0.77.0 — see <a href="CHANGELOG/">CHANGELOG</a>.</p>
-<h2 id="highlights">Highlights<a class="headerlink" href="#highlights" title="Permanent link">&para;</a></h2>
+<h1 id="sysml-v2-jupyter-magic-commands-reference">SysML v2 Jupyter Magic Commands — Reference<a class="headerlink" href="#sysml-v2-jupyter-magic-commands-reference" title="Permanent link">&para;</a></h1>
+<p>Two implementations of notebook SysML exist in the ecosystem:</p>
+<ol>
+<li><strong>The OMG Pilot Implementation kernel</strong> (<code>org.omg.sysml.jupyter.kernel</code>,
+   Java/Xtext, installed via Miniconda from
+   <a href="https://github.com/Systems-Modeling/SysML-v2-Pilot-Implementation">https://github.com/Systems-Modeling/SysML-v2-Pilot-Implementation</a>) — a
+   full <a href="https://github.com/Systems-Modeling/SysML-v2-Pilot-Implementation/blob/master/org.omg.sysml.jupyter.kernel/README.adoc">Jupyter kernel</a>
+   where SysML is the <em>language of the notebook itself</em>.</li>
+<li><strong><code>sysml_magic.py</code></strong> (this template) — an IPython extension providing a
+   <code>%%sysml</code> cell magic in the ordinary Python kernel, backed by
+   <a href="https://github.com/mycr0ft/sysmlpy">sysmlpy</a>. Pure Python, no JVM.</li>
+</ol>
+<p>This document records the official Pilot Implementation magic commands
+(extracted from <code>SysMLInteractive.java</code> and <code>SysMLInteractiveHelp.java</code>)
+and what this template's magic supports for each.</p>
+<h2 id="official-pilot-implementation-commands">Official Pilot Implementation commands<a class="headerlink" href="#official-pilot-implementation-commands" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Magic</th>
+<th>Purpose (per <code>%help &lt;cmd&gt;</code> strings in the Pilot source)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>%help [&lt;COMMAND&gt;]</code></td>
+<td>List available commands, or detailed help on one.</td>
+</tr>
+<tr>
+<td><code>%eval [--target=&lt;NAME&gt;] &lt;EXPR&gt;</code></td>
+<td>Evaluate an expression, optionally in the scope of a named (fully qualified) element.</td>
+</tr>
+<tr>
+<td><code>%list [&lt;QUERY&gt;]</code></td>
+<td>With no argument, list all loaded library packages. With <code>&lt;QUERY&gt;</code> (a legal <code>import</code> name: <code>N</code>, <code>N::*</code>, <code>N::**</code>, optionally followed by a <code>[filter]</code>), list matching elements.</td>
+</tr>
+<tr>
+<td><code>%show [--style=&lt;STYLE&gt;] &lt;NAME&gt;</code></td>
+<td>Print the abstract syntax tree rooted at <code>&lt;NAME&gt;</code>. Styles: <code>TREE</code> (indented), <code>JSON</code>.</td>
+</tr>
+<tr>
+<td><code>%publish [-d] [--project=&lt;P&gt;] [--branch=&lt;B&gt;] &lt;NAME&gt;</code></td>
+<td>Publish the elements rooted at <code>&lt;NAME&gt;</code> to the model repository. <code>-d</code> includes derived properties.</td>
+</tr>
+<tr>
+<td><code>%viz [--view=&lt;VIEW&gt;] [--style=&lt;STYLE&gt;...] &lt;NAME&gt;...</code></td>
+<td>PlantUML visualization. Views: <code>DEFAULT</code>, <code>TREE</code> (≈BDD), <code>INTERCONNECTION</code> (≈IBD), <code>STATE</code>, <code>ACTION</code>, <code>SEQUENCE</code>, <code>MIXED</code>. Styles include <code>LR</code>, <code>ortholine</code>, … (delegated to <code>SysML2PlantUMLStyle</code>).</td>
+</tr>
+<tr>
+<td><code>%view [--render=&lt;RENDERING&gt;] [--style=&lt;STYLE&gt;...] &lt;NAME&gt;</code></td>
+<td>Render a <em>view usage</em> defined in the model itself. Renderings: same set as <code>%viz</code> views.</td>
+</tr>
+<tr>
+<td><code>%export &lt;NAME&gt;</code></td>
+<td>Write a JSON file of the AST rooted at <code>&lt;NAME&gt;</code>.</td>
+</tr>
+<tr>
+<td><code>%load [--id=&lt;ID&gt;] [--name=&lt;N&gt;] [--branch=&lt;B&gt;] [&lt;NAME&gt;]</code></td>
+<td>Download previously published models from the repository.</td>
+</tr>
+<tr>
+<td><code>%projects</code></td>
+<td>List projects in the repository (name + UUID).</td>
+</tr>
+<tr>
+<td><code>%repo [&lt;BASE PATH&gt;]</code></td>
+<td>Set/print the repository API base path used by <code>%publish</code>/<code>%load</code>/<code>%projects</code>.</td>
+</tr>
+<tr>
+<td><code>%exit</code></td>
+<td>(Console/REPL mode only) leave the interactive session.</td>
+</tr>
+</tbody>
+</table>
+<p>The Pilot kernel additionally reads <code>$ISYSML_API_BASE_PATH</code> and
+<code>$ISYSML_GRAPHVIZ_PATH</code> environment variables (also settable via
+<code>--api-base-path</code> / <code>--graphviz-path</code>) to locate the repository API and the
+Graphviz <code>dot</code> binary used by <code>%viz</code>.</p>
+<h2 id="sysml_magic-support-in-this-template"><code>sysml_magic</code> support in this template<a class="headerlink" href="#sysml_magic-support-in-this-template" title="Permanent link">&para;</a></h2>
+<p>The ordinary-Python-kernel magic implements the interaction patterns that
+make sense client-side, backed by sysmlpy instead of the Eclipse/EMF stack.
+Repository-backed commands (<code>%publish</code>, <code>%load</code>, <code>%projects</code>, <code>%repo</code>)
+require the OMG API server and are out of scope; use the Pilot kernel if you
+need them.</p>
+<table>
+<thead>
+<tr>
+<th>Official command</th>
+<th>This template</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>(SysML cell)</td>
+<td><code>%%sysml [--reset] [--file PATH] [--show]</code></td>
+<td>Cell body is SysML source. Accumulates into a persistent <code>model</code>. Package members merge by (name, sysml_type): re-declared elements replace, others are preserved.</td>
+</tr>
+<tr>
+<td><code>%help</code></td>
+<td><code>%%sysml?</code> / module docstring</td>
+<td><code>help(sysml_magic)</code> or the docstrings.</td>
+</tr>
+<tr>
+<td><code>%list [&lt;QUERY&gt;]</code></td>
+<td><code>%sysml_list [NAME]</code></td>
+<td>No arg: top-level packages. With a name: exact-name matches at any depth. Richer queries: <code>model.find(sysml_type='part', recursive=False)</code> from Python.</td>
+</tr>
+<tr>
+<td><code>%show [--style] &lt;NAME&gt;</code></td>
+<td><code>%sysml_show NAME [--json]</code></td>
+<td><code>dump()</code> tree text, or full JSON with <code>--json</code>.</td>
+</tr>
+<tr>
+<td><code>%viz [--view] [--style] &lt;NAME&gt;</code></td>
+<td><code>%sysml_viz NAME [--view V]</code></td>
+<td>Views: <code>general</code>, <code>interconnection</code>, <code>action</code>, <code>package</code>, <code>tree</code> (sysmlpy PlantUML generators). Output is PlantUML text; render with the PlantUML CLI/extension, or embed via a PlantUML server.</td>
+</tr>
+<tr>
+<td><code>%eval &lt;EXPR&gt;</code></td>
+<td>Python cells directly</td>
+<td>The model is a live Python object (<code>model</code>, alias <code>_sysml</code>); evaluate with plain Python.</td>
+</tr>
+<tr>
+<td><code>%view &lt;NAME&gt;</code></td>
+<td>not yet</td>
+<td>Requires sysmlpy View/Viewpoint rendering; planned.</td>
+</tr>
+<tr>
+<td><code>%export &lt;NAME&gt;</code></td>
+<td><code>%sysml_show NAME --json</code></td>
+<td>Prints JSON; redirect to a file if needed.</td>
+</tr>
+<tr>
+<td><code>%publish</code> / <code>%load</code> / <code>%projects</code> / <code>%repo</code></td>
+<td>not supported</td>
+<td>Requires the OMG API repository service.</td>
+</tr>
+<tr>
+<td><code>%exit</code></td>
+<td>n/a</td>
+<td>Jupyter manages the session.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="session-semantics">Session semantics<a class="headerlink" href="#session-semantics" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>123/123 OMG XPect parse conformance</strong> and 143/143 grammar round-trip tests</li>
-<li><strong>Semantic analysis</strong> with 31 rule codes: symbol resolution, imports,
-  OCL well-formedness, type- and unit-checked expressions, <code>*</code>/<code>/</code>
-  unit-dimension derivation, state machines, requirements, traceability</li>
-<li><strong>17 PlantUML views</strong> + Java-free <a href="https://github.com/mycr0ft/boxes">boxes</a>
-  rendering (Unicode-braille text and SVG)</li>
-<li><strong>CLI suite</strong>: <code>parse</code>, <code>analyze</code>, <code>diff</code>, <code>view</code>, <code>format</code>, <code>trace</code>,
-  <code>export</code>/<code>import</code>, <code>eval</code>, <code>sim</code>, <code>xlsx</code> — CI-friendly exit codes</li>
-<li><strong>Storage backends</strong>: memory, NetworkX, Kùzu (Cypher), Cayley (HTTP)</li>
-<li><strong>State-machine simulation</strong> with real guard evaluation</li>
-<li><strong>Semantic model diff</strong> between SysML files</li>
+<li>The first <code>%%sysml</code> cell creates <code>model</code> and binds it into the notebook
+  namespace (as <code>model</code> and <code>_sysml</code>).</li>
+<li>Each subsequent cell is parsed fresh and <strong>merged</strong> into the session model
+  at <em>package-member</em> granularity: a member with the same <code>name</code> and
+  <code>sysml_type</code> replaces the old one; everything else is kept. So you can
+  iterate on a single part definition in one cell without re-stating the
+  rest of the package.</li>
+<li>Parse errors are reported to stderr with line/column and <strong>do not</strong> discard
+  the session model — fix and re-run the cell.</li>
+<li><code>%%sysml --reset</code> (or <code>%sysml_reset</code>) starts over from an empty model.</li>
+<li>Semantic diagnostics from sysmlpy's analyzer run after each merge and
+  surface as <code>[semantic] [code] message</code> on stderr.</li>
 </ul>
-<h2 id="quick-links">Quick Links<a class="headerlink" href="#quick-links" title="Permanent link">&para;</a></h2>
-<h3 id="getting-started">Getting started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h3>
+<h2 id="known-differences-from-the-pilot-kernel">Known differences from the Pilot kernel<a class="headerlink" href="#known-differences-from-the-pilot-kernel" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="TUTORIAL/">Tutorial</a> — comprehensive guide with class mapping tables</li>
-<li><a href="quickstart/">Quick Start</a> — basic usage examples</li>
+<li>Names must be matched exactly as declared (sysmlpy <code>find</code>); the Pilot
+  kernel additionally supports filter expressions in <code>[]</code> after <code>::*</code>.</li>
+<li><code>%viz</code> styles are limited to sysmlpy's PlantUML generator options
+  (<code>style="bw"</code> etc.), not the full OMG style matrix.</li>
+<li>No repository integration (publish/load/projects/repo).</li>
+<li>Only <code>%%sysml</code> cells are SysML; everything else is Python. The Pilot kernel
+  inverts this (everything is SysML unless it's a <code>%...</code> command).</li>
 </ul>
-<h3 id="reference">Reference<a class="headerlink" href="#reference" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="PROJECT_SUMMARY/">Project Summary</a> — architecture and capabilities</li>
-<li><a href="STATUS/">Status</a> — conformance results, rule-code catalogue, round-trip coverage</li>
-<li><a href="CHANGELOG/">Changelog</a> — release history</li>
-<li><a href="TODO/">Roadmap / TODO</a> — what's next</li>
-<li><a href="GUARDS/">Guard Conditions</a> — the <code>if</code> transition keyword, done right</li>
-<li><a href="boxes_view/">Boxes-backed Visualizer</a> — native UML shapes via <code>diagramboxes</code></li>
-<li><a href="sim/">Simulation</a> — state-machine simulation (<code>sysmlpy sim</code>)</li>
-</ul>
-<h3 id="tooling">Tooling<a class="headerlink" href="#tooling" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="LSP/">LSP</a> — language server for editors</li>
-<li><a href="LSP_EDITORS/">LSP Editor Setup</a> — per-editor integration guides</li>
-<li><a href="plantuml-examples/">PlantUML Examples</a> — rendered view gallery</li>
-</ul>
-<h3 id="archive">Archive<a class="headerlink" href="#archive" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="archive/">Archive</a> — historical documents (PySysML2 comparison,
-  completed development plan, reference analyses). No longer maintained.</li>
-</ul>
-<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>sysmlpy
-</code></pre></div>
-<p>Optional extras:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>sysmlpy<span class="o">[</span>graph<span class="o">]</span><span class="w">    </span><span class="c1"># NetworkX graph analysis</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>pip<span class="w"> </span>install<span class="w"> </span>sysmlpy<span class="o">[</span>kuzu<span class="o">]</span><span class="w">     </span><span class="c1"># Kùzu embedded graph database</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>pip<span class="w"> </span>install<span class="w"> </span>sysmlpy<span class="o">[</span>cayley<span class="o">]</span><span class="w">   </span><span class="c1"># Cayley graph database client</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>pip<span class="w"> </span>install<span class="w"> </span>sysmlpy<span class="o">[</span>xlsx<span class="o">]</span><span class="w">     </span><span class="c1"># Excel export</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>pip<span class="w"> </span>install<span class="w"> </span>sysmlpy<span class="o">[</span>sim<span class="o">]</span><span class="w">      </span><span class="c1"># State-machine simulation</span>
-</code></pre></div>
-<h2 id="basic-usage">Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">loads</span><span class="p">,</span> <span class="n">Part</span><span class="p">,</span> <span class="n">Attribute</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">model</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="s2">"""</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="s2">package Vehicle {</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="s2">    part def Engine;</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="s2">    part engine1 : Engine { attribute mass = 100 [kg]; }</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="s2">}</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="s2">"""</span><span class="p">)</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_one</span><span class="p">(</span><span class="s2">"engine1"</span><span class="p">)</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="nb">print</span><span class="p">(</span><span class="n">engine</span><span class="o">.</span><span class="n">dump</span><span class="p">())</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="c1"># Semantic analysis</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sysmlpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">analyze</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="n">issues</span> <span class="o">=</span> <span class="n">analyze</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="nb">print</span><span class="p">(</span><span class="n">issues</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
-</code></pre></div>
-<p>Command line:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>sysmlpy<span class="w"> </span>analyze<span class="w"> </span>model.sysml<span class="w">     </span><span class="c1"># semantic gate with CI exit codes</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>sysmlpy<span class="w"> </span>view<span class="w"> </span>model.sysml<span class="w">        </span><span class="c1"># PlantUML / Markdown / HTML views</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>sysmlpy<span class="w"> </span>diff<span class="w"> </span>old.sysml<span class="w"> </span>new.sysml
-</code></pre></div>
-<p>See the <a href="https://github.com/mycr0ft/sysmlpy#command-line-tools">README</a>
-for the complete CLI table.</p>
 
 
 
@@ -908,10 +899,10 @@ for the complete CLI table.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.sections", "navigation.expand", "search.highlight", "search.share", "content.code.copy"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.expand", "search.highlight", "search.share", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
