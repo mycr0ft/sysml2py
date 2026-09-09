@@ -485,6 +485,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0910-2026-09-09" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.91.0 (2026-09-09)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0901-2026-09-08" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3284,6 +3295,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v0910-2026-09-09" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.91.0 (2026-09-09)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0901-2026-09-08" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -6042,6 +6064,37 @@
 
 
 <h1 id="changelog">CHANGELOG<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v0910-2026-09-09">v0.91.0 (2026-09-09)<a class="headerlink" href="#v0910-2026-09-09" title="Permanent link">&para;</a></h2>
+<p><strong><code>%%sysml</code> Jupyter cell magic — SysML v2 textual notation in notebooks,
+no JVM.</strong></p>
+<p>New optional dependency (<code>pip install sysmlpy[jupyter]</code>) installs
+<code>sysmlpy.ipython_magic</code>, an IPython extension adding:</p>
+<ul>
+<li><code>%%sysml [--reset] [--file PATH] [--show]</code> — cell body is SysML v2
+  textual notation, parsed via <code>parse()</code> and <strong>merged at package-member
+  granularity</strong> into a persistent session <code>Model</code> exposed in the notebook
+  namespace as <code>model</code> (alias <code>_sysml</code>). A re-declared element (matched by
+  <code>name</code> + <code>sysml_type</code>) replaces the prior definition; sibling members
+  are preserved, so a single part can be iterated in one cell.</li>
+<li><code>%sysml_reset</code> — discard the session model.</li>
+<li><code>%sysml_list [NAME]</code> — list top-level packages, or elements matching an
+  exact declared name at any depth.</li>
+<li><code>%sysml_show NAME [--json]</code> — <code>dump()</code> of the AST rooted at a named
+  element (JSON-piped when the dump parses).</li>
+<li><code>%sysml_viz NAME... [--view V]</code> — PlantUML view
+  (general|interconnection|action|package|tree).</li>
+</ul>
+<p>Parse errors report to stderr with line/column and never discard the
+session model. Best-effort semantic diagnostics run after each merge.
+Command set mirrors the OMG Pilot Implementation Jupyter kernel's magic
+commands (<code>%eval</code>/<code>%list</code>/<code>%show</code>/<code>%viz</code>/<code>%view</code>/<code>%export</code>/<code>%load</code>
+/<code>%publish</code>/<code>%projects</code>/<code>%repo</code>/<code>%help</code>); repository-backed commands are
+out of scope (no OMG API server dependency). Reference implementation of
+that mapping lives in the sysml-copier template's
+<code>docs/sysml-magics.md</code>.</p>
+<p>10 new tests in <code>tests/test_ipython_magic.py</code> covering
+load/accumulate/member-granular redefinition/namespace binding/all line
+magics/<code>--file</code>/<code>--show</code>/<code>--reset</code>/parse-error resilience.</p>
 <h2 id="v0901-2026-09-08">v0.90.1 (2026-09-08)<a class="headerlink" href="#v0901-2026-09-08" title="Permanent link">&para;</a></h2>
 <p><strong>Dead-code removal and lint hygiene.</strong></p>
 <p>Silently-shadowed duplicate method definitions removed — in each pair
