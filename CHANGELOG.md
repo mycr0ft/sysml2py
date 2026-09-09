@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## v0.91.0 (2026-09-09)
+
+**`%%sysml` Jupyter cell magic — SysML v2 textual notation in notebooks,
+no JVM.**
+
+New optional dependency (`pip install sysmlpy[jupyter]`) installs
+`sysmlpy.ipython_magic`, an IPython extension adding:
+
+- `%%sysml [--reset] [--file PATH] [--show]` — cell body is SysML v2
+  textual notation, parsed via `parse()` and **merged at package-member
+  granularity** into a persistent session `Model` exposed in the notebook
+  namespace as `model` (alias `_sysml`). A re-declared element (matched by
+  `name` + `sysml_type`) replaces the prior definition; sibling members
+  are preserved, so a single part can be iterated in one cell.
+- `%sysml_reset` — discard the session model.
+- `%sysml_list [NAME]` — list top-level packages, or elements matching an
+  exact declared name at any depth.
+- `%sysml_show NAME [--json]` — `dump()` of the AST rooted at a named
+  element (JSON-piped when the dump parses).
+- `%sysml_viz NAME... [--view V]` — PlantUML view
+  (general|interconnection|action|package|tree).
+
+Parse errors report to stderr with line/column and never discard the
+session model. Best-effort semantic diagnostics run after each merge.
+Command set mirrors the OMG Pilot Implementation Jupyter kernel's magic
+commands (`%eval`/`%list`/`%show`/`%viz`/`%view`/`%export`/`%load`
+/`%publish`/`%projects`/`%repo`/`%help`); repository-backed commands are
+out of scope (no OMG API server dependency). Reference implementation of
+that mapping lives in the sysml-copier template's
+`docs/sysml-magics.md`.
+
+10 new tests in `tests/test_ipython_magic.py` covering
+load/accumulate/member-granular redefinition/namespace binding/all line
+magics/`--file`/`--show`/`--reset`/parse-error resilience.
+
 ## v0.90.1 (2026-09-08)
 
 **Dead-code removal and lint hygiene.**

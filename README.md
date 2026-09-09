@@ -41,6 +41,7 @@ sysmlpy requires the following Python packages:
 - [kuzu](https://kuzudb.com/) — embedded graph database with disk persistence and Cypher queries (install with `pip install sysmlpy[kuzu]`)
 - [cayley](https://cayley.io/) — graph database via HTTP API, supports BoltDB/LevelDB backends (install with `pip install sysmlpy[cayley]`)
 - [PlantUML](https://plantuml.com/) **v1.2020.0+** — diagram rendering (requires Java + PlantUML JAR or [PlantUML server](https://www.plantuml.com/plantuml)). The generator uses `<style>` blocks and `skinparam` stereotype selectors introduced in v1.2020.
+- [IPython](https://ipython.org/) **v8.0+** — the `%%sysml` Jupyter cell magic (install with `pip install sysmlpy[jupyter]`; see [Jupyter integration](#jupyter-integration))
 
 ## Installation
 
@@ -52,6 +53,52 @@ Multiple installation methods are supported by sysmlpy, including:
 |       ![PyPI logo](https://simpleicons.org/icons/pypi.svg)        |     PyPI     |                 ``python -m pip install sysmlpy[graph]`` (with graph analysis)                  |
 |       ![PyPI logo](https://simpleicons.org/icons/pypi.svg)        |     PyPI     |              ``python -m pip install sysmlpy[cayley]`` (with Cayley graph DB)              |
 |     ![GitHub logo](https://simpleicons.org/icons/github.svg)      |    GitHub    | ``python -m pip install https://github.com/mycr0ft/sysmlpy/archive/refs/heads/main.zip`` |
+
+## Jupyter integration
+
+With the `jupyter` extra installed (`pip install sysmlpy[jupyter]`), the
+`%%sysml` cell magic lets you write SysML v2 textual notation directly in
+notebook cells, parsed and accumulated into a persistent session `Model`
+exposed in the notebook namespace as `model` (alias `_sysml`):
+
+```python
+# once per notebook
+%load_ext sysmlpy.ipython_magic
+```
+
+```sysml
+%%sysml
+package Vehicle {
+    part def Engine {
+        attribute fuelRate : Real;
+    }
+    part def Vehicle {
+        part engine : Vehicle::Engine;
+    }
+}
+```
+
+Re-declaring a package merges at *package-member* granularity: elements
+with the same `name` and `sysml_type` replace prior definitions; sibling
+members are preserved. Line magics mirror the OMG Pilot Implementation
+Jupyter kernel's command set:
+
+| Magic | Purpose |
+|-------|---------|
+| `%sysml_reset` | Discard the session model |
+| `%sysml_list [NAME]` | List packages, or find elements by exact declared name |
+| `%sysml_show NAME [--json]` | `dump()` of the AST rooted at a named element |
+| `%sysml_viz NAME... [--view V]` | PlantUML view (general\|interconnection\|action\|package\|tree) |
+
+Cell options: `%%sysml --reset` (fresh model), `--file PATH` (parse from a
+file; use `-` as the cell body), `--show` (print the round-tripped model).
+Parse errors report to stderr with line/column and never discard the
+session model. The full magic-command reference — the complete set of the
+official [OMG Pilot Implementation Jupyter
+kernel](https://github.com/Systems-Modeling/SysML-v2-Pilot-Implementation/tree/master/org.omg.sysml.jupyter.kernel)
+and the mapping to this implementation — is in the
+[sysml-copier](https://github.com/mycr0ft/sysml-copier) template's
+`docs/sysml-magics.md`.
 
 ## Command-Line Tools
 
